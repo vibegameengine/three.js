@@ -114,8 +114,8 @@ class OperatorNode extends TempNode {
 		const aNode = this.aNode;
 		const bNode = this.bNode;
 
-		const typeA = aNode.getNodeType( builder );
-		const typeB = bNode ? bNode.getNodeType( builder ) : null;
+		const typeA = builder.typeOf( aNode );
+		const typeB = bNode ? builder.typeOf( bNode ) : null;
 
 		if ( typeA === 'void' || typeB === 'void' ) {
 

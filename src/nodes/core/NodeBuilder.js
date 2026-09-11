@@ -1460,6 +1460,31 @@ class NodeBuilder {
 
 	}
 
+	typeOf( node ) {
+
+		if ( this.buildStage === 'setup' || globalThis.__nodeTypeCacheOff === true ) return node.getNodeType( this );
+
+		const key = this.buildStage + '|' + this.shaderStage;
+
+		if ( this._nodeTypeCache === undefined || this._nodeTypeCacheKey !== key ) {
+
+			this._nodeTypeCache = new WeakMap();
+			this._nodeTypeCacheKey = key;
+
+		}
+
+		const cached = this._nodeTypeCache.get( node );
+
+		if ( cached !== undefined ) return cached;
+
+		const type = node.getNodeType( this );
+
+		this._nodeTypeCache.set( node, type );
+
+		return type;
+
+	}
+
 	/**
 	 * Returns the vector type for a given type.
 	 *

@@ -101,9 +101,9 @@ class MathNode extends TempNode {
 	 */
 	getInputType( builder ) {
 
-		const aType = this.aNode.getNodeType( builder );
-		const bType = this.bNode ? this.bNode.getNodeType( builder ) : null;
-		const cType = this.cNode ? this.cNode.getNodeType( builder ) : null;
+		const aType = builder.typeOf( this.aNode );
+		const bType = this.bNode ? builder.typeOf( this.bNode ) : null;
+		const cType = this.cNode ? builder.typeOf( this.cNode ) : null;
 
 		const aLen = builder.isMatrix( aType ) ? 0 : builder.getTypeLength( aType );
 		const bLen = builder.isMatrix( bType ) ? 0 : builder.getTypeLength( bType );
@@ -151,7 +151,7 @@ class MathNode extends TempNode {
 
 		} else if ( method === MathNode.EQUALS ) {
 
-			return builder.changeComponentType( this.aNode.getNodeType( builder ), 'bool' );
+			return builder.changeComponentType( builder.typeOf( this.aNode ), 'bool' );
 
 		} else {
 
