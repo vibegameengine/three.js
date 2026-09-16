@@ -603,6 +603,14 @@ class Renderer {
 		this._cacheShadowNodes = new WeakMap();
 
 		/**
+		 * The source material versions an override material was last filled from.
+		 *
+		 * @private
+		 * @type {WeakMap<Material, WeakMap<Material, number>>}
+		 */
+		this._overrideSourceVersions = new WeakMap();
+
+		/**
 		 * Whether the renderer has been initialized or not.
 		 *
 		 * @private
@@ -3122,7 +3130,23 @@ class Renderer {
 
 			}
 
-			overrideMaterial.alphaTest = material.alphaTest;
+			let sourceVersions = this._overrideSourceVersions.get( overrideMaterial );
+
+			if ( sourceVersions === undefined ) {
+
+				sourceVersions = new WeakMap();
+				this._overrideSourceVersions.set( overrideMaterial, sourceVersions );
+
+			}
+
+			if ( sourceVersions.get( material ) !== material.version ) {
+
+				sourceVersions.set( material, material.version );
+				overrideMaterial.version ++;
+
+			}
+
+			overrideMaterial._alphaTest = material.alphaTest;
 			overrideMaterial.alphaMap = material.alphaMap;
 			overrideMaterial.transparent = material.transparent || material.transmission > 0 ||
 				( material.transmissionNode && material.transmissionNode.isNode ) ||
