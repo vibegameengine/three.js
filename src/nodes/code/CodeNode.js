@@ -72,6 +72,12 @@ class CodeNode extends Node {
 
 	}
 
+	isCacheable( /*builder*/ ) {
+
+		return false;
+
+	}
+
 	/**
 	 * Sets the includes of this code node.
 	 *
