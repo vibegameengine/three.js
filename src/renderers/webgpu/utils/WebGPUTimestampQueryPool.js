@@ -182,6 +182,7 @@ class WebGPUTimestampQueryPool extends TimestampQueryPool {
 
 			const times = new BigUint64Array( this.resultBuffer.getMappedRange( 0, bytesUsed ) );
 			const framesDuration = {};
+			const frameSpans = new Map();
 
 			const frames = [];
 
@@ -206,7 +207,13 @@ class WebGPUTimestampQueryPool extends TimestampQueryPool {
 
 				framesDuration[ frame ] += duration;
 
+				const span = frameSpans.get( frame );
+				if ( span === undefined ) frameSpans.set( frame, { start: startTime, end: endTime } );
+				else frameSpans.set( frame, { start: startTime < span.start ? startTime : span.start, end: endTime > span.end ? endTime : span.end } );
+
 			}
+
+			this.frameSpans = frameSpans;
 
 			// Return the total duration of the last frame
 			const totalDuration = framesDuration[ frames[ frames.length - 1 ] ];

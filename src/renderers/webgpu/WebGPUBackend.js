@@ -15,6 +15,7 @@ import WebGPUTextureUtils from './utils/WebGPUTextureUtils.js';
 
 import { WebGPUCoordinateSystem, TimestampQuery, REVISION, HalfFloatType } from '../../constants.js';
 import WebGPUTimestampQueryPool from './utils/WebGPUTimestampQueryPool.js';
+import WebGPUCommandQueue from './utils/WebGPUCommandQueue.js';
 import { warnOnce, error } from '../../utils.js';
 
 /**
@@ -219,7 +220,9 @@ class WebGPUBackend extends Backend {
 
 		this.device = device;
 
-		this.trackTimestamp = this.trackTimestamp && this.hasFeature( GPUFeatureName.TimestampQuery );
+		this.commandQueue = parameters.batchSubmit === true ? new WebGPUCommandQueue( device ) : null;
+
+		this.trackTimestamp =this.trackTimestamp && this.hasFeature( GPUFeatureName.TimestampQuery );
 
 		this.updateSize();
 
@@ -1369,6 +1372,7 @@ class WebGPUBackend extends Backend {
 			const bindingsData = this.get( bindGroup );
 
 			passEncoderGPU.setBindGroup( i, bindingsData.group );
+			if ( this.commandQueue !== null ) this.commandQueue.useBindGroup( bindingsData.group );
 
 		}
 
@@ -1385,6 +1389,7 @@ class WebGPUBackend extends Backend {
 			const dispatchBuffer = this.get( dispatchSize ).buffer;
 
 			passEncoderGPU.dispatchWorkgroupsIndirect( dispatchBuffer, 0 );
+			if ( this.commandQueue !== null ) this.commandQueue.useBuffer( dispatchBuffer );
 
 			return;
 
@@ -1501,6 +1506,7 @@ class WebGPUBackend extends Backend {
 				if ( currentBindingGroups[ bindGroup.index ] !== bindGroup.id ) {
 
 					passEncoderGPU.setBindGroup( bindGroup.index, bindingsData.group );
+					if ( this.commandQueue !== null ) this.commandQueue.useBindGroup( bindingsData.group );
 					currentBindingGroups[ bindGroup.index ] = bindGroup.id;
 
 				}
@@ -1519,6 +1525,7 @@ class WebGPUBackend extends Backend {
 					const indexFormat = ( index.array instanceof Uint16Array ) ? GPUIndexFormat.Uint16 : GPUIndexFormat.Uint32;
 
 					passEncoderGPU.setIndexBuffer( buffer, indexFormat );
+					if ( this.commandQueue !== null ) this.commandQueue.useBuffer( buffer );
 
 					currentSets.index = index;
 
@@ -1537,6 +1544,7 @@ class WebGPUBackend extends Backend {
 
 					const buffer = this.get( vertexBuffer ).buffer;
 					passEncoderGPU.setVertexBuffer( i, buffer );
+					if ( this.commandQueue !== null ) this.commandQueue.useBuffer( buffer );
 
 					currentSets.attributes[ i ] = vertexBuffer;
 
@@ -1611,6 +1619,8 @@ class WebGPUBackend extends Backend {
 
 					}
 
+					if ( this.commandQueue !== null ) this.commandQueue.useBuffer( buffer );
+
 				} else {
 
 					passEncoderGPU.drawIndexed( indexCount, instanceCount, firstIndex, 0, 0 );
@@ -1636,6 +1646,8 @@ class WebGPUBackend extends Backend {
 						passEncoderGPU.drawIndirect( buffer, indirectOffsets[ i ] );
 
 					}
+
+					if ( this.commandQueue !== null ) this.commandQueue.useBuffer( buffer );
 
 
 				} else {
@@ -1722,6 +1734,7 @@ class WebGPUBackend extends Backend {
 					if ( cameraIndex && cameraData.indexesGPU ) {
 
 						pass.setBindGroup( cameraIndex.index, cameraData.indexesGPU[ i ] );
+						if ( this.commandQueue !== null ) this.commandQueue.useBindGroup( cameraData.indexesGPU[ i ] );
 						sets.bindingGroups[ cameraIndex.index ] = cameraIndex.id;
 
 					}
