@@ -419,7 +419,7 @@ class WGSLNodeBuilder extends NodeBuilder {
 
 			}
 
-			textureDimensionNode = new VarNode( new ExpressionNode( `textureDimensions( ${ textureDimensionsParams } )`, dimensionType ) );
+			textureDimensionNode = new ExpressionNode( `textureDimensions( ${ textureDimensionsParams } )`, dimensionType );
 
 			textureData.dimensionsSnippet[ levelSnippet ] = textureDimensionNode;
 
