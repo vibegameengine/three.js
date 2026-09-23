@@ -222,7 +222,7 @@ class WebGPUBackend extends Backend {
 
 		this.commandQueue = new WebGPUCommandQueue( device );
 
-		this.trackTimestamp =this.trackTimestamp && this.hasFeature( GPUFeatureName.TimestampQuery );
+		this.trackTimestamp = this.trackTimestamp && this.hasFeature( GPUFeatureName.TimestampQuery );
 
 		this.updateSize();
 
