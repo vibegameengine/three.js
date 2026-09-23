@@ -12,6 +12,7 @@ import { instanceIndex } from '../core/IndexNode.js';
 import { InstancedInterleavedBuffer } from '../../core/InstancedInterleavedBuffer.js';
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
 import { DynamicDrawUsage } from '../../constants.js';
+import { instanceCullingFor } from '../../renderers/common/InstanceCulling.js';
 
 /**
  * This node implements the vertex shader logic which is required
@@ -107,6 +108,8 @@ class InstanceNode extends Node {
 		 */
 		this.previousInstanceMatrixNode = null;
 
+		this.instanceIdNode = instanceIndex;
+
 	}
 
 	/**
@@ -144,6 +147,8 @@ class InstanceNode extends Node {
 	 */
 	setup( builder ) {
 
+		this.instanceIdNode = this._createInstanceIdNode( builder );
+
 		let { instanceMatrixNode, instanceColorNode } = this;
 
 		// instance matrix
@@ -164,7 +169,11 @@ class InstanceNode extends Node {
 
 			if ( isStorageColor ) {
 
-				instanceColorNode = storage( instanceColor, 'vec3', Math.max( instanceColor.count, 1 ) ).element( instanceIndex );
+				instanceColorNode = storage( instanceColor, 'vec3', Math.max( instanceColor.count, 1 ) ).element( this.instanceIdNode );
+
+			} else if ( this.instanceIdNode !== instanceIndex ) {
+
+				throw new Error( 'InstanceNode: a culled instanced mesh needs its instanceColor in a StorageInstancedBufferAttribute.' );
 
 			} else {
 
@@ -288,6 +297,16 @@ class InstanceNode extends Node {
 	 * @param {NodeBuilder} builder - A reference to the current node builder.
 	 * @return {Node} The instance matrix node.
 	 */
+	_createInstanceIdNode( builder ) {
+
+		const culling = instanceCullingFor( builder.object, builder.camera );
+
+		if ( culling === null ) return instanceIndex;
+
+		return storage( culling.instanceIds, 'uint', culling.instanceIds.count ).element( instanceIndex );
+
+	}
+
 	_createInstanceMatrixNode( assignBuffer, builder ) {
 
 		let instanceMatrixNode;
@@ -295,9 +314,11 @@ class InstanceNode extends Node {
 		const { instanceMatrix } = this;
 		const { count } = instanceMatrix;
 
+		const instanceId = this.instanceIdNode;
+
 		if ( this.isStorageMatrix ) {
 
-			instanceMatrixNode = storage( instanceMatrix, 'mat4', Math.max( count, 1 ) ).element( instanceIndex );
+			instanceMatrixNode = storage( instanceMatrix, 'mat4', Math.max( count, 1 ) ).element( instanceId );
 
 		} else {
 
@@ -307,7 +328,11 @@ class InstanceNode extends Node {
 
 			if ( count <= limit ) {
 
-				instanceMatrixNode = buffer( instanceMatrix.array, 'mat4', Math.max( count, 1 ) ).element( instanceIndex );
+				instanceMatrixNode = buffer( instanceMatrix.array, 'mat4', Math.max( count, 1 ) ).element( instanceId );
+
+			} else if ( instanceId !== instanceIndex ) {
+
+				throw new Error( 'InstanceNode: a culled instanced mesh needs its instanceMatrix in a StorageInstancedBufferAttribute.' );
 
 			} else {
 

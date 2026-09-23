@@ -1,4 +1,5 @@
 import { hash, hashString } from '../../nodes/core/NodeUtils.js';
+import { instanceCullingFor } from './InstanceCulling.js';
 
 let _id = 0;
 
@@ -786,6 +787,12 @@ class RenderObject {
 			// TODO: https://github.com/mrdoob/three.js/pull/29066#issuecomment-2269400850
 
 			cacheKey += object.uuid + ',';
+
+		}
+
+		if ( instanceCullingFor( object, this.camera ) !== null ) {
+
+			cacheKey += 'instanceCulling,';
 
 		}
 
