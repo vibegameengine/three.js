@@ -351,16 +351,19 @@ class WebGPUAttributeUtils {
 		const gpuCommands = cmdEncoder.finish();
 		device.queue.submit( [ gpuCommands ] );
 
-		await readBufferGPU.mapAsync( GPUMapMode.READ );
+		try {
 
-		const arrayBuffer = readBufferGPU.getMappedRange();
+			await readBufferGPU.mapAsync( GPUMapMode.READ );
 
-		const dstBuffer = new attribute.array.constructor( arrayBuffer.slice( 0 ) );
+			const arrayBuffer = readBufferGPU.getMappedRange();
 
-		readBufferGPU.unmap();
-		readBufferGPU.destroy();
+			return new attribute.array.constructor( arrayBuffer.slice( 0 ) ).buffer;
 
-		return dstBuffer.buffer;
+		} finally {
+
+			readBufferGPU.destroy();
+
+		}
 
 	}
 
