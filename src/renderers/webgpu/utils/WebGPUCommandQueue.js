@@ -1,3 +1,5 @@
+export const CLEAN_FINISHES_TO_TRUST = 60;
+const REPEATED_FAILURE_REPORT = 300;
 const UNKNOWN = 0;
 const VALID = 1;
 const INVALID = 2;
@@ -22,12 +24,15 @@ const INVALID = 2;
  * submitted on its own and can lose nothing but itself. Validity comes from the error
  * scope an object was created in: someone else's scope is read, not taken over, and where
  * there is none the queue opens its own and reports what it catches. A command buffer can
- * also be invalid from how it was encoded, which WebGPU reports at finish(), after the
- * submit has gone: the encoder's label is then marked broken and its later command buffers
- * go out on their own (three labels encoders by render context and compute node, so the
- * label names the same pass every frame; unlabelled encoders share the empty label). A
- * rejected batch in which no encoder reported an error makes every later command buffer go
- * out on its own, which is what three did before this queue.
+ * also be invalid from how it was encoded, which WebGPU reports at finish(): the first batch
+ * holding it is lost, its label is marked broken and later command buffers with that label
+ * go out on their own until the label has encoded cleanly CLEAN_FINISHES_TO_TRUST times. A
+ * render context or compute node label names one pass; 'clear', 'mipmapEncoder' and the
+ * empty label are shared, so one broken encoder isolates all of them, which costs batching
+ * and nothing else. Inside someone else's validation scope finish() opens no scope of its
+ * own: the owner gets the error and the queue reads it when the scope is popped. A rejected
+ * batch in which no encoder reported an error makes every later command buffer go out on
+ * its own, which is what three did before this queue.
  */
 class WebGPUCommandQueue {
 
@@ -45,6 +50,8 @@ class WebGPUCommandQueue {
 		this.recordings = new WeakMap();
 		this.scopes = [];
 		this.brokenLabels = new Set();
+		this.cleanFinishes = new Map();
+		this.encoderFailures = new Map();
 		this.opaqueWaiting = false;
 		this.batching = true;
 		this.flushScheduled = false;
@@ -112,7 +119,7 @@ class WebGPUCommandQueue {
 
 		device.pushErrorScope = ( filter ) => {
 
-			this.scopes.push( { filter, objects: [] } );
+			this.scopes.push( { filter, objects: [], labels: [] } );
 			return this._pushErrorScope( filter );
 
 		};
@@ -123,7 +130,13 @@ class WebGPUCommandQueue {
 
 			return this._popErrorScope().then( ( error ) => {
 
-				if ( scope !== undefined ) this.settle( scope.objects, error );
+				if ( scope !== undefined ) {
+
+					this.settle( scope.objects, error );
+					for ( const label of scope.labels ) this.settleEncoder( label, error );
+
+				}
+
 				return error;
 
 			} );
@@ -263,6 +276,43 @@ class WebGPUCommandQueue {
 
 	}
 
+	settleEncoder( label, error ) {
+
+		if ( error !== null ) {
+
+			const failures = ( this.encoderFailures.get( label ) || 0 ) + 1;
+			this.encoderFailures.set( label, failures );
+			this.cleanFinishes.delete( label );
+
+			if ( this.brokenLabels.has( label ) === false ) {
+
+				this.brokenLabels.add( label );
+				console.error( `WebGPU: command encoder "${ label }" is invalid (${ error.message }); its command buffers are submitted on their own until it encodes cleanly ${ CLEAN_FINISHES_TO_TRUST } times.` );
+
+			} else if ( failures % REPEATED_FAILURE_REPORT === 0 ) {
+
+				console.error( `WebGPU: command encoder "${ label }" is still invalid, ${ failures } times (${ error.message }).` );
+
+			}
+
+			return;
+
+		}
+
+		if ( this.brokenLabels.has( label ) === false ) return;
+
+		const clean = ( this.cleanFinishes.get( label ) || 0 ) + 1;
+		this.cleanFinishes.set( label, clean );
+
+		if ( clean < CLEAN_FINISHES_TO_TRUST ) return;
+
+		this.brokenLabels.delete( label );
+		this.cleanFinishes.delete( label );
+		this.encoderFailures.delete( label );
+		console.info( `WebGPU: command encoder "${ label }" encoded cleanly ${ clean } times and is batched again.` );
+
+	}
+
 	settle( objects, error ) {
 
 		for ( const object of objects ) this.validity.set( object, error === null ? VALID : INVALID );
@@ -323,18 +373,23 @@ class WebGPUCommandQueue {
 
 		const finish = encoder.finish.bind( encoder );
 
-		encoder.finish = ( ...args ) => {
+		encoder.finish = ( descriptor ) => {
 
-			this._pushErrorScope( 'validation' );
-			const commandBuffer = finish( ...args );
+			const scope = this.innermostValidationScope();
+			let commandBuffer;
 
-			this._popErrorScope().then( ( error ) => {
+			if ( scope !== undefined ) {
 
-				if ( error === null || this.brokenLabels.has( label ) ) return;
-				this.brokenLabels.add( label );
-				console.error( `WebGPU: command encoder "${ label }" is invalid (${ error.message }); its command buffers are submitted on their own from now on.` );
+				commandBuffer = descriptor === undefined ? finish() : finish( descriptor );
+				scope.labels.push( label );
 
-			} );
+			} else {
+
+				this._pushErrorScope( 'validation' );
+				commandBuffer = descriptor === undefined ? finish() : finish( descriptor );
+				this._popErrorScope().then( ( error ) => this.settleEncoder( label, error ) );
+
+			}
 
 			this.recordings.set( commandBuffer, recording );
 			return commandBuffer;
