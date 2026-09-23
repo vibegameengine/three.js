@@ -15,6 +15,8 @@ import { instanceIndex } from '../core/IndexNode.js';
 
 const _frameId = new WeakMap();
 
+const INFLUENCE_LANES = [ 'x', 'y', 'z', 'w' ];
+
 /**
  * This node implements the vertex transformation shader logic which is required
  * for skinning/skeletal animation.
@@ -112,6 +114,22 @@ class SkinningNode extends Node {
 		 */
 		this.previousBoneMatricesNode = null;
 
+		this.influenceSetCount = 1;
+
+	}
+
+	getInfluences() {
+
+		const influences = [ [ this.skinIndexNode, this.skinWeightNode ] ];
+
+		for ( let set = 1; set < this.influenceSetCount; set ++ ) {
+
+			influences.push( [ attribute( `skinIndex${ set }`, 'uvec4' ), attribute( `skinWeight${ set }`, 'vec4' ) ] );
+
+		}
+
+		return influences;
+
 	}
 
 	/**
@@ -123,23 +141,11 @@ class SkinningNode extends Node {
 	 */
 	getSkinnedPosition( boneMatrices = this.boneMatricesNode, position = this.positionNode ) {
 
-		const { skinIndexNode, skinWeightNode, bindMatrixNode, bindMatrixInverseNode } = this;
-
-		const boneMatX = boneMatrices.element( skinIndexNode.x );
-		const boneMatY = boneMatrices.element( skinIndexNode.y );
-		const boneMatZ = boneMatrices.element( skinIndexNode.z );
-		const boneMatW = boneMatrices.element( skinIndexNode.w );
-
-		// POSITION
+		const { bindMatrixNode, bindMatrixInverseNode } = this;
 
 		const skinVertex = bindMatrixNode.mul( position );
 
-		const skinned = add(
-			boneMatX.mul( skinWeightNode.x ).mul( skinVertex ),
-			boneMatY.mul( skinWeightNode.y ).mul( skinVertex ),
-			boneMatZ.mul( skinWeightNode.z ).mul( skinVertex ),
-			boneMatW.mul( skinWeightNode.w ).mul( skinVertex )
-		);
+		const skinned = add( ...this.getInfluences().flatMap( ( [ index, weight ] ) => INFLUENCE_LANES.map( ( lane ) => boneMatrices.element( index[ lane ] ).mul( weight[ lane ] ).mul( skinVertex ) ) ) );
 
 		return bindMatrixInverseNode.mul( skinned ).xyz;
 
@@ -154,21 +160,9 @@ class SkinningNode extends Node {
 	 */
 	getSkinnedNormal( boneMatrices = this.boneMatricesNode, normal = normalLocal ) {
 
-		const { skinIndexNode, skinWeightNode, bindMatrixNode, bindMatrixInverseNode } = this;
+		const { bindMatrixNode, bindMatrixInverseNode } = this;
 
-		const boneMatX = boneMatrices.element( skinIndexNode.x );
-		const boneMatY = boneMatrices.element( skinIndexNode.y );
-		const boneMatZ = boneMatrices.element( skinIndexNode.z );
-		const boneMatW = boneMatrices.element( skinIndexNode.w );
-
-		// NORMAL
-
-		let skinMatrix = add(
-			skinWeightNode.x.mul( boneMatX ),
-			skinWeightNode.y.mul( boneMatY ),
-			skinWeightNode.z.mul( boneMatZ ),
-			skinWeightNode.w.mul( boneMatW )
-		);
+		let skinMatrix = add( ...this.getInfluences().flatMap( ( [ index, weight ] ) => INFLUENCE_LANES.map( ( lane ) => weight[ lane ].mul( boneMatrices.element( index[ lane ] ) ) ) ) );
 
 		skinMatrix = bindMatrixInverseNode.mul( skinMatrix ).mul( bindMatrixNode );
 
@@ -205,6 +199,8 @@ class SkinningNode extends Node {
 	 * @return {Node<vec3>} The transformed vertex position.
 	 */
 	setup( builder ) {
+
+		while ( builder.hasGeometryAttribute( `skinIndex${ this.influenceSetCount }` ) ) this.influenceSetCount ++;
 
 		if ( builder.needsPreviousData() ) {
 
