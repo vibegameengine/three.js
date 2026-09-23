@@ -358,6 +358,7 @@ class WebGPUAttributeUtils {
 		const dstBuffer = new attribute.array.constructor( arrayBuffer.slice( 0 ) );
 
 		readBufferGPU.unmap();
+		readBufferGPU.destroy();
 
 		return dstBuffer.buffer;
 
