@@ -887,7 +887,7 @@ class RenderObject {
 
 		if ( culling !== null ) {
 
-			cacheKey = hash( cacheKey, culling.instanceIds.id );
+			cacheKey = hash( cacheKey, culling.instanceIds.id, culling.idBase );
 
 		}
 

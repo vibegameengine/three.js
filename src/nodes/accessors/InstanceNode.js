@@ -293,6 +293,16 @@ class InstanceNode extends Node {
 
 	}
 
+	_createInstanceIdNode( builder ) {
+
+		const culling = instanceCullingFor( builder.object, builder.camera );
+
+		if ( culling === null ) return instanceIndex;
+
+		return storage( culling.instanceIds, 'uint', culling.instanceIds.count ).element( instanceIndex.add( culling.idBase ) );
+
+	}
+
 	/**
 	 * Creates a node representing the instance matrix data.
 	 *
@@ -301,16 +311,6 @@ class InstanceNode extends Node {
 	 * @param {NodeBuilder} builder - A reference to the current node builder.
 	 * @return {Node} The instance matrix node.
 	 */
-	_createInstanceIdNode( builder ) {
-
-		const culling = instanceCullingFor( builder.object, builder.camera );
-
-		if ( culling === null ) return instanceIndex;
-
-		return storage( culling.instanceIds, 'uint', culling.instanceIds.count ).element( instanceIndex );
-
-	}
-
 	_createInstanceMatrixNode( assignBuffer, builder ) {
 
 		let instanceMatrixNode;

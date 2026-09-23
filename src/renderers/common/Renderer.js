@@ -653,8 +653,6 @@ class Renderer {
 		 */
 		this.opaque = true;
 
-		this.opaqueBreak = null;
-
 		/**
 		 * Shadow map configuration
 		 * @typedef {Object} ShadowMapConfig
@@ -1343,41 +1341,6 @@ class Renderer {
 	 * @param {boolean} [useFrameBufferTarget=true] - Whether to use a framebuffer target or not.
 	 * @return {RenderContext} The current render context.
 	 */
-	_resumeAfterOpaque( opaqueBreak, renderContext, pass ) {
-
-		const { scene, camera, renderTarget, sceneRef, lightsNode, opaqueObjects } = pass;
-
-		this.backend.finishRender( renderContext );
-		this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
-
-		opaqueBreak.afterOpaque( this );
-
-		const cleared = [ renderContext.clearColor, renderContext.clearDepth, renderContext.clearStencil ];
-		renderContext.clearColor = renderContext.clearDepth = renderContext.clearStencil = false;
-
-		const sceneName = scene.name;
-		scene.name = opaqueBreak.label;
-		this.info.render.frameCalls ++;
-		this.backend.updateTimeStampUID( renderContext );
-		this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), scene, camera, renderTarget );
-		scene.name = sceneName;
-
-		this.backend.beginRender( renderContext );
-
-		const redraw = opaqueObjects.filter( ( item ) => opaqueBreak.redraws( item.object ) );
-
-		if ( redraw.length > 0 ) {
-
-			opaqueBreak.beforeRedraw();
-			this._renderObjects( redraw, camera, sceneRef, lightsNode );
-			opaqueBreak.afterRedraw();
-
-		}
-
-		[ renderContext.clearColor, renderContext.clearDepth, renderContext.clearStencil ] = cleared;
-
-	}
-
 	_renderScene( scene, camera, useFrameBufferTarget = true ) {
 
 		if ( this._isDeviceLost === true ) return;
@@ -1612,15 +1575,6 @@ class Renderer {
 
 		if ( bundles.length > 0 ) this._renderBundles( bundles, sceneRef, lightsNode );
 		if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
-
-		const opaqueBreak = this.opaqueBreak;
-
-		if ( opaqueBreak !== null && opaqueBreak.camera === camera ) {
-
-			this._resumeAfterOpaque( opaqueBreak, renderContext, { scene, camera, renderTarget, sceneRef, lightsNode, opaqueObjects } );
-
-		}
-
 		if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
 
 		// finish render pass
