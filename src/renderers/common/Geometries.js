@@ -1,6 +1,7 @@
 import DataMap from './DataMap.js';
 import { AttributeType } from './Constants.js';
 import { arrayNeedsUint32 } from '../../utils.js';
+import { instanceCullingOf } from './InstanceCulling.js';
 
 import { Uint16BufferAttribute, Uint32BufferAttribute } from '../../core/BufferAttribute.js';
 
@@ -246,7 +247,7 @@ class Geometries extends DataMap {
 
 		// indirect
 
-		const indirect = renderObject.geometry.indirect;
+		const indirect = this.getIndirect( renderObject );
 
 		if ( indirect !== null ) {
 
@@ -306,6 +307,10 @@ class Geometries extends DataMap {
 	 */
 	getIndirect( renderObject ) {
 
+		const culling = instanceCullingOf( renderObject );
+
+		if ( culling !== null ) return culling.indirect;
+
 		return renderObject.geometry.indirect;
 
 	}
@@ -317,6 +322,10 @@ class Geometries extends DataMap {
 	 * @return {number} The byte offset into the indirect attribute buffer.
 	 */
 	getIndirectOffset( renderObject ) {
+
+		const culling = instanceCullingOf( renderObject );
+
+		if ( culling !== null ) return culling.indirectOffset;
 
 		return renderObject.geometry.indirectOffset;
 

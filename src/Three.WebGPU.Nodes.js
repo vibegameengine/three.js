@@ -13,6 +13,7 @@ export { default as StorageTexture } from './renderers/common/StorageTexture.js'
 export { default as StorageBufferAttribute } from './renderers/common/StorageBufferAttribute.js';
 export { default as StorageInstancedBufferAttribute } from './renderers/common/StorageInstancedBufferAttribute.js';
 export { default as IndirectStorageBufferAttribute } from './renderers/common/IndirectStorageBufferAttribute.js';
+export { instanceCullingFor } from './renderers/common/InstanceCulling.js';
 export { default as IESSpotLight } from './lights/webgpu/IESSpotLight.js';
 export { default as ProjectorLight } from './lights/webgpu/ProjectorLight.js';
 export { default as NodeLoader } from './loaders/nodes/NodeLoader.js';

@@ -1,4 +1,5 @@
 import { hash, hashString } from '../../nodes/core/NodeUtils.js';
+import { instanceCullingFor } from './InstanceCulling.js';
 
 let _id = 0;
 
@@ -879,6 +880,14 @@ class RenderObject {
 		if ( this.object.receiveShadow ) {
 
 			cacheKey = hash( cacheKey, 1 );
+
+		}
+
+		const culling = instanceCullingFor( this.object, this.camera );
+
+		if ( culling !== null ) {
+
+			cacheKey = hash( cacheKey, culling.instanceIds.id, culling.idBase );
 
 		}
 
