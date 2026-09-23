@@ -22,9 +22,12 @@ const INVALID = 2;
  * submitted on its own and can lose nothing but itself. Validity comes from the error
  * scope an object was created in: someone else's scope is read, not taken over, and where
  * there is none the queue opens its own and reports what it catches. A command buffer can
- * also be invalid from how it was encoded, which WebGPU reports only after the submit; if a
- * batch is ever rejected, that frame is lost and every later command buffer is submitted on
- * its own, which is what three did before this queue.
+ * also be invalid from how it was encoded, which WebGPU reports at finish(), after the
+ * submit has gone: the encoder's label is then marked broken and its later command buffers
+ * go out on their own (three labels encoders by render context and compute node, so the
+ * label names the same pass every frame; unlabelled encoders share the empty label). A
+ * rejected batch in which no encoder reported an error makes every later command buffer go
+ * out on its own, which is what three did before this queue.
  */
 class WebGPUCommandQueue {
 
@@ -41,6 +44,8 @@ class WebGPUCommandQueue {
 		this.textureOfView = new WeakMap();
 		this.recordings = new WeakMap();
 		this.scopes = [];
+		this.brokenLabels = new Set();
+		this.opaqueWaiting = false;
 		this.batching = true;
 		this.flushScheduled = false;
 		this.submits = 0;
@@ -75,7 +80,7 @@ class WebGPUCommandQueue {
 
 		queue.writeBuffer = ( buffer, ...rest ) => {
 
-			if ( this.referenced.has( buffer ) ) this.flush();
+			if ( this.opaqueWaiting || this.referenced.has( buffer ) ) this.flush();
 			return writeBuffer( buffer, ...rest );
 
 		};
@@ -128,6 +133,10 @@ class WebGPUCommandQueue {
 	}
 
 	installCreation( device ) {
+
+		const createQuerySet = device.createQuerySet.bind( device );
+
+		device.createQuerySet = ( descriptor ) => this.flushBeforeDestroy( createQuerySet( descriptor ) );
 
 		const createBindGroup = device.createBindGroup.bind( device );
 		const createBuffer = device.createBuffer.bind( device );
@@ -210,7 +219,7 @@ class WebGPUCommandQueue {
 
 		};
 
-		device.createCommandEncoder = ( descriptor ) => this.observeEncoder( createCommandEncoder( descriptor ) );
+		device.createCommandEncoder = ( descriptor ) => this.observeEncoder( createCommandEncoder( descriptor ), descriptor && descriptor.label ? descriptor.label : '' );
 
 	}
 
@@ -275,14 +284,14 @@ class WebGPUCommandQueue {
 
 	}
 
-	observeEncoder( encoder ) {
+	observeEncoder( encoder, label ) {
 
-		const recording = { references: new Set(), uses: new Set() };
+		const recording = { references: new Set(), uses: new Set(), groups: new Set(), opaque: false, label };
 		const use = ( object ) => { if ( object ) recording.uses.add( object ); };
 		const reference = ( buffer ) => { if ( buffer ) { recording.references.add( buffer ); recording.uses.add( buffer ); } };
 		const useView = ( view ) => { if ( view ) use( this.textureOfView.get( view ) ); };
 
-		after( encoder, 'beginComputePass', ( pass ) => this.observePass( pass, use, reference ) );
+		after( encoder, 'beginComputePass', ( pass ) => this.observePass( pass, false, recording, use, reference ) );
 
 		after( encoder, 'beginRenderPass', ( pass, descriptor ) => {
 
@@ -294,7 +303,7 @@ class WebGPUCommandQueue {
 
 			if ( descriptor.depthStencilAttachment ) useView( descriptor.depthStencilAttachment.view );
 
-			return this.observePass( pass, use, reference );
+			return this.observePass( pass, true, recording, use, reference );
 
 		} );
 
@@ -312,41 +321,80 @@ class WebGPUCommandQueue {
 		after( encoder, 'clearBuffer', ( result, buffer ) => { reference( buffer ); return result; } );
 		after( encoder, 'resolveQuerySet', ( result, querySet, firstQuery, queryCount, destination ) => { reference( destination ); return result; } );
 
-		after( encoder, 'finish', ( commandBuffer ) => {
+		const finish = encoder.finish.bind( encoder );
+
+		encoder.finish = ( ...args ) => {
+
+			this._pushErrorScope( 'validation' );
+			const commandBuffer = finish( ...args );
+
+			this._popErrorScope().then( ( error ) => {
+
+				if ( error === null || this.brokenLabels.has( label ) ) return;
+				this.brokenLabels.add( label );
+				console.error( `WebGPU: command encoder "${ label }" is invalid (${ error.message }); its command buffers are submitted on their own from now on.` );
+
+			} );
 
 			this.recordings.set( commandBuffer, recording );
 			return commandBuffer;
 
-		} );
+		};
 
 		return encoder;
 
 	}
 
-	observePass( pass, use, reference ) {
+	observePass( pass, isRenderPass, recording, use, reference ) {
 
-		after( pass, 'setPipeline', ( result, pipeline ) => { use( pipeline ); return result; } );
+		const setPipeline = pass.setPipeline.bind( pass );
+		const setBindGroup = pass.setBindGroup.bind( pass );
 
-		after( pass, 'setBindGroup', ( result, index, bindGroup ) => {
+		pass.setPipeline = ( pipeline ) => {
 
-			use( bindGroup );
-			for ( const buffer of this.buffersOfGroup.get( bindGroup ) || [] ) reference( buffer );
-			return result;
+			use( pipeline );
+			setPipeline( pipeline );
 
-		} );
+		};
 
-		after( pass, 'setVertexBuffer', ( result, slot, buffer ) => { reference( buffer ); return result; } );
-		after( pass, 'setIndexBuffer', ( result, buffer ) => { reference( buffer ); return result; } );
-		after( pass, 'dispatchWorkgroupsIndirect', ( result, buffer ) => { reference( buffer ); return result; } );
-		after( pass, 'drawIndirect', ( result, buffer ) => { reference( buffer ); return result; } );
-		after( pass, 'drawIndexedIndirect', ( result, buffer ) => { reference( buffer ); return result; } );
+		pass.setBindGroup = ( index, bindGroup, dynamicOffsets, start, length ) => {
 
-		after( pass, 'executeBundles', ( result, bundles ) => {
+			if ( bindGroup ) recording.groups.add( bindGroup );
 
-			for ( const bundle of bundles ) use( bundle );
-			return result;
+			if ( dynamicOffsets === undefined ) setBindGroup( index, bindGroup );
+			else if ( start === undefined ) setBindGroup( index, bindGroup, dynamicOffsets );
+			else setBindGroup( index, bindGroup, dynamicOffsets, start, length );
 
-		} );
+		};
+
+		if ( isRenderPass ) {
+
+			const setVertexBuffer = pass.setVertexBuffer.bind( pass );
+			const setIndexBuffer = pass.setIndexBuffer.bind( pass );
+			const drawIndirect = pass.drawIndirect.bind( pass );
+			const drawIndexedIndirect = pass.drawIndexedIndirect.bind( pass );
+			const executeBundles = pass.executeBundles.bind( pass );
+
+			pass.setVertexBuffer = ( slot, buffer, offset, size ) => { reference( buffer ); setVertexBuffer( slot, buffer, offset, size ); };
+			pass.setIndexBuffer = ( buffer, format, offset, size ) => { reference( buffer ); setIndexBuffer( buffer, format, offset, size ); };
+			pass.drawIndirect = ( buffer, offset ) => { reference( buffer ); drawIndirect( buffer, offset ); };
+			pass.drawIndexedIndirect = ( buffer, offset ) => { reference( buffer ); drawIndexedIndirect( buffer, offset ); };
+
+			pass.executeBundles = ( bundles ) => {
+
+				recording.opaque = true;
+				for ( const bundle of bundles ) use( bundle );
+				executeBundles( bundles );
+
+			};
+
+		} else {
+
+			const dispatchWorkgroupsIndirect = pass.dispatchWorkgroupsIndirect.bind( pass );
+
+			pass.dispatchWorkgroupsIndirect = ( buffer, offset ) => { reference( buffer ); dispatchWorkgroupsIndirect( buffer, offset ); };
+
+		}
 
 		return pass;
 
@@ -362,9 +410,18 @@ class WebGPUCommandQueue {
 
 				for ( const buffer of recording.references ) this.referenced.add( buffer );
 
+				for ( const bindGroup of recording.groups ) {
+
+					recording.uses.add( bindGroup );
+					for ( const buffer of this.buffersOfGroup.get( bindGroup ) || [] ) this.referenced.add( buffer );
+
+				}
+
+				if ( recording.opaque ) this.opaqueWaiting = true;
+
 			}
 
-			this.waiting.push( { commandBuffer, uses: recording === undefined ? null : recording.uses } );
+			this.waiting.push( { commandBuffer, uses: recording === undefined ? null : recording.uses, label: recording === undefined ? '' : recording.label } );
 
 		}
 
@@ -377,8 +434,9 @@ class WebGPUCommandQueue {
 
 	}
 
-	isTrusted( uses ) {
+	isTrusted( uses, label ) {
 
+		if ( this.brokenLabels.has( label ) ) return false;
 		if ( uses === null ) return true;
 
 		for ( const object of uses ) {
@@ -397,20 +455,21 @@ class WebGPUCommandQueue {
 		const waiting = this.waiting;
 		this.waiting = [];
 		this.referenced.clear();
+		this.opaqueWaiting = false;
 
 		let batch = [];
 
-		for ( const { commandBuffer, uses } of waiting ) {
+		for ( const entry of waiting ) {
 
-			if ( this.batching && this.isTrusted( uses ) ) {
+			if ( this.batching && this.isTrusted( entry.uses, entry.label ) ) {
 
-				batch.push( commandBuffer );
+				batch.push( entry );
 				continue;
 
 			}
 
 			if ( batch.length > 0 ) this.submitNow( batch );
-			this.submitNow( [ commandBuffer ] );
+			this.submitNow( [ entry ] );
 			batch = [];
 
 		}
@@ -419,11 +478,13 @@ class WebGPUCommandQueue {
 
 	}
 
-	submitNow( commandBuffers ) {
+	submitNow( entries ) {
+
+		const commandBuffers = entries.map( ( entry ) => entry.commandBuffer );
 
 		this.submits ++;
 
-		if ( commandBuffers.length === 1 ) {
+		if ( entries.length === 1 ) {
 
 			this._submit( commandBuffers );
 			return;
@@ -436,9 +497,10 @@ class WebGPUCommandQueue {
 		this._popErrorScope().then( ( error ) => {
 
 			if ( error === null || this.batching === false ) return;
+			if ( entries.some( ( entry ) => this.brokenLabels.has( entry.label ) ) ) return;
 
 			this.batching = false;
-			console.error( `WebGPU: a batched submit of ${ commandBuffers.length } command buffers was rejected (${ error.message }); every command buffer is submitted on its own from now on, so an invalid one loses only itself.` );
+			console.error( `WebGPU: a batched submit of ${ entries.length } command buffers was rejected (${ error.message }) and no encoder in it reported an error; every command buffer is submitted on its own from now on, so an invalid one loses only itself.` );
 
 		} );
 
