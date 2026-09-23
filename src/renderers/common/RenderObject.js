@@ -790,12 +790,6 @@ class RenderObject {
 
 		}
 
-		if ( instanceCullingFor( object, this.camera ) !== null ) {
-
-			cacheKey += 'instanceCulling,';
-
-		}
-
 		cacheKey += this.context.id + ',';
 
 		cacheKey += object.receiveShadow + ',';
@@ -886,6 +880,14 @@ class RenderObject {
 		if ( this.object.receiveShadow ) {
 
 			cacheKey = hash( cacheKey, 1 );
+
+		}
+
+		const culling = instanceCullingFor( this.object, this.camera );
+
+		if ( culling !== null ) {
+
+			cacheKey = hash( cacheKey, culling.instanceIds.id );
 
 		}
 

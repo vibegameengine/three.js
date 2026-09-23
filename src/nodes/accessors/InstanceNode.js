@@ -261,7 +261,11 @@ class InstanceNode extends Node {
 
 		if ( this.previousInstanceMatrixNode !== null ) {
 
-			frame.object.previousInstanceMatrix.array.set( this.instanceMatrix.array );
+			const previous = frame.object.previousInstanceMatrix;
+
+			previous.array.set( this.instanceMatrix.array );
+
+			if ( this.isStorageMatrix && previous.version !== this.instanceMatrix.version ) previous.version = this.instanceMatrix.version;
 
 		}
 
