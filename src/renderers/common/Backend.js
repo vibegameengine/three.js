@@ -194,10 +194,9 @@ class Backend {
 	 * @abstract
 	 * @param {BindGroup} bindGroup - The bind group.
 	 * @param {Array<BindGroup>} bindings - Array of bind groups.
-	 * @param {number} cacheIndex - The cache index.
-	 * @param {number} version - The version.
+	 * @param {string} [cacheKey] - The textures and samplers of this group, or '' to not cache.
 	 */
-	createBindings( /*bindGroup, bindings, cacheIndex, version*/ ) { }
+	createBindings( /*bindGroup, bindings, cacheKey*/ ) { }
 
 	/**
 	 * Updates the given bind group definition.
@@ -205,10 +204,9 @@ class Backend {
 	 * @abstract
 	 * @param {BindGroup} bindGroup - The bind group.
 	 * @param {Array<BindGroup>} bindings - Array of bind groups.
-	 * @param {number} cacheIndex - The cache index.
-	 * @param {number} version - The version.
+	 * @param {string} [cacheKey] - The textures and samplers of this group, or '' to not cache.
 	 */
-	updateBindings( /*bindGroup, bindings, cacheIndex, version*/ ) { }
+	updateBindings( /*bindGroup, bindings, cacheKey*/ ) { }
 
 	/**
 	 * Updates a buffer binding.

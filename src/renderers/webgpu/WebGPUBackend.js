@@ -1372,7 +1372,6 @@ class WebGPUBackend extends Backend {
 			const bindingsData = this.get( bindGroup );
 
 			passEncoderGPU.setBindGroup( i, bindingsData.group );
-			this.commandQueue.useBindGroup( bindingsData.group );
 
 		}
 
@@ -1389,7 +1388,6 @@ class WebGPUBackend extends Backend {
 			const dispatchBuffer = this.get( dispatchSize ).buffer;
 
 			passEncoderGPU.dispatchWorkgroupsIndirect( dispatchBuffer, 0 );
-			this.commandQueue.useBuffer( dispatchBuffer );
 
 			return;
 
@@ -1506,7 +1504,6 @@ class WebGPUBackend extends Backend {
 				if ( currentBindingGroups[ bindGroup.index ] !== bindGroup.id ) {
 
 					passEncoderGPU.setBindGroup( bindGroup.index, bindingsData.group );
-					this.commandQueue.useBindGroup( bindingsData.group );
 					currentBindingGroups[ bindGroup.index ] = bindGroup.id;
 
 				}
@@ -1525,7 +1522,6 @@ class WebGPUBackend extends Backend {
 					const indexFormat = ( index.array instanceof Uint16Array ) ? GPUIndexFormat.Uint16 : GPUIndexFormat.Uint32;
 
 					passEncoderGPU.setIndexBuffer( buffer, indexFormat );
-					this.commandQueue.useBuffer( buffer );
 
 					currentSets.index = index;
 
@@ -1544,7 +1540,6 @@ class WebGPUBackend extends Backend {
 
 					const buffer = this.get( vertexBuffer ).buffer;
 					passEncoderGPU.setVertexBuffer( i, buffer );
-					this.commandQueue.useBuffer( buffer );
 
 					currentSets.attributes[ i ] = vertexBuffer;
 
@@ -1619,8 +1614,6 @@ class WebGPUBackend extends Backend {
 
 					}
 
-					this.commandQueue.useBuffer( buffer );
-
 				} else {
 
 					passEncoderGPU.drawIndexed( indexCount, instanceCount, firstIndex, 0, 0 );
@@ -1646,8 +1639,6 @@ class WebGPUBackend extends Backend {
 						passEncoderGPU.drawIndirect( buffer, indirectOffsets[ i ] );
 
 					}
-
-					this.commandQueue.useBuffer( buffer );
 
 
 				} else {
@@ -1734,7 +1725,6 @@ class WebGPUBackend extends Backend {
 					if ( cameraIndex && cameraData.indexesGPU ) {
 
 						pass.setBindGroup( cameraIndex.index, cameraData.indexesGPU[ i ] );
-						this.commandQueue.useBindGroup( cameraData.indexesGPU[ i ] );
 						sets.bindingGroups[ cameraIndex.index ] = cameraIndex.id;
 
 					}
@@ -2140,12 +2130,11 @@ class WebGPUBackend extends Backend {
 	 *
 	 * @param {BindGroup} bindGroup - The bind group.
 	 * @param {Array<BindGroup>} bindings - Array of bind groups.
-	 * @param {number} cacheIndex - The cache index.
-	 * @param {number} version - The version.
+	 * @param {string} [cacheKey] - The textures and samplers of this group, or '' to not cache.
 	 */
-	createBindings( bindGroup, bindings, cacheIndex, version ) {
+	createBindings( bindGroup, bindings, cacheKey ) {
 
-		this.bindingUtils.createBindings( bindGroup, bindings, cacheIndex, version );
+		this.bindingUtils.createBindings( bindGroup, bindings, cacheKey );
 
 	}
 
@@ -2154,12 +2143,11 @@ class WebGPUBackend extends Backend {
 	 *
 	 * @param {BindGroup} bindGroup - The bind group.
 	 * @param {Array<BindGroup>} bindings - Array of bind groups.
-	 * @param {number} cacheIndex - The cache index.
-	 * @param {number} version - The version.
+	 * @param {string} [cacheKey] - The textures and samplers of this group, or '' to not cache.
 	 */
-	updateBindings( bindGroup, bindings, cacheIndex, version ) {
+	updateBindings( bindGroup, bindings, cacheKey ) {
 
-		this.bindingUtils.createBindings( bindGroup, bindings, cacheIndex, version );
+		this.bindingUtils.createBindings( bindGroup, bindings, cacheKey );
 
 	}
 

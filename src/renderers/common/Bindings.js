@@ -246,8 +246,7 @@ class Bindings extends DataMap {
 
 		let needsBindingsUpdate = false;
 		let cacheBindings = true;
-		let cacheIndex = 0;
-		let version = 0;
+		let cacheKey = '';
 
 		// iterate over all bindings and check if buffer updates or a new binding group is required
 
@@ -305,8 +304,6 @@ class Bindings extends DataMap {
 
 						needsBindingsUpdate = true;
 
-						cacheBindings = false;
-
 					}
 
 				}
@@ -319,8 +316,7 @@ class Bindings extends DataMap {
 
 				} else {
 
-					cacheIndex = cacheIndex * 10 + texture.id;
-					version += texture.version;
+					cacheKey += `${ texture.id }:${ texturesTextureData.generation }|`;
 
 				}
 
@@ -356,11 +352,11 @@ class Bindings extends DataMap {
 
 						needsBindingsUpdate = true;
 
-						cacheBindings = false;
-
 					}
 
 				}
+
+				cacheKey += `s${ binding.samplerKey }|`;
 
 			}
 
@@ -368,7 +364,7 @@ class Bindings extends DataMap {
 
 		if ( needsBindingsUpdate === true ) {
 
-			this.backend.updateBindings( bindGroup, bindings, cacheBindings ? cacheIndex : 0, version );
+			this.backend.updateBindings( bindGroup, bindings, cacheBindings ? cacheKey : '' );
 
 		}
 

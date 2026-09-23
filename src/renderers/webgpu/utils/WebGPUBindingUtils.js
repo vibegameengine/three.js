@@ -7,6 +7,8 @@ import { FloatType, IntType, UnsignedIntType } from '../../../constants.js';
 import { NodeAccess } from '../../../nodes/core/constants.js';
 import { isTypedArray, error } from '../../../utils.js';
 
+const MAX_CACHED_GROUPS = 16;
+
 /**
  * Class representing a WebGPU bind group layout.
  *
@@ -126,12 +128,16 @@ class WebGPUBindingUtils {
 	/**
 	 * Creates bindings from the given bind group definition.
 	 *
+	 * A bind group is kept per set of textures it was made with, keyed by each texture's id
+	 * and the generation of its GPU texture, so a binding that alternates between history
+	 * textures reuses the groups it already has, and a texture that was re-created gets a
+	 * new one.
+	 *
 	 * @param {BindGroup} bindGroup - The bind group.
 	 * @param {Array<BindGroup>} bindings - Array of bind groups.
-	 * @param {number} cacheIndex - The cache index.
-	 * @param {number} version - The version.
+	 * @param {string} [cacheKey=''] - The textures and samplers of this group, or '' to not cache.
 	 */
-	createBindings( bindGroup, bindings, cacheIndex, version = 0 ) {
+	createBindings( bindGroup, bindings, cacheKey = '' ) {
 
 		const { backend } = this;
 		const bindingsData = backend.get( bindGroup );
@@ -142,20 +148,11 @@ class WebGPUBindingUtils {
 
 		let bindGroupGPU;
 
-		if ( cacheIndex > 0 ) {
+		if ( cacheKey ) {
 
-			if ( bindingsData.groups === undefined ) {
+			if ( bindingsData.groups === undefined ) bindingsData.groups = new Map();
 
-				bindingsData.groups = [];
-				bindingsData.versions = [];
-
-			}
-
-			if ( bindingsData.versions[ cacheIndex ] === version ) {
-
-				bindGroupGPU = bindingsData.groups[ cacheIndex ];
-
-			}
+			bindGroupGPU = bindingsData.groups.get( cacheKey );
 
 		}
 
@@ -163,10 +160,11 @@ class WebGPUBindingUtils {
 
 			bindGroupGPU = this.createBindGroup( bindGroup, bindLayoutGPU );
 
-			if ( cacheIndex > 0 ) {
+			if ( cacheKey ) {
 
-				bindingsData.groups[ cacheIndex ] = bindGroupGPU;
-				bindingsData.versions[ cacheIndex ] = version;
+				if ( bindingsData.groups.size >= MAX_CACHED_GROUPS ) bindingsData.groups.clear();
+
+				bindingsData.groups.set( cacheKey, bindGroupGPU );
 
 			}
 
