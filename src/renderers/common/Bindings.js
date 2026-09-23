@@ -245,8 +245,6 @@ class Bindings extends DataMap {
 		const { backend } = this;
 
 		let needsBindingsUpdate = false;
-		let cacheBindings = true;
-		let cacheKey = '';
 
 		// iterate over all bindings and check if buffer updates or a new binding group is required
 
@@ -290,7 +288,7 @@ class Bindings extends DataMap {
 				const texture = binding.texture;
 				const texturesTextureData = this.textures.get( texture );
 
-				if ( updated ) {
+				if ( updated || texturesTextureData.initialized !== true ) {
 
 					// version: update the texture data or create a new one
 
@@ -298,25 +296,14 @@ class Bindings extends DataMap {
 
 					// generation: update the bindings if a new texture has been created
 
-					if ( binding.generation !== texturesTextureData.generation ) {
+					if ( binding.generation !== texturesTextureData.generation || binding.creation !== texturesTextureData.creation ) {
 
 						binding.generation = texturesTextureData.generation;
+						binding.creation = texturesTextureData.creation;
 
 						needsBindingsUpdate = true;
 
 					}
-
-				}
-
-				const textureData = backend.get( texture );
-
-				if ( textureData.externalTexture !== undefined || texturesTextureData.isDefaultTexture ) {
-
-					cacheBindings = false;
-
-				} else {
-
-					cacheKey += `${ texture.id }:${ texturesTextureData.generation }|`;
 
 				}
 
@@ -356,17 +343,51 @@ class Bindings extends DataMap {
 
 				}
 
-				cacheKey += `s${ binding.samplerKey }|`;
-
 			}
 
 		}
 
 		if ( needsBindingsUpdate === true ) {
 
-			this.backend.updateBindings( bindGroup, bindings, cacheBindings ? cacheKey : '' );
+			this.backend.updateBindings( bindGroup, bindings, this._cacheKey( bindGroup ) );
 
 		}
+
+	}
+
+	/**
+	 * The textures and samplers a bind group is made with: every texture by its id and the
+	 * GPU texture it currently has, every sampler by its key. Groups that bind an external
+	 * or a placeholder texture are not cached.
+	 *
+	 * @private
+	 * @param {BindGroup} bindGroup - The bind group.
+	 * @return {string} The key, or '' when the group must not be cached.
+	 */
+	_cacheKey( bindGroup ) {
+
+		let key = '';
+
+		for ( const binding of bindGroup.bindings ) {
+
+			if ( binding.isSampledTexture ) {
+
+				const texture = binding.texture;
+				const texturesTextureData = this.textures.get( texture );
+
+				if ( this.backend.get( texture ).externalTexture !== undefined || texturesTextureData.isDefaultTexture ) return '';
+
+				key += `${ texture.id }:${ texturesTextureData.creation }|`;
+
+			} else if ( binding.isSampler ) {
+
+				key += `s${ binding.samplerKey }|`;
+
+			}
+
+		}
+
+		return key;
 
 	}
 

@@ -8,6 +8,8 @@ import { warn } from '../../utils.js';
 
 const _size = /*@__PURE__*/ new Vector3();
 
+let gpuTextureCreations = 0;
+
 /**
  * This module manages the textures of the renderer.
  *
@@ -241,6 +243,7 @@ class Textures extends DataMap {
 			backend.createTexture( texture, options );
 
 			textureData.generation = texture.version;
+			textureData.creation = ++ gpuTextureCreations;
 
 		} else {
 
@@ -282,6 +285,7 @@ class Textures extends DataMap {
 
 						textureData.isDefaultTexture = false;
 						textureData.generation = texture.version;
+						textureData.creation = ++ gpuTextureCreations;
 
 					}
 
@@ -307,6 +311,7 @@ class Textures extends DataMap {
 
 				textureData.isDefaultTexture = true;
 				textureData.generation = texture.version;
+				textureData.creation = ++ gpuTextureCreations;
 
 			}
 
