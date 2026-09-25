@@ -144,6 +144,12 @@ class LightsNode extends Node {
 
 	}
 
+	getLightsCacheKey() {
+
+		return hashArray( [ this.getCacheKey(), this.customCacheKey() ] );
+
+	}
+
 	/**
 	 * Computes a hash value for identifying the current light nodes setup.
 	 *

@@ -427,7 +427,7 @@ class Nodes extends DataMap {
 			const environmentNode = this.getEnvironmentNode( scene );
 			const fogNode = this.getFogNode( scene );
 
-			if ( lightsNode ) _cacheKeyValues.push( lightsNode.getCacheKey( true ) );
+			if ( lightsNode ) _cacheKeyValues.push( lightsNode.getLightsCacheKey() );
 			if ( environmentNode ) _cacheKeyValues.push( environmentNode.getCacheKey() );
 			if ( fogNode ) _cacheKeyValues.push( fogNode.getCacheKey() );
 
