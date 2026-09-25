@@ -31,6 +31,14 @@ const typeArraysToVertexFormatPrefixForItemSize1 = new Map( [
 	[ Float32Array, 'float32' ]
 ] );
 
+const zeroFilledTypesUploadedAsIs = new Set( [ Float32Array, Uint32Array, Int32Array ] );
+
+function isZeroFilledOnGPU( bufferAttribute ) {
+
+	return zeroFilledTypesUploadedAsIs.has( bufferAttribute.zeroFilledType );
+
+}
+
 /**
  * A WebGPU backend utility module for managing shader attributes.
  *
@@ -69,7 +77,13 @@ class WebGPUAttributeUtils {
 
 		let buffer = bufferData.buffer;
 
-		if ( buffer === undefined ) {
+		if ( buffer === undefined && isZeroFilledOnGPU( bufferAttribute ) ) {
+
+			bufferData.buffer = this._createZeroFilledBuffer( bufferAttribute, bufferData, usage );
+
+			bufferAttribute.onUploadCallback();
+
+		} else if ( buffer === undefined ) {
 
 			const device = backend.device;
 
@@ -137,7 +151,28 @@ class WebGPUAttributeUtils {
 
 			bufferData.buffer = buffer;
 
+			bufferAttribute.onUploadCallback();
+
 		}
+
+	}
+
+	_createZeroFilledBuffer( bufferAttribute, bufferData, usage ) {
+
+		if ( bufferAttribute.itemSize === 3 ) {
+
+			bufferAttribute.itemSize = 4;
+			bufferData._force3to4BytesAlignment = true;
+
+		}
+
+		const byteLength = bufferAttribute.count * bufferAttribute.itemSize * bufferAttribute.zeroFilledType.BYTES_PER_ELEMENT;
+
+		return this.backend.device.createBuffer( {
+			label: bufferAttribute.name,
+			size: byteLength + ( ( 4 - ( byteLength % 4 ) ) % 4 ),
+			usage: usage
+		} );
 
 	}
 
@@ -226,6 +261,8 @@ class WebGPUAttributeUtils {
 			bufferAttribute.clearUpdateRanges();
 
 		}
+
+		bufferAttribute.onUploadCallback();
 
 	}
 

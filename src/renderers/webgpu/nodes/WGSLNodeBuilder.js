@@ -1687,8 +1687,8 @@ ${ flowData.code }
 		const isAttributeStructType = ( attribute.isBufferAttribute || attribute.isInstancedBufferAttribute ) && bufferNode.structTypeNode !== null;
 
 		const isStructArray =
-			( bufferNode.value && bufferNode.value.array ) &&
-			( typeof bufferNode.value.itemSize === 'number' && bufferNode.value.array.length > bufferNode.value.itemSize );
+			Boolean( bufferNode.value ) &&
+			( typeof bufferNode.value.itemSize === 'number' && bufferNode.value.count > 1 );
 
 		return isAttributeStructType && ! isStructArray;
 

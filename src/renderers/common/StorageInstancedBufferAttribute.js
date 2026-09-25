@@ -1,4 +1,5 @@
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
+import { deferZeroFilledArray } from './ZeroFilledArray.js';
 
 /**
  * This special type of instanced buffer attribute is intended for compute shaders.
@@ -26,9 +27,9 @@ class StorageInstancedBufferAttribute extends InstancedBufferAttribute {
 	 */
 	constructor( count, itemSize, typeClass = Float32Array ) {
 
-		const array = ArrayBuffer.isView( count ) ? count : new typeClass( count * itemSize );
+		const provided = ArrayBuffer.isView( count );
 
-		super( array, itemSize );
+		super( provided ? count : new typeClass( 0 ), itemSize );
 
 		/**
 		 * This flag can be used for type testing.
@@ -38,6 +39,10 @@ class StorageInstancedBufferAttribute extends InstancedBufferAttribute {
 		 * @default true
 		 */
 		this.isStorageInstancedBufferAttribute = true;
+
+		this.zeroFilledType = null;
+
+		if ( provided === false ) deferZeroFilledArray( this, count, typeClass );
 
 	}
 

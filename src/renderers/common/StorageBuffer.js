@@ -1,4 +1,5 @@
 import Buffer from './Buffer.js';
+import { getFloatLength } from './BufferUtils.js';
 
 /**
  * Represents a storage buffer binding type.
@@ -16,7 +17,7 @@ class StorageBuffer extends Buffer {
 	 */
 	constructor( name, attribute ) {
 
-		super( name, attribute ? attribute.array : null );
+		super( name, null );
 
 		/**
 		 * This flag can be used for type testing.
@@ -33,6 +34,18 @@ class StorageBuffer extends Buffer {
 		 * @default true
 		 */
 		this.isStorageBuffer = true;
+
+	}
+
+	get byteLength() {
+
+		return getFloatLength( this.attribute.array.byteLength );
+
+	}
+
+	get buffer() {
+
+		return this.attribute ? this.attribute.array : null;
 
 	}
 
