@@ -1206,7 +1206,7 @@ class Renderer {
 
 				const renderObject = renderObjects[ i ];
 
-				if ( this._nodes.needsRefresh( renderObject ) ) {
+				if ( this._nodes.needsRefresh( renderObject ) && this._refreshedWithMaterial( renderObject ) === false ) {
 
 					this._nodes.updateBefore( renderObject );
 
@@ -1502,7 +1502,7 @@ class Renderer {
 
 		renderList.finish();
 
-		if ( this.gpuScene !== null ) this._syncGpuScene( renderList );
+		if ( this.gpuScene !== null ) this._syncGpuScene( renderList, { topLevel: previousRenderContext === null, toScreen: outputRenderTarget === null } );
 
 		if ( this.sortObjects === true ) {
 
@@ -3222,13 +3222,35 @@ class Renderer {
 	 * @param {ClippingContext} clippingContext - The clipping context.
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 */
-	_syncGpuScene( renderList ) {
+	_syncGpuScene( renderList, { topLevel, toScreen } ) {
 
 		const gpuScene = this.gpuScene;
+		const frame = gpuScene.frameOf( {
+			frameId: this._nodes.nodeFrame.frameId,
+			animated: this._animation._animationLoop !== null,
+			topLevel,
+			toScreen
+		} );
 
-		gpuScene.syncRenderList( renderList, this._nodes.nodeFrame.frameId );
+		gpuScene.syncRenderList( renderList, frame );
 
 		if ( gpuScene.flush() === true ) this._attributes.update( gpuScene.records, AttributeType.STORAGE );
+
+	}
+
+	_refreshedWithMaterial( renderObject ) {
+
+		const shared = renderObject.getMaterialBindings();
+
+		if ( shared === null ) return false;
+
+		const renderId = this._nodes.nodeFrame.renderId;
+
+		if ( shared.renderId === renderId ) return true;
+
+		shared.renderId = renderId;
+
+		return false;
 
 	}
 
@@ -3240,7 +3262,7 @@ class Renderer {
 
 		//
 
-		const needsRefresh = this._nodes.needsRefresh( renderObject );
+		const needsRefresh = this._nodes.needsRefresh( renderObject ) && this._refreshedWithMaterial( renderObject ) === false;
 
 		if ( needsRefresh ) {
 
@@ -3250,6 +3272,10 @@ class Renderer {
 
 			this._nodes.updateForRender( renderObject );
 			this._bindings.updateForRender( renderObject );
+
+		} else if ( renderObject.materialBindings !== null ) {
+
+			this._geometries.updateForRender( renderObject );
 
 		}
 

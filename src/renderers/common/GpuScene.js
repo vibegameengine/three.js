@@ -27,7 +27,30 @@ class GpuScene {
 		this.dirtyFirst = Infinity;
 		this.dirtyLast = - 1;
 		this.grown = false;
+		this.frame = 0;
+		this.loopFrameId = - 1;
+		this.presented = false;
 		this.releaser = new FinalizationRegistry( ( id ) => this.release( id ) );
+
+	}
+
+	frameOf( { frameId, animated, topLevel, toScreen } ) {
+
+		if ( animated ) {
+
+			if ( frameId !== this.loopFrameId ) this.frame ++;
+			this.loopFrameId = frameId;
+
+		} else if ( topLevel && this.presented ) {
+
+			this.frame ++;
+			this.presented = false;
+
+		}
+
+		if ( topLevel && toScreen ) this.presented = true;
+
+		return this.frame;
 
 	}
 

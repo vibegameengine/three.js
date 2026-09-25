@@ -179,8 +179,13 @@ class Bindings extends DataMap {
 	deleteForRender( renderObject ) {
 
 		const bindings = renderObject.getBindings();
+		const shared = renderObject.materialBindings;
+
+		if ( shared !== null && renderObject.getNodeBuilderState().releaseBindings( renderObject.material, shared ) === false ) return;
 
 		for ( const bindGroup of bindings ) {
+
+			if ( shared !== null && bindGroup.bindings[ 0 ].groupNode.shared === true ) continue;
 
 			this.backend.deleteBindGroupData( bindGroup );
 			this.delete( bindGroup );

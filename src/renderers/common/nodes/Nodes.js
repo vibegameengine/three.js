@@ -6,6 +6,7 @@ import { cubeMapNode } from '../../../nodes/utils/CubeMapNode.js';
 import { NodeFrame } from '../../../nodes/Nodes.js';
 import { objectGroup, renderGroup, frameGroup, cubeTexture, texture, texture3D, vec3, fog, rangeFogFactor, densityFogFactor, reference, pmremTexture, screenUV } from '../../../nodes/TSL.js';
 import { builtin } from '../../../nodes/accessors/BuiltinNode.js';
+import { bindingsFollowMaterial } from '../../../nodes/accessors/GpuSceneNode.js';
 
 import { CubeUVReflectionMapping, EquirectangularReflectionMapping, EquirectangularRefractionMapping } from '../../../constants.js';
 import { hashArray } from '../../../nodes/core/NodeUtils.js';
@@ -307,6 +308,16 @@ class Nodes extends DataMap {
 	 * @return {NodeBuilderState} The node builder state.
 	 */
 	_createNodeBuilderState( nodeBuilder ) {
+
+		const nodeBuilderState = this._describeNodeBuilderState( nodeBuilder );
+
+		if ( this.renderer.gpuScene !== null && bindingsFollowMaterial( nodeBuilder.object, nodeBuilder ) ) nodeBuilderState.materialBindings = new WeakMap();
+
+		return nodeBuilderState;
+
+	}
+
+	_describeNodeBuilderState( nodeBuilder ) {
 
 		return new NodeBuilderState(
 			nodeBuilder.vertexShader,

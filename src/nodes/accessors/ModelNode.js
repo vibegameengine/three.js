@@ -34,6 +34,8 @@ class ModelNode extends Object3DNode {
 
 		super( scope );
 
+		this.isModelNode = true;
+
 	}
 
 	/**
@@ -54,13 +56,17 @@ class ModelNode extends Object3DNode {
 
 		if ( usesGpuScene( builder ) ) {
 
-			const fromGpuScene = gpuSceneScope( this.scope );
-
-			if ( fromGpuScene !== null ) return fromGpuScene;
+			if ( this.readsGpuScene() ) return gpuSceneScopes[ this.scope ]();
 
 		}
 
 		return super.setup( builder );
+
+	}
+
+	readsGpuScene() {
+
+		return Object.hasOwn( gpuSceneScopes, this.scope );
 
 	}
 
@@ -76,22 +82,15 @@ class ModelNode extends Object3DNode {
 
 }
 
-function gpuSceneScope( scope ) {
+const worldColumn = ( index ) => gpuSceneWorldMatrix.element( index ).xyz;
 
-	const world = gpuSceneWorldMatrix;
-
-	switch ( scope ) {
-
-		case Object3DNode.WORLD_MATRIX: return world;
-		case Object3DNode.POSITION: return world.element( 3 ).xyz;
-		case Object3DNode.SCALE: return vec3( length( world.element( 0 ).xyz ), length( world.element( 1 ).xyz ), length( world.element( 2 ).xyz ) );
-		case Object3DNode.DIRECTION: return normalize( world.element( 2 ).xyz );
-		case Object3DNode.VIEW_POSITION: return cameraViewMatrix.mul( vec4( world.element( 3 ).xyz, 1 ) ).xyz;
-		default: return null;
-
-	}
-
-}
+const gpuSceneScopes = {
+	[ Object3DNode.WORLD_MATRIX ]: () => gpuSceneWorldMatrix,
+	[ Object3DNode.POSITION ]: () => worldColumn( 3 ),
+	[ Object3DNode.SCALE ]: () => vec3( length( worldColumn( 0 ) ), length( worldColumn( 1 ) ), length( worldColumn( 2 ) ) ),
+	[ Object3DNode.DIRECTION ]: () => normalize( worldColumn( 2 ) ),
+	[ Object3DNode.VIEW_POSITION ]: () => cameraViewMatrix.mul( vec4( worldColumn( 3 ), 1 ) ).xyz
+};
 
 class ModelNormalMatrixNode extends Node {
 

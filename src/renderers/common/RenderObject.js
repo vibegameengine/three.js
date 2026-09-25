@@ -273,6 +273,8 @@ class RenderObject {
 		 */
 		this._bindings = null;
 
+		this.materialBindings = null;
+
 		/**
 		 * Reference to the node material observer.
 		 *
@@ -399,7 +401,24 @@ class RenderObject {
 	 */
 	getBindings() {
 
-		return this._bindings || ( this._bindings = this.getNodeBuilderState().createBindings() );
+		if ( this._bindings === null ) {
+
+			const nodeBuilderState = this.getNodeBuilderState();
+
+			this.materialBindings = nodeBuilderState.shareBindings( this.material );
+			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings();
+
+		}
+
+		return this._bindings;
+
+	}
+
+	getMaterialBindings() {
+
+		this.getBindings();
+
+		return this.materialBindings;
 
 	}
 

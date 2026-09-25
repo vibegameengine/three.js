@@ -107,6 +107,39 @@ class NodeBuilderState {
 		 */
 		this.usedTimes = 0;
 
+		this.materialBindings = null;
+
+	}
+
+	shareBindings( material ) {
+
+		if ( this.materialBindings === null ) return null;
+
+		let shared = this.materialBindings.get( material );
+
+		if ( shared === undefined ) {
+
+			shared = { bindings: this.createBindings(), users: 0, renderId: - 1 };
+			this.materialBindings.set( material, shared );
+
+		}
+
+		shared.users ++;
+
+		return shared;
+
+	}
+
+	releaseBindings( material, shared ) {
+
+		shared.users --;
+
+		if ( shared.users > 0 ) return false;
+
+		this.materialBindings.delete( material );
+
+		return true;
+
 	}
 
 	/**

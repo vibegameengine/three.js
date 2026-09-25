@@ -61,6 +61,8 @@ class VelocityNode extends TempNode {
 		 */
 		this.updateAfterType = NodeUpdateType.OBJECT;
 
+		this.isVelocityNode = true;
+
 		/**
 		 * Uniform node representing the previous model matrix in world space.
 		 *

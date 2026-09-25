@@ -2,6 +2,7 @@ import Node from '../core/Node.js';
 import BufferAttributeNode from './BufferAttributeNode.js';
 import { storage } from './StorageBufferNode.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
+import { NodeUpdateType } from '../core/constants.js';
 import { nodeImmutable, nodeObject, mat3, mat4, uint } from '../tsl/TSLBase.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout, gpuScenePrimitiveTemplate } from '../../renderers/common/GpuScene.js';
 
@@ -68,3 +69,31 @@ export const gpuScenePreviousWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuScene
 export const gpuSceneNormalMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'normal' );
 
 export const usesGpuScene = ( builder ) => builder.renderer.gpuScene !== null && builder.renderer.gpuScene !== undefined;
+
+export function bindingsFollowMaterial( object, { updateNodes, updateBeforeNodes, updateAfterNodes } ) {
+
+	if ( isPlainMesh( object ) === false ) return false;
+
+	return updateNodes.every( ( node ) => updatesFromMaterial( node, node.updateType, 'update' ) )
+		&& updateBeforeNodes.every( ( node ) => updatesFromMaterial( node, node.updateBeforeType, 'updateBefore' ) )
+		&& updateAfterNodes.every( ( node ) => updatesFromMaterial( node, node.updateAfterType, 'updateAfter' ) );
+
+}
+
+function isPlainMesh( object ) {
+
+	if ( object === null || object.isMesh !== true || object.isInstancedMesh === true || object.isSkinnedMesh === true || object.isBatchedMesh === true ) return false;
+
+	return Object.keys( object.geometry.morphAttributes ).length === 0;
+
+}
+
+function updatesFromMaterial( node, updateType, method ) {
+
+	if ( updateType !== NodeUpdateType.OBJECT ) return true;
+
+	if ( Object.hasOwn( node, method ) ) return false;
+
+	return node.isMaterialReferenceNode === true || node.isTextureNode === true || node.isVelocityNode === true || ( node.isModelNode === true && node.readsGpuScene() );
+
+}
