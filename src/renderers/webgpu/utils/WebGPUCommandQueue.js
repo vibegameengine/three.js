@@ -1,4 +1,5 @@
 export const CLEAN_FINISHES_TO_TRUST = 60;
+const SHARED_ENCODER_LABEL = 'frame';
 const REPEATED_FAILURE_REPORT = 300;
 const UNKNOWN = 0;
 const VALID = 1;
@@ -57,6 +58,10 @@ class WebGPUCommandQueue {
 		this.batching = true;
 		this.flushScheduled = false;
 		this.submits = 0;
+		this.open = null;
+		this.openPassEnded = 0;
+		this.passOpen = false;
+		this.splitPass = null;
 
 		const queue = device.queue;
 
@@ -74,6 +79,60 @@ class WebGPUCommandQueue {
 		this.installQueue( queue );
 		this.installErrorScopes( device );
 		this.installCreation( device );
+
+	}
+
+	openEncoder() {
+
+		if ( this.passOpen || this.batching === false || this.brokenLabels.has( SHARED_ENCODER_LABEL ) ) return null;
+
+		if ( this.open === null ) {
+
+			this.open = this.observeEncoder( this._createCommandEncoder( { label: SHARED_ENCODER_LABEL } ), SHARED_ENCODER_LABEL, true );
+			this.openPassEnded = 0;
+
+		}
+
+		return this.open;
+
+	}
+
+	finishOpen() {
+
+		const encoder = this.open;
+
+		if ( encoder === null ) return;
+
+		this.open = null;
+		this.passOpen = false;
+		this.add( [ encoder.finish() ] );
+
+	}
+
+	orderQueueWork() {
+
+		if ( this.open === null ) return;
+
+		if ( this.passOpen === false ) {
+
+			this.finishOpen();
+
+		} else if ( this.openPassEnded > 0 && this.splitPass !== null ) {
+
+			this.splitPass();
+
+		}
+
+	}
+
+	scheduleFlush() {
+
+		if ( this.flushScheduled === false ) {
+
+			this.flushScheduled = true;
+			queueMicrotask( this._scheduledFlush );
+
+		}
 
 	}
 
@@ -156,6 +215,8 @@ class WebGPUCommandQueue {
 		const createBuffer = device.createBuffer.bind( device );
 		const createTexture = device.createTexture.bind( device );
 		const createCommandEncoder = device.createCommandEncoder.bind( device );
+
+		this._createCommandEncoder = createCommandEncoder;
 
 		for ( const name of [ 'createRenderPipeline', 'createComputePipeline' ] ) {
 
@@ -376,7 +437,7 @@ class WebGPUCommandQueue {
 
 		resource.destroy = () => {
 
-			if ( this.waiting.length > 0 ) this.flush();
+			if ( this.waiting.length > 0 || this.open !== null ) this.flush();
 			destroy();
 
 		};
@@ -385,16 +446,24 @@ class WebGPUCommandQueue {
 
 	}
 
-	observeEncoder( encoder, label ) {
+	observeEncoder( encoder, label, shared = false ) {
 
-		const recording = { references: new Set(), uses: new Set(), groups: new Set(), bundles: [], opaque: false, label };
+		const recording = { references: new Set(), uses: new Set(), groups: new Set(), bundles: [], opaque: false, label, shared };
 		const use = ( object ) => { if ( object ) recording.uses.add( object ); };
-		const reference = ( buffer ) => { if ( buffer ) { recording.references.add( buffer ); recording.uses.add( buffer ); } };
+		const recordReference = ( buffer ) => { if ( buffer ) { recording.references.add( buffer ); recording.uses.add( buffer ); } };
+		const reference = shared ? ( buffer ) => { recordReference( buffer ); if ( this.passOpen === false ) this.referenceRecorded( recording ); } : recordReference;
 		const useView = ( view ) => { if ( view ) use( this.textureOfView.get( view ) ); };
 
-		after( encoder, 'beginComputePass', ( pass ) => this.observePass( pass, false, recording, use, reference ) );
+		after( encoder, 'beginComputePass', ( pass ) => {
+
+			if ( shared ) this.passOpen = true;
+			return this.observePass( pass, false, recording, use, recordReference );
+
+		} );
 
 		after( encoder, 'beginRenderPass', ( pass, descriptor ) => {
+
+			if ( shared ) this.passOpen = true;
 
 			for ( const attachment of descriptor.colorAttachments || [] ) {
 
@@ -404,7 +473,7 @@ class WebGPUCommandQueue {
 
 			if ( descriptor.depthStencilAttachment ) useView( descriptor.depthStencilAttachment.view );
 
-			return this.observePass( pass, true, recording, use, reference );
+			return this.observePass( pass, true, recording, use, recordReference );
 
 		} );
 
@@ -451,10 +520,53 @@ class WebGPUCommandQueue {
 
 	}
 
+	referenceRecorded( recording ) {
+
+		for ( const buffer of recording.references ) this.referenced.add( buffer );
+		recording.references.clear();
+
+		for ( const contents of recording.bundles ) {
+
+			const referenced = contents.referenced;
+			for ( let i = 0, l = referenced.length; i < l; i ++ ) this.referenced.add( referenced[ i ] );
+
+		}
+
+		recording.bundles.length = 0;
+
+		for ( const bindGroup of recording.groups ) {
+
+			recording.uses.add( bindGroup );
+			for ( const buffer of this.buffersOfGroup.get( bindGroup ) || [] ) this.referenced.add( buffer );
+
+		}
+
+		recording.groups.clear();
+
+		if ( recording.opaque ) this.opaqueWaiting = true;
+
+	}
+
 	observePass( pass, isRenderPass, recording, use, reference ) {
 
 		const setPipeline = pass.setPipeline.bind( pass );
 		const setBindGroup = pass.setBindGroup.bind( pass );
+
+		if ( recording.shared ) {
+
+			const end = pass.end.bind( pass );
+
+			pass.end = () => {
+
+				end();
+				this.passOpen = false;
+				this.openPassEnded ++;
+				this.referenceRecorded( recording );
+				this.scheduleFlush();
+
+			};
+
+		}
 
 		pass.setPipeline = ( pipeline ) => {
 
@@ -529,42 +641,24 @@ class WebGPUCommandQueue {
 
 	enqueue( commandBuffers ) {
 
+		this.orderQueueWork();
+		this.add( commandBuffers );
+
+	}
+
+	add( commandBuffers ) {
+
 		for ( const commandBuffer of commandBuffers ) {
 
 			const recording = this.recordings.get( commandBuffer );
 
-			if ( recording !== undefined ) {
-
-				for ( const buffer of recording.references ) this.referenced.add( buffer );
-
-				for ( const contents of recording.bundles ) {
-
-					const referenced = contents.referenced;
-					for ( let i = 0, l = referenced.length; i < l; i ++ ) this.referenced.add( referenced[ i ] );
-
-				}
-
-				for ( const bindGroup of recording.groups ) {
-
-					recording.uses.add( bindGroup );
-					for ( const buffer of this.buffersOfGroup.get( bindGroup ) || [] ) this.referenced.add( buffer );
-
-				}
-
-				if ( recording.opaque ) this.opaqueWaiting = true;
-
-			}
+			if ( recording !== undefined ) this.referenceRecorded( recording );
 
 			this.waiting.push( { commandBuffer, uses: recording === undefined ? null : recording.uses, label: recording === undefined ? '' : recording.label } );
 
 		}
 
-		if ( this.flushScheduled === false ) {
-
-			this.flushScheduled = true;
-			queueMicrotask( this._scheduledFlush );
-
-		}
+		this.scheduleFlush();
 
 	}
 
@@ -591,6 +685,8 @@ class WebGPUCommandQueue {
 	}
 
 	flush() {
+
+		this.orderQueueWork();
 
 		const waiting = this.waiting;
 		this.waiting = [];

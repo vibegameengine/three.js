@@ -726,11 +726,20 @@ class WebGPUBackend extends Backend {
 
 		//
 
-		const encoder = device.createCommandEncoder( { label: 'renderContext_' + renderContext.id } );
+		const deferred = occlusionQueryCount === 0 && ! this._isRenderCameraDepthArray( renderContext );
+		const encoder = deferred ? null : device.createCommandEncoder( { label: 'renderContext_' + renderContext.id } );
+
+		renderContextData.passPending = deferred;
+		renderContextData.sharedEncoder = false;
+		renderContextData.renderContext = renderContext;
 
 		// shadow arrays - prepare bundle encoders for each camera in an array camera
 
-		if ( this._isRenderCameraDepthArray( renderContext ) === true ) {
+		if ( deferred ) {
+
+			renderContextData.currentPass = null;
+
+		} else if ( this._isRenderCameraDepthArray( renderContext ) === true ) {
 
 			const cameras = renderContext.camera.cameras;
 
@@ -797,7 +806,67 @@ class WebGPUBackend extends Backend {
 		renderContextData.encoder = encoder;
 		renderContextData.currentSets = { attributes: {}, bindingGroups: [], pipeline: null, index: null };
 		renderContextData.renderBundles = [];
-		renderContextData.cachedDraws = renderContextData.currentPass ? [] : undefined;
+		renderContextData.cachedDraws = renderContextData.currentPass || deferred ? [] : undefined;
+
+	}
+
+	_beginPendingPass( renderContextData ) {
+
+		if ( renderContextData.passPending !== true ) return;
+
+		renderContextData.passPending = false;
+
+		const renderContext = renderContextData.renderContext;
+		const shared = this.commandQueue.openEncoder();
+		const encoder = shared ?? this.device.createCommandEncoder( { label: 'renderContext_' + renderContext.id } );
+
+		renderContextData.encoder = encoder;
+		renderContextData.sharedEncoder = shared !== null;
+		this._startRenderPass( renderContextData, renderContextData.descriptor );
+
+		if ( shared !== null ) this.commandQueue.splitPass = () => this._splitRenderPass( renderContextData );
+
+	}
+
+	_startRenderPass( renderContextData, descriptor ) {
+
+		const renderContext = renderContextData.renderContext;
+
+		renderContextData.currentPass = renderContextData.encoder.beginRenderPass( descriptor );
+		renderContextData.currentSets = { attributes: {}, bindingGroups: [], pipeline: null, index: null };
+
+		if ( renderContext.viewport ) this.updateViewport( renderContext );
+		if ( renderContext.scissor ) this.updateScissor( renderContext );
+
+	}
+
+	_splitRenderPass( renderContextData ) {
+
+		this._executeCachedDraws( renderContextData );
+		renderContextData.currentPass.end();
+		this.commandQueue.finishOpen();
+
+		const descriptor = renderContextData.descriptor;
+		const depthStencil = descriptor.depthStencilAttachment;
+		const continuation = {
+			label: descriptor.label,
+			colorAttachments: descriptor.colorAttachments.map( ( attachment ) => attachment ? { ...attachment, loadOp: GPULoadOp.Load } : attachment )
+		};
+
+		if ( depthStencil ) {
+
+			continuation.depthStencilAttachment = { ...depthStencil };
+			if ( depthStencil.depthLoadOp !== undefined ) continuation.depthStencilAttachment.depthLoadOp = GPULoadOp.Load;
+			if ( depthStencil.stencilLoadOp !== undefined ) continuation.depthStencilAttachment.stencilLoadOp = GPULoadOp.Load;
+
+		}
+
+		const shared = this.commandQueue.openEncoder();
+
+		renderContextData.encoder = shared ?? this.device.createCommandEncoder( { label: 'renderContext_' + renderContextData.renderContext.id } );
+		renderContextData.sharedEncoder = shared !== null;
+		if ( shared === null ) this.commandQueue.splitPass = null;
+		this._startRenderPass( renderContextData, continuation );
 
 	}
 
@@ -941,6 +1010,7 @@ class WebGPUBackend extends Backend {
 		const renderContextData = this.get( renderContext );
 		const occlusionQueryCount = renderContext.occlusionQueryCount;
 
+		this._beginPendingPass( renderContextData );
 		this._executeCachedDraws( renderContextData );
 
 		if ( renderContextData.renderBundles.length > 0 ) {
@@ -1047,8 +1117,15 @@ class WebGPUBackend extends Backend {
 
 		}
 
-		this.device.queue.submit( [ renderContextData.encoder.finish() ] );
+		if ( renderContextData.sharedEncoder === true ) {
 
+			this.commandQueue.splitPass = null;
+
+		} else {
+
+			this.device.queue.submit( [ renderContextData.encoder.finish() ] );
+
+		}
 
 		//
 
@@ -1345,9 +1422,38 @@ class WebGPUBackend extends Backend {
 
 		this.initTimestampQuery( TimestampQuery.COMPUTE, this.getTimestampUID( computeGroup ), descriptor );
 
-		groupGPU.cmdEncoderGPU = this.device.createCommandEncoder( { label: 'computeGroup_' + computeGroup.id } );
+		groupGPU.computeDescriptor = descriptor;
+		groupGPU.cmdEncoderGPU = null;
+		groupGPU.passEncoderGPU = null;
+		groupGPU.sharedEncoder = false;
 
-		groupGPU.passEncoderGPU = groupGPU.cmdEncoderGPU.beginComputePass( descriptor );
+	}
+
+	_beginPendingCompute( computeGroup, groupGPU ) {
+
+		if ( groupGPU.passEncoderGPU !== null ) return;
+
+		const shared = this.commandQueue.openEncoder();
+
+		groupGPU.cmdEncoderGPU = shared ?? this.device.createCommandEncoder( { label: 'computeGroup_' + computeGroup.id } );
+		groupGPU.sharedEncoder = shared !== null;
+		groupGPU.passEncoderGPU = groupGPU.cmdEncoderGPU.beginComputePass( groupGPU.computeDescriptor );
+
+		if ( shared !== null ) this.commandQueue.splitPass = () => this._splitComputePass( computeGroup, groupGPU );
+
+	}
+
+	_splitComputePass( computeGroup, groupGPU ) {
+
+		groupGPU.passEncoderGPU.end();
+		this.commandQueue.finishOpen();
+
+		const shared = this.commandQueue.openEncoder();
+
+		groupGPU.cmdEncoderGPU = shared ?? this.device.createCommandEncoder( { label: 'computeGroup_' + computeGroup.id } );
+		groupGPU.sharedEncoder = shared !== null;
+		if ( shared === null ) this.commandQueue.splitPass = null;
+		groupGPU.passEncoderGPU = groupGPU.cmdEncoderGPU.beginComputePass( { label: groupGPU.computeDescriptor.label } );
 
 	}
 
@@ -1366,7 +1472,9 @@ class WebGPUBackend extends Backend {
 	compute( computeGroup, computeNode, bindings, pipeline, dispatchSize = null ) {
 
 		const computeNodeData = this.get( computeNode );
-		const { passEncoderGPU } = this.get( computeGroup );
+		const groupGPU = this.get( computeGroup );
+		this._beginPendingCompute( computeGroup, groupGPU );
+		const { passEncoderGPU } = groupGPU;
 
 		// pipeline
 
@@ -1466,9 +1574,20 @@ class WebGPUBackend extends Backend {
 
 		const groupData = this.get( computeGroup );
 
+		if ( groupData.passEncoderGPU === null && groupData.computeDescriptor.timestampWrites === undefined ) return;
+
+		this._beginPendingCompute( computeGroup, groupData );
 		groupData.passEncoderGPU.end();
 
-		this.device.queue.submit( [ groupData.cmdEncoderGPU.finish() ] );
+		if ( groupData.sharedEncoder === true ) {
+
+			this.commandQueue.splitPass = null;
+
+		} else {
+
+			this.device.queue.submit( [ groupData.cmdEncoderGPU.finish() ] );
+
+		}
 
 	}
 
@@ -1485,6 +1604,7 @@ class WebGPUBackend extends Backend {
 		const { object, material, context, pipeline } = renderObject;
 		const bindings = renderObject.getBindings();
 		const renderContextData = this.get( context );
+		this._beginPendingPass( renderContextData );
 		const pipelineData = this.get( pipeline );
 		const pipelineGPU = pipelineData.pipeline;
 
@@ -2194,6 +2314,7 @@ class WebGPUBackend extends Backend {
 
 		const renderContextData = this.get( renderContext );
 
+		this._beginPendingPass( renderContextData );
 		renderContextData._currentPass = renderContextData.currentPass;
 		renderContextData._currentSets = renderContextData.currentSets;
 
@@ -2503,6 +2624,8 @@ class WebGPUBackend extends Backend {
 	copyFramebufferToTexture( texture, renderContext, rectangle ) {
 
 		const renderContextData = this.get( renderContext );
+
+		this._beginPendingPass( renderContextData );
 
 		let sourceGPU = null;
 
