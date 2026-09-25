@@ -8,6 +8,7 @@ import { uniform } from '../core/UniformNode.js';
 import { sub } from '../math/OperatorNode.js';
 import { cameraProjectionMatrix } from './Camera.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
+import { gpuScenePreviousWorldMatrix, usesGpuScene } from './GpuSceneNode.js';
 
 const _objectData = new WeakMap();
 
@@ -82,7 +83,7 @@ class VelocityNode extends TempNode {
 		 * @type {UniformNode<mat4>}
 		 * @default null
 		 */
-		this.previousCameraViewMatrix = uniform( new Matrix4() );
+		this.previousCameraViewMatrix = uniform( new Matrix4() ).setGroup( renderGroup );
 
 	}
 
@@ -102,11 +103,9 @@ class VelocityNode extends TempNode {
 	 *
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 */
-	update( { frameId, camera, object } ) {
+	update( { frameId, camera, object, renderer } ) {
 
-		const previousModelMatrix = getPreviousMatrix( object );
-
-		this.previousModelWorldMatrix.value.copy( previousModelMatrix );
+		if ( renderer.gpuScene == null ) this.previousModelWorldMatrix.value.copy( getPreviousMatrix( object ) );
 
 		//
 
@@ -149,9 +148,9 @@ class VelocityNode extends TempNode {
 	 *
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 */
-	updateAfter( { object } ) {
+	updateAfter( { object, renderer } ) {
 
-		getPreviousMatrix( object ).copy( object.matrixWorld );
+		if ( renderer.gpuScene == null ) getPreviousMatrix( object ).copy( object.matrixWorld );
 
 	}
 
@@ -161,11 +160,13 @@ class VelocityNode extends TempNode {
 	 * @param {NodeBuilder} builder - A reference to the current node builder.
 	 * @return {Node<vec2>} The motion vector.
 	 */
-	setup( /*builder*/ ) {
+	setup( builder ) {
 
 		const projectionMatrix = ( this.projectionMatrix === null ) ? cameraProjectionMatrix : uniform( this.projectionMatrix );
 
-		const previousModelViewMatrix = this.previousCameraViewMatrix.mul( this.previousModelWorldMatrix );
+		const previousModelWorldMatrix = usesGpuScene( builder ) ? gpuScenePreviousWorldMatrix : this.previousModelWorldMatrix;
+
+		const previousModelViewMatrix = this.previousCameraViewMatrix.mul( previousModelWorldMatrix );
 
 		const clipPositionCurrent = projectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
 		const clipPositionPrevious = this.previousProjectionMatrix.mul( previousModelViewMatrix ).mul( positionPrevious );

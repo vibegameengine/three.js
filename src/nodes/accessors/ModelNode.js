@@ -1,5 +1,8 @@
 import Object3DNode from './Object3DNode.js';
-import { Fn, nodeImmutable } from '../tsl/TSLBase.js';
+import Node from '../core/Node.js';
+import { Fn, nodeImmutable, vec3, vec4 } from '../tsl/TSLBase.js';
+import { length, normalize } from '../math/MathNode.js';
+import { gpuSceneWorldMatrix, gpuSceneNormalMatrix, usesGpuScene } from './GpuSceneNode.js';
 import { uniform } from '../core/UniformNode.js';
 
 import { Matrix4 } from '../../math/Matrix4.js';
@@ -44,6 +47,69 @@ class ModelNode extends Object3DNode {
 		this.object3d = frame.object;
 
 		super.update( frame );
+
+	}
+
+	setup( builder ) {
+
+		if ( usesGpuScene( builder ) ) {
+
+			const fromGpuScene = gpuSceneScope( this.scope );
+
+			if ( fromGpuScene !== null ) return fromGpuScene;
+
+		}
+
+		return super.setup( builder );
+
+	}
+
+	generate( builder, output ) {
+
+		const { outputNode } = builder.getNodeProperties( this );
+
+		if ( outputNode && outputNode.isNode === true ) return outputNode.build( builder, output );
+
+		return super.generate( builder );
+
+	}
+
+}
+
+function gpuSceneScope( scope ) {
+
+	const world = gpuSceneWorldMatrix;
+
+	switch ( scope ) {
+
+		case Object3DNode.WORLD_MATRIX: return world;
+		case Object3DNode.POSITION: return world.element( 3 ).xyz;
+		case Object3DNode.SCALE: return vec3( length( world.element( 0 ).xyz ), length( world.element( 1 ).xyz ), length( world.element( 2 ).xyz ) );
+		case Object3DNode.DIRECTION: return normalize( world.element( 2 ).xyz );
+		case Object3DNode.VIEW_POSITION: return cameraViewMatrix.mul( vec4( world.element( 3 ).xyz, 1 ) ).xyz;
+		default: return null;
+
+	}
+
+}
+
+class ModelNormalMatrixNode extends Node {
+
+	static get type() {
+
+		return 'ModelNormalMatrixNode';
+
+	}
+
+	constructor() {
+
+		super( 'mat3' );
+
+	}
+
+	setup( builder ) {
+
+		return usesGpuScene( builder ) ? gpuSceneNormalMatrix : modelNormalMatrixUniform;
 
 	}
 
@@ -105,7 +171,9 @@ export const modelRadius = /*@__PURE__*/ nodeImmutable( ModelNode, ModelNode.RAD
  * @tsl
  * @type {UniformNode<mat3>}
  */
-export const modelNormalMatrix = /*@__PURE__*/ uniform( new Matrix3() ).onObjectUpdate( ( { object }, self ) => self.value.getNormalMatrix( object.matrixWorld ) );
+const modelNormalMatrixUniform = /*@__PURE__*/ uniform( new Matrix3() ).onObjectUpdate( ( { object }, self ) => self.value.getNormalMatrix( object.matrixWorld ) );
+
+export const modelNormalMatrix = /*@__PURE__*/ nodeImmutable( ModelNormalMatrixNode );
 
 /**
  * TSL object that represents the object's inverse world matrix.

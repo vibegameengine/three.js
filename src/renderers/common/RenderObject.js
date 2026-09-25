@@ -508,6 +508,8 @@ class RenderObject {
 				// node attribute
 				attribute = nodeAttribute.node.attribute;
 
+				if ( attribute.isGpuScenePrimitiveTemplate === true ) attribute = this.renderer.gpuScene.primitiveAttribute( this.object );
+
 			} else {
 
 				// geometry attribute

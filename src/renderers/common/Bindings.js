@@ -266,6 +266,13 @@ class Bindings extends DataMap {
 
 			if ( binding.isStorageBuffer ) {
 
+				if ( binding.nodeUniform && binding.nodeUniform.value !== binding.attribute ) {
+
+					binding.attribute = binding.nodeUniform.value;
+					needsBindingsUpdate = true;
+
+				}
+
 				const attribute = binding.attribute;
 				const attributeType = attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE;
 
@@ -405,6 +412,10 @@ class Bindings extends DataMap {
 			} else if ( binding.isSampler ) {
 
 				key += `s${ binding.samplerKey }|`;
+
+			} else if ( binding.isStorageBuffer ) {
+
+				key += `b${ binding.attribute.id }|`;
 
 			}
 

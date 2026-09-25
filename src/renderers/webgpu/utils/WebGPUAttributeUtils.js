@@ -258,6 +258,11 @@ class WebGPUAttributeUtils {
 					arrayStride = geometryAttribute.data.stride * bytesPerElement;
 					stepMode = geometryAttribute.data.isInstancedInterleavedBuffer ? GPUInputStepMode.Instance : GPUInputStepMode.Vertex;
 
+				} else if ( geometryAttribute.isGpuScenePrimitive === true ) {
+
+					arrayStride = 0;
+					stepMode = GPUInputStepMode.Instance;
+
 				} else {
 
 					arrayStride = geometryAttribute.itemSize * bytesPerElement;

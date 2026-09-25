@@ -19,6 +19,7 @@ import Lighting from './Lighting.js';
 import XRManager from './XRManager.js';
 import InspectorBase from './InspectorBase.js';
 import CanvasTarget from './CanvasTarget.js';
+import { AttributeType } from './Constants.js';
 
 import NodeMaterial from '../../materials/nodes/NodeMaterial.js';
 
@@ -564,6 +565,8 @@ class Renderer {
 		 * @default null
 		 */
 		this._handleObjectFunction = this._renderObjectDirect;
+
+		this.gpuScene = null;
 
 		/**
 		 * Indicates whether the device has been lost or not. In WebGL terms, the device
@@ -1498,6 +1501,8 @@ class Renderer {
 		this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext );
 
 		renderList.finish();
+
+		if ( this.gpuScene !== null ) this._syncGpuScene( renderList );
 
 		if ( this.sortObjects === true ) {
 
@@ -3217,6 +3222,16 @@ class Renderer {
 	 * @param {ClippingContext} clippingContext - The clipping context.
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 */
+	_syncGpuScene( renderList ) {
+
+		const gpuScene = this.gpuScene;
+
+		gpuScene.syncRenderList( renderList, this._nodes.nodeFrame.frameId );
+
+		if ( gpuScene.flush() === true ) this._attributes.update( gpuScene.records, AttributeType.STORAGE );
+
+	}
+
 	_renderObjectDirect( object, material, scene, camera, lightsNode, group, clippingContext, passId ) {
 
 		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId );
