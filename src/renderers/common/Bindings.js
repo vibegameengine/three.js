@@ -217,6 +217,11 @@ class Bindings extends DataMap {
 
 				this.textures.updateTexture( binding.texture );
 
+				const texturesTextureData = this.textures.get( binding.texture );
+
+				binding.generation = texturesTextureData.generation;
+				binding.creation = texturesTextureData.creation;
+
 			} else if ( binding.isSampler ) {
 
 				this.textures.updateSampler( binding.texture );
@@ -294,16 +299,16 @@ class Bindings extends DataMap {
 
 					this.textures.updateTexture( texture );
 
-					// generation: update the bindings if a new texture has been created
+				}
 
-					if ( binding.generation !== texturesTextureData.generation || binding.creation !== texturesTextureData.creation ) {
+				// generation: update the bindings if a new texture has been created, here or by another group
 
-						binding.generation = texturesTextureData.generation;
-						binding.creation = texturesTextureData.creation;
+				if ( binding.generation !== texturesTextureData.generation || binding.creation !== texturesTextureData.creation ) {
 
-						needsBindingsUpdate = true;
+					binding.generation = texturesTextureData.generation;
+					binding.creation = texturesTextureData.creation;
 
-					}
+					needsBindingsUpdate = true;
 
 				}
 
@@ -349,7 +354,25 @@ class Bindings extends DataMap {
 
 		if ( needsBindingsUpdate === true ) {
 
+			this._recreateDestroyedSamplers( bindGroup );
+
 			this.backend.updateBindings( bindGroup, bindings, this._cacheKey( bindGroup ) );
+
+		}
+
+	}
+
+	_recreateDestroyedSamplers( bindGroup ) {
+
+		for ( const binding of bindGroup.bindings ) {
+
+			if ( binding.isSampler !== true || binding.isSampledTexture === true ) continue;
+
+			if ( this.backend.get( binding.texture ).sampler === undefined ) {
+
+				binding.samplerKey = this.textures.updateSampler( binding.texture );
+
+			}
 
 		}
 
