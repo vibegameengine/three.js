@@ -70,6 +70,9 @@ class Nodes extends DataMap {
 		 */
 		this.callHashCache = new ChainMap();
 
+		this.sharedBindGroups = new Map();
+		this.sharedUniformBuffers = new Map();
+
 		/**
 		 * A cache for managing node uniforms group data.
 		 *
@@ -311,9 +314,53 @@ class Nodes extends DataMap {
 
 		const nodeBuilderState = this._describeNodeBuilderState( nodeBuilder );
 
-		if ( this.renderer.gpuScene !== null && bindingsFollowMaterial( nodeBuilder.object, nodeBuilder ) ) nodeBuilderState.materialBindings = new WeakMap();
+		if ( this.renderer.gpuScene === null || nodeBuilder.material === null ) return nodeBuilderState;
+
+		nodeBuilderState.bindings = nodeBuilderState.bindings.map( ( bindGroup ) => this._shareAcrossStates( bindGroup ) );
+
+		if ( bindingsFollowMaterial( nodeBuilder.object, nodeBuilder ) ) nodeBuilderState.materialBindings = new WeakMap();
 
 		return nodeBuilderState;
+
+	}
+
+	_shareAcrossStates( bindGroup ) {
+
+		if ( bindGroup.bindings[ 0 ].groupNode.shared !== true ) return bindGroup;
+
+		const signature = bindGroupSignature( bindGroup );
+		const known = signature === null ? undefined : this.sharedBindGroups.get( signature );
+
+		if ( known !== undefined ) return known;
+
+		this._shareUniformBuffers( bindGroup );
+
+		if ( signature !== null ) {
+
+			bindGroup.sharedAcrossStates = true;
+			this.sharedBindGroups.set( signature, bindGroup );
+
+		}
+
+		return bindGroup;
+
+	}
+
+	_shareUniformBuffers( bindGroup ) {
+
+		const { bindings } = bindGroup;
+
+		for ( let i = 0; i < bindings.length; i ++ ) {
+
+			if ( bindings[ i ].isNodeUniformsGroup !== true ) continue;
+
+			const signature = `${ bindings[ i ].groupNode.name }|${ bindings[ i ].visibility }:${ bindingSignature( bindings[ i ] ) }`;
+			const shared = this.sharedUniformBuffers.get( signature );
+
+			if ( shared === undefined ) this.sharedUniformBuffers.set( signature, bindings[ i ] );
+			else bindings[ i ] = shared;
+
+		}
 
 	}
 
@@ -842,9 +889,41 @@ class Nodes extends DataMap {
 
 		this.nodeFrame = new NodeFrame();
 		this.nodeBuilderCache = new Map();
+		this.sharedBindGroups = new Map();
+		this.sharedUniformBuffers = new Map();
 		this.cacheLib = {};
 
 	}
+
+}
+
+export function bindGroupSignature( bindGroup ) {
+
+	let signature = `${ bindGroup.name }@${ bindGroup.index }`;
+
+	for ( const binding of bindGroup.bindings ) {
+
+		const part = bindingSignature( binding );
+
+		if ( part === null ) return null;
+
+		signature += `|${ binding.visibility }:${ part }`;
+
+	}
+
+	return signature;
+
+}
+
+function bindingSignature( binding ) {
+
+	if ( binding.isNodeUniformsGroup === true ) return 'u' + binding.uniforms.map( ( uniform ) => `${ uniform.nodeUniform.node.id }:${ uniform.nodeUniform.type }` ).join( ',' );
+	if ( binding.isStorageBuffer === true ) return `s${ binding.nodeUniform.id }:${ binding.access }`;
+	if ( binding.isUniformBuffer === true && binding.nodeUniform !== undefined ) return `b${ binding.nodeUniform.id }`;
+	if ( binding.isSampler === true ) return `p${ binding.textureNode.id }`;
+	if ( binding.isSampledTexture === true ) return `t${ binding.textureNode.id }:${ binding.isSampledCubeTexture === true }:${ binding.isSampledTexture3D === true }:${ binding.access }:${ binding.store }`;
+
+	return null;
 
 }
 

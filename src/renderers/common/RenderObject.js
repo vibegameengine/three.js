@@ -405,12 +405,20 @@ class RenderObject {
 
 			const nodeBuilderState = this.getNodeBuilderState();
 
-			this.materialBindings = nodeBuilderState.shareBindings( this.material );
+			this.materialBindings = this._drawsItsOwnMaterial() ? nodeBuilderState.shareBindings( this.material ) : null;
 			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings();
 
 		}
 
 		return this._bindings;
+
+	}
+
+	_drawsItsOwnMaterial() {
+
+		const own = this.object.material;
+
+		return own === this.material || ( Array.isArray( own ) && own.includes( this.material ) );
 
 	}
 

@@ -54,6 +54,8 @@ class BindGroup {
 		 */
 		this.id = _id ++;
 
+		this.sharedAcrossStates = false;
+
 	}
 
 }

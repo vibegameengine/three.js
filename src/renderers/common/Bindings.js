@@ -185,7 +185,7 @@ class Bindings extends DataMap {
 
 		for ( const bindGroup of bindings ) {
 
-			if ( shared !== null && bindGroup.bindings[ 0 ].groupNode.shared === true ) continue;
+			if ( bindGroup.sharedAcrossStates === true || ( shared !== null && bindGroup.bindings[ 0 ].groupNode.shared === true ) ) continue;
 
 			this.backend.deleteBindGroupData( bindGroup );
 			this.delete( bindGroup );
