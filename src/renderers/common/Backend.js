@@ -441,10 +441,11 @@ class Backend {
 
 		const contextData = this.get( abstractRenderContext );
 		const frame = this.renderer.info.frame;
+		const leadingContext = Array.isArray( abstractRenderContext ) ? abstractRenderContext[ 0 ] : abstractRenderContext;
 
 		let prefix;
 
-		if ( abstractRenderContext.isComputeNode === true ) {
+		if ( leadingContext.isComputeNode === true ) {
 
 			prefix = 'c:' + this.renderer.info.compute.frameCalls;
 
@@ -454,7 +455,7 @@ class Backend {
 
 		}
 
-		contextData.timestampUID = prefix + ':' + abstractRenderContext.id + ':f' + frame;
+		contextData.timestampUID = prefix + ':' + leadingContext.id + ':f' + frame;
 
 	}
 
