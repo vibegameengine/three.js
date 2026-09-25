@@ -234,6 +234,18 @@ class Pipelines extends DataMap {
 
 	}
 
+	hasGpuPipeline( renderObject ) {
+
+		const pipeline = this.get( renderObject ).pipeline;
+
+		if ( pipeline === undefined ) return false;
+
+		const gpuPipeline = this.backend.get( pipeline ).pipeline;
+
+		return gpuPipeline !== undefined && gpuPipeline !== null;
+
+	}
+
 	/**
 	 * Deletes the pipeline for the given render object.
 	 *

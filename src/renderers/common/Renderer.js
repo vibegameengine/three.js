@@ -3425,7 +3425,7 @@ class Renderer {
 
 		}
 
-		this.backend.draw( renderObject, this.info );
+		if ( this._pipelines.hasGpuPipeline( renderObject ) ) this.backend.draw( renderObject, this.info );
 
 		if ( needsRefresh ) this._nodes.updateAfter( renderObject );
 
