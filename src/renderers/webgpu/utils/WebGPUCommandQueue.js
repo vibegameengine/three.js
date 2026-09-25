@@ -47,6 +47,7 @@ class WebGPUCommandQueue {
 		this.validity = new WeakMap();
 		this.buffersOfGroup = new WeakMap();
 		this.textureOfView = new WeakMap();
+		this.bundleContents = new WeakMap();
 		this.recordings = new WeakMap();
 		this.scopes = [];
 		this.brokenLabels = new Set();
@@ -234,6 +235,56 @@ class WebGPUCommandQueue {
 
 		device.createCommandEncoder = ( descriptor ) => this.observeEncoder( createCommandEncoder( descriptor ), descriptor && descriptor.label ? descriptor.label : '' );
 
+		const createRenderBundleEncoder = device.createRenderBundleEncoder.bind( device );
+
+		device.createRenderBundleEncoder = ( descriptor ) => this.observeBundleEncoder( createRenderBundleEncoder( descriptor ) );
+
+	}
+
+	observeBundleEncoder( encoder ) {
+
+		const references = new Set();
+		const contents = { referenced: null, uses: new Set(), trusted: false };
+		const use = ( object ) => { if ( object ) contents.uses.add( object ); };
+		const reference = ( buffer ) => { if ( buffer ) { references.add( buffer ); contents.uses.add( buffer ); } };
+
+		const setPipeline = encoder.setPipeline.bind( encoder );
+		const setBindGroup = encoder.setBindGroup.bind( encoder );
+		const setVertexBuffer = encoder.setVertexBuffer.bind( encoder );
+		const setIndexBuffer = encoder.setIndexBuffer.bind( encoder );
+		const drawIndirect = encoder.drawIndirect.bind( encoder );
+		const drawIndexedIndirect = encoder.drawIndexedIndirect.bind( encoder );
+		const finish = encoder.finish.bind( encoder );
+
+		encoder.setPipeline = ( pipeline ) => { use( pipeline ); setPipeline( pipeline ); };
+		encoder.setBindGroup = ( index, bindGroup, ...rest ) => {
+
+			if ( bindGroup ) {
+
+				use( bindGroup );
+				for ( const buffer of this.buffersOfGroup.get( bindGroup ) || [] ) references.add( buffer );
+
+			}
+
+			setBindGroup( index, bindGroup, ...rest );
+
+		};
+		encoder.setVertexBuffer = ( slot, buffer, offset, size ) => { reference( buffer ); setVertexBuffer( slot, buffer, offset, size ); };
+		encoder.setIndexBuffer = ( buffer, format, offset, size ) => { reference( buffer ); setIndexBuffer( buffer, format, offset, size ); };
+		encoder.drawIndirect = ( buffer, offset ) => { reference( buffer ); drawIndirect( buffer, offset ); };
+		encoder.drawIndexedIndirect = ( buffer, offset ) => { reference( buffer ); drawIndexedIndirect( buffer, offset ); };
+
+		encoder.finish = ( descriptor ) => {
+
+			const bundle = descriptor === undefined ? finish() : finish( descriptor );
+			contents.referenced = [ ...references ];
+			this.bundleContents.set( bundle, contents );
+			return bundle;
+
+		};
+
+		return encoder;
+
 	}
 
 	created( create ) {
@@ -336,7 +387,7 @@ class WebGPUCommandQueue {
 
 	observeEncoder( encoder, label ) {
 
-		const recording = { references: new Set(), uses: new Set(), groups: new Set(), opaque: false, label };
+		const recording = { references: new Set(), uses: new Set(), groups: new Set(), bundles: [], opaque: false, label };
 		const use = ( object ) => { if ( object ) recording.uses.add( object ); };
 		const reference = ( buffer ) => { if ( buffer ) { recording.references.add( buffer ); recording.uses.add( buffer ); } };
 		const useView = ( view ) => { if ( view ) use( this.textureOfView.get( view ) ); };
@@ -437,8 +488,29 @@ class WebGPUCommandQueue {
 
 			pass.executeBundles = ( bundles ) => {
 
-				recording.opaque = true;
-				for ( const bundle of bundles ) use( bundle );
+				for ( const bundle of bundles ) {
+
+					const contents = this.bundleContents.get( bundle );
+
+					if ( contents === undefined ) {
+
+						use( bundle );
+						recording.opaque = true;
+						continue;
+
+					}
+
+					recording.bundles.push( contents );
+
+					if ( contents.trusted === false ) {
+
+						contents.trusted = this.allValid( contents.uses );
+						if ( contents.trusted === false ) for ( const object of contents.uses ) recording.uses.add( object );
+
+					}
+
+				}
+
 				executeBundles( bundles );
 
 			};
@@ -464,6 +536,13 @@ class WebGPUCommandQueue {
 			if ( recording !== undefined ) {
 
 				for ( const buffer of recording.references ) this.referenced.add( buffer );
+
+				for ( const contents of recording.bundles ) {
+
+					const referenced = contents.referenced;
+					for ( let i = 0, l = referenced.length; i < l; i ++ ) this.referenced.add( referenced[ i ] );
+
+				}
 
 				for ( const bindGroup of recording.groups ) {
 
@@ -494,7 +573,13 @@ class WebGPUCommandQueue {
 		if ( this.brokenLabels.has( label ) ) return false;
 		if ( uses === null ) return true;
 
-		for ( const object of uses ) {
+		return this.allValid( uses );
+
+	}
+
+	allValid( objects ) {
+
+		for ( const object of objects ) {
 
 			const validity = this.validity.get( object );
 			if ( validity !== undefined && validity !== VALID ) return false;

@@ -16,6 +16,7 @@ import WebGPUTextureUtils from './utils/WebGPUTextureUtils.js';
 import { WebGPUCoordinateSystem, TimestampQuery, REVISION, HalfFloatType } from '../../constants.js';
 import WebGPUTimestampQueryPool from './utils/WebGPUTimestampQueryPool.js';
 import WebGPUCommandQueue from './utils/WebGPUCommandQueue.js';
+import { DrawCommand, DrawCommandCache } from './utils/WebGPUDrawCommandCache.js';
 import { warnOnce, error } from '../../utils.js';
 
 /**
@@ -122,6 +123,8 @@ class WebGPUBackend extends Backend {
 		 * @type {WebGPUPipelineUtils}
 		 */
 		this.pipelineUtils = new WebGPUPipelineUtils( this );
+
+		this._drawCommand = new DrawCommand();
 
 		/**
 		 * A reference to a backend module holding shader texture-related
@@ -794,6 +797,7 @@ class WebGPUBackend extends Backend {
 		renderContextData.encoder = encoder;
 		renderContextData.currentSets = { attributes: {}, bindingGroups: [], pipeline: null, index: null };
 		renderContextData.renderBundles = [];
+		renderContextData.cachedDraws = renderContextData.currentPass ? [] : undefined;
 
 	}
 
@@ -936,6 +940,8 @@ class WebGPUBackend extends Backend {
 
 		const renderContextData = this.get( renderContext );
 		const occlusionQueryCount = renderContext.occlusionQueryCount;
+
+		this._executeCachedDraws( renderContextData );
 
 		if ( renderContextData.renderBundles.length > 0 ) {
 
@@ -1135,9 +1141,11 @@ class WebGPUBackend extends Backend {
 	 */
 	updateViewport( renderContext ) {
 
-		const { currentPass } = this.get( renderContext );
+		const renderContextData = this.get( renderContext );
+		const { currentPass } = renderContextData;
 		const { x, y, width, height, minDepth, maxDepth } = renderContext.viewportValue;
 
+		this._executeCachedDraws( renderContextData );
 		currentPass.setViewport( x, y, width, height, minDepth, maxDepth );
 
 	}
@@ -1149,9 +1157,11 @@ class WebGPUBackend extends Backend {
 	 */
 	updateScissor( renderContext ) {
 
-		const { currentPass } = this.get( renderContext );
+		const renderContextData = this.get( renderContext );
+		const { currentPass } = renderContextData;
 		const { x, y, width, height } = renderContext.scissorValue;
 
+		this._executeCachedDraws( renderContextData );
 		currentPass.setScissorRect( x, y, width, height );
 
 	}
@@ -1487,6 +1497,22 @@ class WebGPUBackend extends Backend {
 		const drawParams = renderObject.getDrawParameters();
 		if ( drawParams === null ) return;
 
+		const drawCache = this._describeCachedDraw( renderObject, renderContextData, pipelineGPU, bindings, index, drawParams );
+
+		if ( drawCache !== null ) {
+
+			const bundle = drawCache.replay( this._drawCommand );
+
+			if ( bundle !== null ) {
+
+				renderContextData.cachedDraws.push( bundle );
+				info.update( object, drawParams.vertexCount, drawParams.instanceCount );
+				return;
+
+			}
+
+		}
+
 		// pipeline
 
 		const setPipelineAndBindings = ( passEncoderGPU, currentSets ) => {
@@ -1655,6 +1681,8 @@ class WebGPUBackend extends Backend {
 
 		if ( renderObject.camera.isArrayCamera && renderObject.camera.cameras.length > 0 ) {
 
+			this._executeCachedDraws( renderContextData );
+
 			const cameraData = this.get( renderObject.camera );
 			const cameras = renderObject.camera.cameras;
 			const cameraIndex = renderObject.getBindingGroup( 'cameraIndex' );
@@ -1739,7 +1767,17 @@ class WebGPUBackend extends Backend {
 		} else {
 
 			// Regular single camera rendering
-			if ( renderContextData.currentPass ) {
+			if ( drawCache !== null ) {
+
+				const bundleEncoder = this.pipelineUtils.createBundleEncoder( context, 'drawCommand' );
+				draw( bundleEncoder, { attributes: {}, bindingGroups: [], pipeline: null, index: null } );
+				const bundle = bundleEncoder.finish();
+				drawCache.remember( this._drawCommand, bundle );
+				renderContextData.cachedDraws.push( bundle );
+
+			} else if ( renderContextData.currentPass ) {
+
+				this._executeCachedDraws( renderContextData );
 
 				// Handle occlusion queries
 				if ( renderContextData.occlusionQuerySet !== undefined ) {
@@ -1772,6 +1810,83 @@ class WebGPUBackend extends Backend {
 			}
 
 		}
+
+	}
+
+	_describeCachedDraw( renderObject, renderContextData, pipelineGPU, bindings, index, drawParams ) {
+
+		const { object, material, context, camera } = renderObject;
+		const pass = renderContextData.currentPass;
+
+		if ( ! pass || renderContextData.cachedDraws === undefined || typeof pass.executeBundles !== 'function' ) return null;
+		if ( camera.isArrayCamera === true || object.isBatchedMesh === true || renderContextData.occlusionQuerySet !== undefined ) return null;
+		if ( context.stencil === true && material.stencilWrite === true ) return null;
+
+		const command = this._drawCommand;
+		command.begin( pipelineGPU );
+
+		for ( let i = 0, l = bindings.length; i < l; i ++ ) {
+
+			command.bindGroup( bindings[ i ].index, this.get( bindings[ i ] ).group );
+
+		}
+
+		if ( index !== null ) {
+
+			command.indexBuffer( this.get( index ).buffer, index.array instanceof Uint16Array ? GPUIndexFormat.Uint16 : GPUIndexFormat.Uint32 );
+
+		}
+
+		const vertexBuffers = renderObject.getVertexBuffers();
+
+		for ( let i = 0, l = vertexBuffers.length; i < l; i ++ ) {
+
+			command.vertexBuffer( this.get( vertexBuffers[ i ] ).buffer );
+
+		}
+
+		const indirect = renderObject.getIndirect();
+
+		if ( indirect !== null ) {
+
+			const offset = renderObject.getIndirectOffset();
+			const offsets = Array.isArray( offset ) ? offset : [ offset ];
+
+			if ( index !== null ) command.drawIndexedIndirect( this.get( indirect ).buffer, offsets );
+			else command.drawIndirect( this.get( indirect ).buffer, offsets );
+
+		} else if ( index !== null ) {
+
+			command.drawIndexed( drawParams.vertexCount, drawParams.instanceCount, drawParams.firstVertex );
+
+		} else {
+
+			command.draw( drawParams.vertexCount, drawParams.instanceCount, drawParams.firstVertex );
+
+		}
+
+		const data = this.get( renderObject );
+
+		if ( data.drawCommandCache === undefined ) data.drawCommandCache = new DrawCommandCache();
+
+		return data.drawCommandCache;
+
+	}
+
+	_executeCachedDraws( renderContextData ) {
+
+		const cachedDraws = renderContextData.cachedDraws;
+
+		if ( cachedDraws === undefined || cachedDraws.length === 0 ) return;
+
+		renderContextData.currentPass.executeBundles( cachedDraws );
+		cachedDraws.length = 0;
+
+		const sets = renderContextData.currentSets;
+		sets.attributes = {};
+		sets.bindingGroups = [];
+		sets.pipeline = null;
+		sets.index = null;
 
 	}
 
@@ -2431,6 +2546,7 @@ class WebGPUBackend extends Backend {
 
 		if ( renderContextData.currentPass ) {
 
+			this._executeCachedDraws( renderContextData );
 			renderContextData.currentPass.end();
 
 			encoder = renderContextData.encoder;
