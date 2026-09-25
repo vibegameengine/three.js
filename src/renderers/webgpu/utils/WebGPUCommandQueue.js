@@ -1,4 +1,5 @@
 export const CLEAN_FINISHES_TO_TRUST = 60;
+export const SHARED_RETRY_AFTER_CLEAN_FLUSHES = 120;
 const SHARED_ENCODER_LABEL = 'frame';
 const REPEATED_FAILURE_REPORT = 300;
 const UNKNOWN = 0;
@@ -62,6 +63,7 @@ class WebGPUCommandQueue {
 		this.openPassEnded = 0;
 		this.passOpen = false;
 		this.splitPass = null;
+		this.cleanFlushesSinceEncoderError = 0;
 
 		const queue = device.queue;
 
@@ -72,6 +74,7 @@ class WebGPUCommandQueue {
 		this._scheduledFlush = () => {
 
 			this.flushScheduled = false;
+			this.cleanFlushesSinceEncoderError ++;
 			this.flush();
 
 		};
@@ -84,7 +87,7 @@ class WebGPUCommandQueue {
 
 	openEncoder() {
 
-		if ( this.passOpen || this.batching === false || this.brokenLabels.has( SHARED_ENCODER_LABEL ) ) return null;
+		if ( this.passOpen || this.batching === false || this.sharedEncoderOnHold() ) return null;
 
 		if ( this.open === null ) {
 
@@ -94,6 +97,12 @@ class WebGPUCommandQueue {
 		}
 
 		return this.open;
+
+	}
+
+	sharedEncoderOnHold() {
+
+		return this.brokenLabels.has( SHARED_ENCODER_LABEL ) && this.cleanFlushesSinceEncoderError < SHARED_RETRY_AFTER_CLEAN_FLUSHES;
 
 	}
 
@@ -395,6 +404,7 @@ class WebGPUCommandQueue {
 			const failures = ( this.encoderFailures.get( label ) || 0 ) + 1;
 			this.encoderFailures.set( label, failures );
 			this.cleanFinishes.delete( label );
+			this.cleanFlushesSinceEncoderError = 0;
 
 			if ( this.brokenLabels.has( label ) === false ) {
 
