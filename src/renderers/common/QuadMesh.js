@@ -103,7 +103,7 @@ class QuadMesh extends Mesh {
 	 */
 	render( renderer ) {
 
-		renderer.render( this, _camera );
+		renderer.renderQuad( this, _camera );
 
 	}
 

@@ -1442,40 +1442,7 @@ class Renderer {
 
 		}
 
-		//
-
-		const canvasTarget = this._canvasTarget;
-
-		let viewport = canvasTarget._viewport;
-		let scissor = canvasTarget._scissor;
-		let pixelRatio = canvasTarget._pixelRatio;
-
-		if ( renderTarget !== null ) {
-
-			viewport = renderTarget.viewport;
-			scissor = renderTarget.scissor;
-			pixelRatio = 1;
-
-		}
-
-		this.getDrawingBufferSize( _drawingBufferSize );
-
-		_screen.set( 0, 0, _drawingBufferSize.width, _drawingBufferSize.height );
-
-		const minDepth = ( viewport.minDepth === undefined ) ? 0 : viewport.minDepth;
-		const maxDepth = ( viewport.maxDepth === undefined ) ? 1 : viewport.maxDepth;
-
-		renderContext.viewportValue.copy( viewport ).multiplyScalar( pixelRatio ).floor();
-		renderContext.viewportValue.width >>= activeMipmapLevel;
-		renderContext.viewportValue.height >>= activeMipmapLevel;
-		renderContext.viewportValue.minDepth = minDepth;
-		renderContext.viewportValue.maxDepth = maxDepth;
-		renderContext.viewport = renderContext.viewportValue.equals( _screen ) === false;
-
-		renderContext.scissorValue.copy( scissor ).multiplyScalar( pixelRatio ).floor();
-		renderContext.scissor = canvasTarget._scissorTest && renderContext.scissorValue.equals( _screen ) === false;
-		renderContext.scissorValue.width >>= activeMipmapLevel;
-		renderContext.scissorValue.height >>= activeMipmapLevel;
+		this._setContextViewport( renderContext, renderTarget, activeMipmapLevel );
 
 		if ( ! renderContext.clippingContext ) renderContext.clippingContext = new ClippingContext();
 		renderContext.clippingContext.updateGlobal( sceneRef, camera );
@@ -1512,54 +1479,8 @@ class Renderer {
 
 		//
 
-		if ( renderTarget !== null ) {
-
-			this._textures.updateRenderTarget( renderTarget, activeMipmapLevel );
-
-			const renderTargetData = this._textures.get( renderTarget );
-
-			renderContext.textures = renderTargetData.textures;
-			renderContext.depthTexture = renderTargetData.depthTexture;
-			renderContext.width = renderTargetData.width;
-			renderContext.height = renderTargetData.height;
-			renderContext.renderTarget = renderTarget;
-			renderContext.depth = renderTarget.depthBuffer;
-			renderContext.stencil = renderTarget.stencilBuffer;
-
-		} else {
-
-			renderContext.textures = null;
-			renderContext.depthTexture = null;
-			renderContext.width = _drawingBufferSize.width;
-			renderContext.height = _drawingBufferSize.height;
-			renderContext.depth = this.depth;
-			renderContext.stencil = this.stencil;
-
-		}
-
-		renderContext.width >>= activeMipmapLevel;
-		renderContext.height >>= activeMipmapLevel;
-		renderContext.activeCubeFace = activeCubeFace;
-		renderContext.activeMipmapLevel = activeMipmapLevel;
+		this._setContextTarget( renderContext, renderTarget, activeCubeFace, activeMipmapLevel );
 		renderContext.occlusionQueryCount = renderList.occlusionQueryCount;
-
-		//
-
-		renderContext.scissorValue.max( _vector4.set( 0, 0, 0, 0 ) );
-
-		if ( renderContext.scissorValue.x + renderContext.scissorValue.width > renderContext.width ) {
-
-			renderContext.scissorValue.width = Math.max( renderContext.width - renderContext.scissorValue.x, 0 );
-
-		}
-
-		if ( renderContext.scissorValue.y + renderContext.scissorValue.height > renderContext.height ) {
-
-			renderContext.scissorValue.height = Math.max( renderContext.height - renderContext.scissorValue.y, 0 );
-
-		}
-
-		//
 
 		this._background.update( sceneRef, renderList, renderContext );
 
@@ -1617,6 +1538,196 @@ class Renderer {
 
 	}
 
+	_setContextViewport( renderContext, renderTarget, activeMipmapLevel ) {
+
+		const canvasTarget = this._canvasTarget;
+
+		let viewport = canvasTarget._viewport;
+		let scissor = canvasTarget._scissor;
+		let pixelRatio = canvasTarget._pixelRatio;
+
+		if ( renderTarget !== null ) {
+
+			viewport = renderTarget.viewport;
+			scissor = renderTarget.scissor;
+			pixelRatio = 1;
+
+		}
+
+		this.getDrawingBufferSize( _drawingBufferSize );
+
+		_screen.set( 0, 0, _drawingBufferSize.width, _drawingBufferSize.height );
+
+		const minDepth = ( viewport.minDepth === undefined ) ? 0 : viewport.minDepth;
+		const maxDepth = ( viewport.maxDepth === undefined ) ? 1 : viewport.maxDepth;
+
+		renderContext.viewportValue.copy( viewport ).multiplyScalar( pixelRatio ).floor();
+		renderContext.viewportValue.width >>= activeMipmapLevel;
+		renderContext.viewportValue.height >>= activeMipmapLevel;
+		renderContext.viewportValue.minDepth = minDepth;
+		renderContext.viewportValue.maxDepth = maxDepth;
+		renderContext.viewport = renderContext.viewportValue.equals( _screen ) === false;
+
+		renderContext.scissorValue.copy( scissor ).multiplyScalar( pixelRatio ).floor();
+		renderContext.scissor = canvasTarget._scissorTest && renderContext.scissorValue.equals( _screen ) === false;
+		renderContext.scissorValue.width >>= activeMipmapLevel;
+		renderContext.scissorValue.height >>= activeMipmapLevel;
+
+	}
+
+	_setContextTarget( renderContext, renderTarget, activeCubeFace, activeMipmapLevel ) {
+
+		if ( renderTarget !== null ) {
+
+			this._textures.updateRenderTarget( renderTarget, activeMipmapLevel );
+
+			const renderTargetData = this._textures.get( renderTarget );
+
+			renderContext.textures = renderTargetData.textures;
+			renderContext.depthTexture = renderTargetData.depthTexture;
+			renderContext.width = renderTargetData.width;
+			renderContext.height = renderTargetData.height;
+			renderContext.renderTarget = renderTarget;
+			renderContext.depth = renderTarget.depthBuffer;
+			renderContext.stencil = renderTarget.stencilBuffer;
+
+		} else {
+
+			renderContext.textures = null;
+			renderContext.depthTexture = null;
+			renderContext.width = _drawingBufferSize.width;
+			renderContext.height = _drawingBufferSize.height;
+			renderContext.depth = this.depth;
+			renderContext.stencil = this.stencil;
+
+		}
+
+		renderContext.width >>= activeMipmapLevel;
+		renderContext.height >>= activeMipmapLevel;
+		renderContext.activeCubeFace = activeCubeFace;
+		renderContext.activeMipmapLevel = activeMipmapLevel;
+
+		renderContext.scissorValue.max( _vector4.set( 0, 0, 0, 0 ) );
+
+		if ( renderContext.scissorValue.x + renderContext.scissorValue.width > renderContext.width ) {
+
+			renderContext.scissorValue.width = Math.max( renderContext.width - renderContext.scissorValue.x, 0 );
+
+		}
+
+		if ( renderContext.scissorValue.y + renderContext.scissorValue.height > renderContext.height ) {
+
+			renderContext.scissorValue.height = Math.max( renderContext.height - renderContext.scissorValue.y, 0 );
+
+		}
+
+	}
+
+	renderQuad( quad, camera = quad.camera ) {
+
+		if ( this._initialized === false ) {
+
+			throw new Error( 'Renderer: .renderQuad() called before the backend is initialized. Use "await renderer.init();" before rendering.' );
+
+		}
+
+		this._renderQuad( quad, camera, true );
+
+	}
+
+	_quadTakesScenePath( quad, camera, useFrameBufferTarget ) {
+
+		const material = quad.material;
+
+		if ( useFrameBufferTarget && ( this.currentToneMapping !== NoToneMapping || this.currentColorSpace !== ColorManagement.workingColorSpace ) ) return true;
+		if ( this.xr.enabled === true && this.xr.isPresenting === true ) return true;
+		if ( camera.isArrayCamera === true || quad.visible === false || quad.children.length > 0 ) return true;
+		if ( quad.layers.test( camera.layers ) === false ) return true;
+		if ( material === null || Array.isArray( material ) || material.visible === false ) return true;
+
+		return material.transparent === true ? this.transparent === false || material.side === DoubleSide : this.opaque === false;
+
+	}
+
+	_renderQuad( quad, camera, useFrameBufferTarget ) {
+
+		if ( this._isDeviceLost === true ) return;
+
+		if ( this._quadTakesScenePath( quad, camera, useFrameBufferTarget ) ) {
+
+			this._renderScene( quad, camera, useFrameBufferTarget );
+			return;
+
+		}
+
+		const nodeFrame = this._nodes.nodeFrame;
+
+		const previousRenderId = nodeFrame.renderId;
+		const previousRenderContext = this._currentRenderContext;
+		const previousRenderObjectFunction = this._currentRenderObjectFunction;
+
+		const renderTarget = this._renderTarget || this._outputRenderTarget;
+		const activeCubeFace = this._activeCubeFace;
+		const activeMipmapLevel = this._activeMipmapLevel;
+
+		const renderContext = this._renderContexts.get( quad, camera, renderTarget, this._mrt );
+
+		this._currentRenderContext = renderContext;
+		this._currentRenderObjectFunction = this._renderObjectFunction || this.renderObject;
+
+		this.info.calls ++;
+		this.info.render.calls ++;
+		this.info.render.frameCalls ++;
+
+		nodeFrame.renderId = this.info.calls;
+
+		this.backend.updateTimeStampUID( renderContext );
+
+		this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), quad, camera, renderTarget );
+
+		if ( camera.coordinateSystem !== this.coordinateSystem ) {
+
+			camera.coordinateSystem = this.coordinateSystem;
+			camera.updateProjectionMatrix();
+
+		}
+
+		if ( quad.matrixWorldAutoUpdate === true ) quad.updateMatrixWorld();
+
+		if ( camera.parent === null && camera.matrixWorldAutoUpdate === true ) camera.updateMatrixWorld();
+
+		this._setContextViewport( renderContext, renderTarget, activeMipmapLevel );
+
+		if ( ! renderContext.clippingContext ) renderContext.clippingContext = new ClippingContext();
+		renderContext.clippingContext.updateGlobal( _scene, camera );
+
+		const renderList = this._renderLists.get( quad, camera );
+		renderList.begin();
+		renderList.finish();
+
+		if ( this.gpuScene !== null ) this._syncGpuSceneObject( quad, { topLevel: previousRenderContext === null, toScreen: renderTarget === null } );
+
+		this._setContextTarget( renderContext, renderTarget, activeCubeFace, activeMipmapLevel );
+		renderContext.occlusionQueryCount = 0;
+
+		this._background.update( _scene, renderList, renderContext );
+
+		renderContext.camera = camera;
+		this.backend.beginRender( renderContext );
+
+		this._currentRenderObjectFunction( quad, _scene, camera, quad.geometry, quad.material, null, renderList.lightsNode, renderContext.clippingContext, null );
+
+		this.backend.finishRender( renderContext );
+
+		nodeFrame.renderId = previousRenderId;
+
+		this._currentRenderContext = previousRenderContext;
+		this._currentRenderObjectFunction = previousRenderObjectFunction;
+
+		this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
+
+	}
+
 	_setXRLayerSize( width, height ) {
 
 		// TODO: Find a better solution to resize the canvas when in XR.
@@ -1653,7 +1764,7 @@ class Renderer {
 		this.autoClear = false;
 		this.xr.enabled = false;
 
-		this._renderScene( quad, quad.camera, false );
+		this._renderQuad( quad, quad.camera, false );
 
 		this.autoClear = currentAutoClear;
 		this.xr.enabled = currentXR;
@@ -3225,14 +3336,35 @@ class Renderer {
 	_syncGpuScene( renderList, { topLevel, toScreen } ) {
 
 		const gpuScene = this.gpuScene;
-		const frame = gpuScene.frameOf( {
+
+		gpuScene.syncRenderList( renderList, this._gpuSceneFrame( topLevel, toScreen ) );
+
+		this._flushGpuScene();
+
+	}
+
+	_syncGpuSceneObject( object, { topLevel, toScreen } ) {
+
+		this.gpuScene.sync( object, this._gpuSceneFrame( topLevel, toScreen ) );
+
+		this._flushGpuScene();
+
+	}
+
+	_gpuSceneFrame( topLevel, toScreen ) {
+
+		return this.gpuScene.frameOf( {
 			frameId: this._nodes.nodeFrame.frameId,
 			animated: this._animation._animationLoop !== null,
 			topLevel,
 			toScreen
 		} );
 
-		gpuScene.syncRenderList( renderList, frame );
+	}
+
+	_flushGpuScene() {
+
+		const gpuScene = this.gpuScene;
 
 		if ( gpuScene.flush() === true ) this._attributes.update( gpuScene.records, AttributeType.STORAGE );
 
