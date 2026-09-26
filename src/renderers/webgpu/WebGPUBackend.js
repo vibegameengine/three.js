@@ -1390,15 +1390,20 @@ class WebGPUBackend extends Backend {
 
 		//
 
+		const clearPass = this.beginAuxiliaryPass( 'clear', renderTargetContext === null ? null : renderTargetContext.renderTarget );
+
 		const encoder = device.createCommandEncoder( { label: 'clear' } );
 		const currentPass = encoder.beginRenderPass( {
 			colorAttachments,
-			depthStencilAttachment
+			depthStencilAttachment,
+			timestampWrites: clearPass.timestampWrites
 		} );
 
 		currentPass.end();
 
 		device.queue.submit( [ encoder.finish() ] );
+
+		this.finishAuxiliaryPass( clearPass );
 
 	}
 
@@ -2231,6 +2236,24 @@ class WebGPUBackend extends Backend {
 			beginningOfPassWriteIndex: baseOffset,
 			endOfPassWriteIndex: baseOffset + 1,
 		};
+
+	}
+
+	beginAuxiliaryPass( kind, target ) {
+
+		const uid = this.createAuxiliaryPassTimestampUID( kind );
+		const descriptor = {};
+
+		this.initTimestampQuery( TimestampQuery.RENDER, uid, descriptor );
+		this.renderer.inspector.beginRender( uid, { name: kind }, null, target );
+
+		return { uid, timestampWrites: descriptor.timestampWrites };
+
+	}
+
+	finishAuxiliaryPass( auxiliaryPass ) {
+
+		this.renderer.inspector.finishRender( auxiliaryPass.uid );
 
 	}
 

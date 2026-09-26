@@ -3,7 +3,7 @@ import {
 } from './WebGPUConstants.js';
 import { ColorManagement } from '../../../math/ColorManagement.js';
 
-import WebGPUTexturePassUtils from './WebGPUTexturePassUtils.js';
+import WebGPUTexturePassUtils, { timestampWritesOfPart } from './WebGPUTexturePassUtils.js';
 
 import {
 	ByteType, ShortType,
@@ -350,26 +350,23 @@ class WebGPUTextureUtils {
 	generateMipmaps( texture, encoder = null ) {
 
 		const textureData = this.backend.get( texture );
+		const textureDescriptorGPU = textureData.textureDescriptorGPU;
 
-		if ( texture.isCubeTexture ) {
+		if ( textureDescriptorGPU.mipLevelCount <= 1 ) return;
 
-			for ( let i = 0; i < 6; i ++ ) {
+		const layerCount = texture.isCubeTexture ? 6 : ( texture.image.depth || 1 );
+		const size = textureDescriptorGPU.size;
+		const mipPass = this.backend.beginAuxiliaryPass( 'mips', { width: size.width, height: size.height, texture } );
 
-				this._generateMipmaps( textureData.texture, textureData.textureDescriptorGPU, i, encoder );
+		for ( let i = 0; i < layerCount; i ++ ) {
 
-			}
+			const timestampWrites = timestampWritesOfPart( mipPass.timestampWrites, i, layerCount );
 
-		} else {
-
-			const depth = texture.image.depth || 1;
-
-			for ( let i = 0; i < depth; i ++ ) {
-
-				this._generateMipmaps( textureData.texture, textureData.textureDescriptorGPU, i, encoder );
-
-			}
+			this._generateMipmaps( textureData.texture, textureDescriptorGPU, i, encoder, timestampWrites );
 
 		}
+
+		this.backend.finishAuxiliaryPass( mipPass );
 
 	}
 
@@ -824,9 +821,9 @@ class WebGPUTextureUtils {
 	 * @param {number} [baseArrayLayer=0] - The index of the first array layer accessible to the texture view.
 	 * @param {?GPUCommandEncoder} [encoder=null] - An optional command encoder used to generate mipmaps.
 	 */
-	_generateMipmaps( textureGPU, textureDescriptorGPU, baseArrayLayer = 0, encoder = null ) {
+	_generateMipmaps( textureGPU, textureDescriptorGPU, baseArrayLayer = 0, encoder = null, timestampWrites = undefined ) {
 
-		this._getPassUtils().generateMipmaps( textureGPU, textureDescriptorGPU, baseArrayLayer, encoder );
+		this._getPassUtils().generateMipmaps( textureGPU, textureDescriptorGPU, baseArrayLayer, encoder, timestampWrites );
 
 	}
 

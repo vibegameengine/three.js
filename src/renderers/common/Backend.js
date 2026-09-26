@@ -76,6 +76,10 @@ class Backend {
 		 */
 		this.trackTimestamp = ( parameters.trackTimestamp === true );
 
+		this.auxiliaryPassFrame = - 1;
+
+		this.auxiliaryPassCalls = 0;
+
 	}
 
 	/**
@@ -456,6 +460,23 @@ class Backend {
 		}
 
 		contextData.timestampUID = prefix + ':' + leadingContext.id + ':f' + frame;
+
+	}
+
+	createAuxiliaryPassTimestampUID( kind ) {
+
+		const frame = this.renderer.info.frame;
+
+		if ( this.auxiliaryPassFrame !== frame ) {
+
+			this.auxiliaryPassFrame = frame;
+			this.auxiliaryPassCalls = 0;
+
+		}
+
+		this.auxiliaryPassCalls ++;
+
+		return 'r:' + kind + this.auxiliaryPassCalls + ':f' + frame;
 
 	}
 

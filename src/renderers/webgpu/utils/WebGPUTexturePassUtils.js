@@ -312,7 +312,7 @@ fn main( @location( 0 ) vTex : vec2<f32> ) -> @location( 0 ) vec4<f32> {
 	 * @param {number} [baseArrayLayer=0] - The index of the first array layer accessible to the texture view.
 	 * @param {?GPUCommandEncoder} [encoder=null] - An optional command encoder used to generate mipmaps.
 	 */
-	generateMipmaps( textureGPU, textureGPUDescriptor, baseArrayLayer = 0, encoder = null ) {
+	generateMipmaps( textureGPU, textureGPUDescriptor, baseArrayLayer = 0, encoder = null, timestampWrites = undefined ) {
 
 		const textureData = this.get( textureGPU );
 
@@ -326,7 +326,7 @@ fn main( @location( 0 ) vTex : vec2<f32> ) -> @location( 0 ) vec4<f32> {
 
 		const commandEncoder = encoder || this.device.createCommandEncoder( { label: 'mipmapEncoder' } );
 
-		this._mipmapRunBundles( commandEncoder, passes );
+		this._mipmapRunBundles( commandEncoder, passes, timestampWrites );
 
 		if ( encoder === null ) this.device.queue.submit( [ commandEncoder.finish() ] );
 
@@ -414,15 +414,17 @@ fn main( @location( 0 ) vTex : vec2<f32> ) -> @location( 0 ) vec4<f32> {
 	 * @param {GPUCommandEncoder} commandEncoder - The GPU command encoder.
 	 * @param {Array<Object>} passes - An array of render bundles.
 	 */
-	_mipmapRunBundles( commandEncoder, passes ) {
+	_mipmapRunBundles( commandEncoder, passes, timestampWrites = undefined ) {
 
 		const levels = passes.length;
 
 		for ( let i = 0; i < levels; i ++ ) {
 
 			const pass = passes[ i ];
+			const levelTimestampWrites = timestampWritesOfPart( timestampWrites, i, levels );
+			const passDescriptor = levelTimestampWrites === undefined ? pass.passDescriptor : { ...pass.passDescriptor, timestampWrites: levelTimestampWrites };
 
-			const passEncoder = commandEncoder.beginRenderPass( pass.passDescriptor );
+			const passEncoder = commandEncoder.beginRenderPass( passDescriptor );
 
 			passEncoder.executeBundles( pass.renderBundles );
 
@@ -431,6 +433,24 @@ fn main( @location( 0 ) vTex : vec2<f32> ) -> @location( 0 ) vec4<f32> {
 		}
 
 	}
+
+}
+
+export function timestampWritesOfPart( timestampWrites, partIndex, partCount ) {
+
+	if ( timestampWrites === undefined ) return undefined;
+
+	const opensSpan = partIndex === 0 && timestampWrites.beginningOfPassWriteIndex !== undefined;
+	const closesSpan = partIndex === partCount - 1 && timestampWrites.endOfPassWriteIndex !== undefined;
+
+	if ( opensSpan === false && closesSpan === false ) return undefined;
+
+	const partWrites = { querySet: timestampWrites.querySet };
+
+	if ( opensSpan ) partWrites.beginningOfPassWriteIndex = timestampWrites.beginningOfPassWriteIndex;
+	if ( closesSpan ) partWrites.endOfPassWriteIndex = timestampWrites.endOfPassWriteIndex;
+
+	return partWrites;
 
 }
 
