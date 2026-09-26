@@ -2,13 +2,14 @@ import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js
 import { Matrix3 } from '../../math/Matrix3.js';
 import StorageBufferAttribute from './StorageBufferAttribute.js';
 
-export const PrimitiveLayout = Object.freeze( { world: 0, previousWorld: 4, normal: 8 } );
+export const PrimitiveLayout = Object.freeze( { world: 0, previousWorld: 4, normal: 8, custom: 11 } );
 export const PRIMITIVE_VEC4S = 12;
 export const PRIMITIVE_FLOATS = PRIMITIVE_VEC4S * 4;
 
 const WORLD_OFFSET = PrimitiveLayout.world * 4;
 const PREVIOUS_OFFSET = PrimitiveLayout.previousWorld * 4;
 const NORMAL_OFFSET = PrimitiveLayout.normal * 4;
+const CUSTOM_OFFSET = PrimitiveLayout.custom * 4;
 const _normalMatrix = /*@__PURE__*/ new Matrix3();
 
 export const gpuScenePrimitiveTemplate = /*@__PURE__*/ new InstancedBufferAttribute( new Uint32Array( 1 ), 1 );
@@ -142,11 +143,28 @@ class GpuScene {
 			const base = id * PRIMITIVE_FLOATS;
 			this.writeCurrent( base, object.matrixWorld );
 			this.records.array.copyWithin( base + PREVIOUS_OFFSET, base + WORLD_OFFSET, base + WORLD_OFFSET + 16 );
+			this.records.array.fill( 0, base + CUSTOM_OFFSET, base + CUSTOM_OFFSET + 4 );
 			this.markDirty( id );
 
 		}
 
 		return primitive;
+
+	}
+
+	setCustomData( object, x, y, z, w ) {
+
+		const primitive = this.primitiveOf( object );
+		const at = primitive.id * PRIMITIVE_FLOATS + CUSTOM_OFFSET;
+		const array = this.records.array;
+
+		if ( array[ at ] === Math.fround( x ) && array[ at + 1 ] === Math.fround( y ) && array[ at + 2 ] === Math.fround( z ) && array[ at + 3 ] === Math.fround( w ) ) return;
+
+		array[ at ] = x;
+		array[ at + 1 ] = y;
+		array[ at + 2 ] = z;
+		array[ at + 3 ] = w;
+		this.markDirty( primitive.id );
 
 	}
 

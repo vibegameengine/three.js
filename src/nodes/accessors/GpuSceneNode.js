@@ -34,6 +34,8 @@ export function gpuSceneRecords( gpuScene ) {
 
 }
 
+const RECORD_FIELD_TYPES = { world: 'mat4', previousWorld: 'mat4', normal: 'mat3', custom: 'vec4' };
+
 class GpuSceneRecordNode extends Node {
 
 	static get type() {
@@ -44,7 +46,7 @@ class GpuSceneRecordNode extends Node {
 
 	constructor( field ) {
 
-		super( field === 'normal' ? 'mat3' : 'mat4' );
+		super( RECORD_FIELD_TYPES[ field ] );
 
 		this.field = field;
 
@@ -57,6 +59,7 @@ class GpuSceneRecordNode extends Node {
 		const column = ( index ) => records.element( base.add( uint( index ) ) );
 
 		if ( this.field === 'normal' ) return mat3( column( 0 ).xyz, column( 1 ).xyz, column( 2 ).xyz );
+		if ( this.field === 'custom' ) return column( 0 );
 
 		return mat4( column( 0 ), column( 1 ), column( 2 ), column( 3 ) );
 
@@ -67,6 +70,7 @@ class GpuSceneRecordNode extends Node {
 export const gpuSceneWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'world' );
 export const gpuScenePreviousWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'previousWorld' );
 export const gpuSceneNormalMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'normal' );
+export const gpuSceneCustomData = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'custom' );
 
 export const usesGpuScene = ( builder ) => builder.renderer.gpuScene !== null && builder.renderer.gpuScene !== undefined;
 
