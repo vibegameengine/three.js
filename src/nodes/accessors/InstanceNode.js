@@ -14,6 +14,9 @@ import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js
 import { DynamicDrawUsage } from '../../constants.js';
 import { instanceCullingFor } from '../../renderers/common/InstanceCulling.js';
 
+const _previousMatricesOf = new WeakMap();
+const _copiedVersionOf = new WeakMap();
+
 /**
  * This node implements the vertex shader logic which is required
  * when rendering 3D objects via instancing. The code makes sure
@@ -107,8 +110,6 @@ class InstanceNode extends Node {
 		 * @default null
 		 */
 		this.previousInstanceMatrixNode = null;
-
-		this.previousCopiedVersion = - 1;
 
 		this.instanceIdNode = instanceIndex;
 
@@ -261,13 +262,13 @@ class InstanceNode extends Node {
 
 		}
 
-		if ( this.previousInstanceMatrixNode !== null && this.previousCopiedVersion !== this.instanceMatrix.version ) {
+		const previous = frame.object.previousInstanceMatrix;
 
-			const previous = frame.object.previousInstanceMatrix;
+		if ( this.previousInstanceMatrixNode !== null && _copiedVersionOf.get( previous ) !== this.instanceMatrix.version ) {
 
 			previous.array.set( this.instanceMatrix.array );
 
-			this.previousCopiedVersion = this.instanceMatrix.version;
+			_copiedVersionOf.set( previous, this.instanceMatrix.version );
 
 			if ( this.isStorageMatrix && previous.version !== this.instanceMatrix.version ) previous.version = this.instanceMatrix.version;
 
@@ -287,7 +288,9 @@ class InstanceNode extends Node {
 
 		if ( this.previousInstanceMatrixNode === null ) {
 
-			instancedMesh.previousInstanceMatrix = this.instanceMatrix.clone();
+			if ( ! _previousMatricesOf.has( this.instanceMatrix ) ) _previousMatricesOf.set( this.instanceMatrix, this.instanceMatrix.clone() );
+
+			instancedMesh.previousInstanceMatrix = _previousMatricesOf.get( this.instanceMatrix );
 
 			this.previousInstanceMatrixNode = this._createInstanceMatrixNode( false, builder );
 
