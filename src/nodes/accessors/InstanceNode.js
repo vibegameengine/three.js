@@ -108,6 +108,8 @@ class InstanceNode extends Node {
 		 */
 		this.previousInstanceMatrixNode = null;
 
+		this.previousCopiedVersion = - 1;
+
 		this.instanceIdNode = instanceIndex;
 
 	}
@@ -259,11 +261,13 @@ class InstanceNode extends Node {
 
 		}
 
-		if ( this.previousInstanceMatrixNode !== null ) {
+		if ( this.previousInstanceMatrixNode !== null && this.previousCopiedVersion !== this.instanceMatrix.version ) {
 
 			const previous = frame.object.previousInstanceMatrix;
 
 			previous.array.set( this.instanceMatrix.array );
+
+			this.previousCopiedVersion = this.instanceMatrix.version;
 
 			if ( this.isStorageMatrix && previous.version !== this.instanceMatrix.version ) previous.version = this.instanceMatrix.version;
 
