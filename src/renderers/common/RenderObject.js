@@ -173,11 +173,12 @@ class RenderObject {
 		this.attributes = null;
 
 		/**
-		 * An object holding the version of the
+		 * An object holding the identity of the
 		 * attributes. The keys are the attribute names
-		 * and the values are the attribute versions.
+		 * and the values are the attributes themselves. Content updates
+		 * do not change the vertex layout; replacing an attribute does.
 		 *
-		 * @type {?Object<string, number>}
+		 * @type {?Object<string, BufferAttribute|InterleavedBufferAttribute>}
 		 * @default null
 		 */
 		this.attributesId = null;
@@ -325,6 +326,7 @@ class RenderObject {
 
 			this.attributes = null;
 			this.attributesId = null;
+			this.vertexBuffers = null;
 
 		};
 
@@ -505,6 +507,7 @@ class RenderObject {
 		this.geometry = geometry;
 		this.attributes = null;
 		this.attributesId = null;
+		this.vertexBuffers = null;
 
 	}
 
@@ -542,7 +545,7 @@ class RenderObject {
 				// geometry attribute
 				attribute = geometry.getAttribute( nodeAttribute.name );
 
-				attributesId[ nodeAttribute.name ] = attribute.version;
+				attributesId[ nodeAttribute.name ] = attribute;
 
 			}
 
@@ -845,7 +848,7 @@ class RenderObject {
 
 				const attribute = this.geometry.getAttribute( name );
 
-				if ( attribute === undefined || attributesId[ name ] !== attribute.id ) {
+				if ( attribute === undefined || attributesId[ name ] !== attribute ) {
 
 					return true;
 
