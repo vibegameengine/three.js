@@ -96,6 +96,7 @@ class GpuScene {
 		for ( const item of renderList.opaque ) this.sync( item.object, frameId );
 		for ( const item of renderList.transparent ) this.sync( item.object, frameId );
 		for ( const item of renderList.transparentDoublePass ) this.sync( item.object, frameId );
+		for ( const bundle of renderList.bundles ) this.syncRenderList( bundle.renderList, frameId );
 
 	}
 
