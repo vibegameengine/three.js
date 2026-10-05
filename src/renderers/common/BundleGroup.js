@@ -55,6 +55,15 @@ class BundleGroup extends Group {
 		this.static = true;
 
 		/**
+		 * Reuse the projected draw list until needsUpdate is set. Opt in only
+		 * when child visibility, CPU frustum tests and depth sorting are fixed
+		 * (for example, depth-only indirect draws with GPU visibility).
+		 * Uniform, skeleton and buffer updates still run on every replay.
+		 * @type {boolean}
+		 */
+		this.cacheRenderList = false;
+
+		/**
 		 * The bundle group's version.
 		 *
 		 * @type {number}

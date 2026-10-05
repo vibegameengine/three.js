@@ -2993,9 +2993,24 @@ class Renderer {
 
 		}
 
+		let cachedBundleList = null;
+
 		if ( object.isBundleGroup === true && this.backend.beginBundle !== undefined ) {
 
 			const baseRenderList = renderList;
+
+			if ( object.cacheRenderList === true && object.static === true ) {
+
+				cachedBundleList = this.backend.get( this._bundles.get( object, camera ) );
+
+				if ( cachedBundleList.projectedVersion === object.version && cachedBundleList.projectedLayers === camera.layers.mask && cachedBundleList.projectedClipping === clippingContext ) {
+
+					baseRenderList.pushBundle( { bundleGroup: object, camera, renderList: cachedBundleList.projectedList } );
+					return;
+
+				}
+
+			}
 
 			// replace render list
 			renderList = this._renderLists.get( object, camera );
@@ -3017,6 +3032,15 @@ class Renderer {
 		for ( let i = 0, l = children.length; i < l; i ++ ) {
 
 			this._projectObject( children[ i ], camera, groupOrder, renderList, clippingContext );
+
+		}
+
+		if ( cachedBundleList !== null ) {
+
+			cachedBundleList.projectedList = renderList;
+			cachedBundleList.projectedVersion = object.version;
+			cachedBundleList.projectedLayers = camera.layers.mask;
+			cachedBundleList.projectedClipping = clippingContext;
 
 		}
 
