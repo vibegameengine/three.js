@@ -14,6 +14,7 @@ import Color4 from './Color4.js';
 import ClippingContext from './ClippingContext.js';
 import QuadMesh from './QuadMesh.js';
 import RenderBundles from './RenderBundles.js';
+import RenderObjectPass from './RenderObjectPass.js';
 import NodeLibrary from './nodes/NodeLibrary.js';
 import Lighting from './Lighting.js';
 import XRManager from './XRManager.js';
@@ -1171,13 +1172,9 @@ class Renderer {
 
 		if ( renderBundleNeedsUpdate ) {
 
-			this.backend.beginBundle( renderContext );
-
-			if ( renderBundleData.renderObjects === undefined || needsUpdate ) {
-
-				renderBundleData.renderObjects = [];
-
-			}
+			renderBundleData.renderObjects = [];
+			renderBundleData.preparedDraws = [];
+			renderBundleData.preparing = true;
 
 			this._currentRenderBundle = renderBundle;
 
@@ -1191,12 +1188,28 @@ class Renderer {
 			if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
 
 			this._currentRenderBundle = null;
+			renderBundleData.preparing = false;
+
+			// Uploads and compute dependencies must be completed before opening a
+			// render-bundle encoder, which cannot be split like a render pass.
+			this.backend.beginBundle( renderContext );
+			let ready = true;
+			for ( const draw of renderBundleData.preparedDraws ) {
+
+				const { renderObject, group, pipeline } = draw;
+				renderObject.group = group;
+				renderObject.pipeline = pipeline;
+				if ( this._pipelines.hasGpuPipeline( renderObject ) ) this.backend.draw( renderObject, this.info );
+				else ready = false;
+
+			}
+			renderBundleData.preparedDraws.length = 0;
 
 			//
 
 			this.backend.finishBundle( renderContext, renderBundle );
 
-			renderBundleData.version = bundleGroup.version;
+			renderBundleData.version = ready ? bundleGroup.version : - 1;
 
 		} else {
 
@@ -1344,7 +1357,21 @@ class Renderer {
 	 * @param {boolean} [useFrameBufferTarget=true] - Whether to use a framebuffer target or not.
 	 * @return {RenderContext} The current render context.
 	 */
-	_renderScene( scene, camera, useFrameBufferTarget = true ) {
+	createObjectPass( filter ) {
+
+		return new RenderObjectPass( filter );
+
+	}
+
+	renderObjectPass( scene, camera, pass ) {
+
+		if ( this.backend.beginBundle === undefined ) throw new Error( 'RenderObjectPass requires a render-bundle backend.' );
+		if ( this._renderObjectFunction !== null ) throw new Error( 'RenderObjectPass uses its own primitive filter; a custom render function cannot be active.' );
+		this._renderScene( scene, camera, true, pass );
+
+	}
+
+	_renderScene( scene, camera, useFrameBufferTarget = true, objectPass = null ) {
 
 		if ( this._isDeviceLost === true ) return;
 
@@ -1465,7 +1492,7 @@ class Renderer {
 		const renderList = this._renderLists.get( scene, camera );
 		renderList.begin();
 
-		this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext );
+		this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext, objectPass );
 
 		renderList.finish();
 
@@ -1499,9 +1526,17 @@ class Renderer {
 			opaque: opaqueObjects
 		} = renderList;
 
-		if ( bundles.length > 0 ) this._renderBundles( bundles, sceneRef, lightsNode );
-		if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
-		if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
+		if ( objectPass !== null ) {
+
+			this._renderBundle( objectPass.prepare( renderList, sceneRef, renderContext, this ), sceneRef, lightsNode );
+
+		} else {
+
+			if ( bundles.length > 0 ) this._renderBundles( bundles, sceneRef, lightsNode );
+			if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
+			if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
+
+		}
 
 		// finish render pass
 
@@ -2897,7 +2932,7 @@ class Renderer {
 	 * @param {RenderList} renderList - The current render list.
 	 * @param {ClippingContext} clippingContext - The current clipping context.
 	 */
-	_projectObject( object, camera, groupOrder, renderList, clippingContext ) {
+	_projectObject( object, camera, groupOrder, renderList, clippingContext, objectPass = null ) {
 
 		if ( object.visible === false ) return;
 
@@ -2919,7 +2954,7 @@ class Renderer {
 
 				renderList.pushLight( object );
 
-			} else if ( object.isSprite ) {
+			} else if ( object.isSprite && ( objectPass === null || objectPass.filter( object ) ) ) {
 
 				const frustum = camera.isArrayCamera ? _frustumArray : _frustum;
 
@@ -2945,7 +2980,7 @@ class Renderer {
 
 				error( 'Renderer: Objects of type THREE.LineLoop are not supported. Please use THREE.Line or THREE.LineSegments.' );
 
-			} else if ( object.isMesh || object.isLine || object.isPoints ) {
+			} else if ( ( object.isMesh || object.isLine || object.isPoints ) && ( objectPass === null || objectPass.filter( object ) ) ) {
 
 				const frustum = camera.isArrayCamera ? _frustumArray : _frustum;
 
@@ -2995,7 +3030,7 @@ class Renderer {
 
 		let cachedBundleList = null;
 
-		if ( object.isBundleGroup === true && this.backend.beginBundle !== undefined ) {
+		if ( objectPass === null && object.isBundleGroup === true && this.backend.beginBundle !== undefined ) {
 
 			const baseRenderList = renderList;
 
@@ -3031,7 +3066,7 @@ class Renderer {
 
 		for ( let i = 0, l = children.length; i < l; i ++ ) {
 
-			this._projectObject( children[ i ], camera, groupOrder, renderList, clippingContext );
+			this._projectObject( children[ i ], camera, groupOrder, renderList, clippingContext, objectPass );
 
 		}
 
@@ -3446,6 +3481,14 @@ class Renderer {
 			renderBundleData.renderObjects.push( renderObject );
 
 			renderObject.bundle = this._currentRenderBundle.bundleGroup;
+
+			if ( renderBundleData.preparing === true ) {
+
+				renderBundleData.preparedDraws.push( { renderObject, group, pipeline: renderObject.pipeline } );
+				if ( needsRefresh ) this._nodes.updateAfter( renderObject );
+				return;
+
+			}
 
 		}
 
