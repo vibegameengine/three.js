@@ -430,9 +430,13 @@ class WebGPUBindingUtils {
 
 				if ( binding.isStorageBuffer ) {
 
-					if ( binding.visibility & GPUShaderStage.COMPUTE ) {
+					const atomicInFragment = binding.nodeUniform?.isAtomic === true && ( binding.visibility & GPUShaderStage.VERTEX ) === 0;
 
-						// compute
+					if ( atomicInFragment ) {
+
+						buffer.type = GPUBufferBindingType.Storage;
+
+					} else if ( binding.visibility & GPUShaderStage.COMPUTE ) {
 
 						if ( binding.access === NodeAccess.READ_WRITE || binding.access === NodeAccess.WRITE_ONLY ) {
 
