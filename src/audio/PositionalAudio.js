@@ -48,6 +48,8 @@ class PositionalAudio extends Audio {
 
 		super( listener );
 
+		this.updatesEveryFrame = true;
+
 		/**
 		 * The panner node represents the location, direction, and behavior of an audio
 		 * source in 3D space.

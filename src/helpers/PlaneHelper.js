@@ -38,6 +38,7 @@ class PlaneHelper extends Line {
 		super( geometry, new LineBasicMaterial( { color: color, toneMapped: false } ) );
 
 		this.type = 'PlaneHelper';
+		this.updatesEveryFrame = true;
 
 		/**
 		 * The plane being visualized.

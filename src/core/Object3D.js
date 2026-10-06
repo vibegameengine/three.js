@@ -8,6 +8,15 @@ import { Matrix3 } from '../math/Matrix3.js';
 import { generateUUID } from '../math/MathUtils.js';
 import { error } from '../utils.js';
 import { touchDrawList } from './DrawListRevision.js';
+import { ObservedVector3 } from '../math/ObservedVector3.js';
+
+function markTransformDirty( object ) {
+
+	object._transformDirty = true;
+
+	for ( let node = object.parent; node != null && node._dirtyBelow !== true; node = node.parent ) node._dirtyBelow = true;
+
+}
 
 let _object3DId = 0;
 
@@ -138,23 +147,37 @@ class Object3D extends EventDispatcher {
 		 */
 		this.up = Object3D.DEFAULT_UP.clone();
 
-		const position = new Vector3();
+		this._transformDirty = true;
+		this._dirtyBelow = false;
+
+		const position = new ObservedVector3();
 		const rotation = new Euler();
 		const quaternion = new Quaternion();
-		const scale = new Vector3( 1, 1, 1 );
+		const scale = new ObservedVector3( 1, 1, 1 );
+		const object = this;
+
+		function onTransformChange() {
+
+			if ( object._transformDirty !== true ) markTransformDirty( object );
+
+		}
 
 		function onRotationChange() {
 
 			quaternion.setFromEuler( rotation, false );
+			onTransformChange();
 
 		}
 
 		function onQuaternionChange() {
 
 			rotation.setFromQuaternion( quaternion, undefined, false );
+			onTransformChange();
 
 		}
 
+		position._onChange( onTransformChange );
+		scale._onChange( onTransformChange );
 		rotation._onChange( onRotationChange );
 		quaternion._onChange( onQuaternionChange );
 
@@ -250,7 +273,7 @@ class Object3D extends EventDispatcher {
 		 * @type {boolean}
 		 * @default true
 		 */
-		this.matrixAutoUpdate = Object3D.DEFAULT_MATRIX_AUTO_UPDATE;
+		this._matrixAutoUpdate = Object3D.DEFAULT_MATRIX_AUTO_UPDATE;
 
 		/**
 		 * When set to `true`, the engine automatically computes the world matrix from the current local
@@ -270,8 +293,6 @@ class Object3D extends EventDispatcher {
 		 * @type {boolean}
 		 * @default false
 		 */
-		this.matrixWorldNeedsUpdate = false;
-
 		/**
 		 * The layer membership of the 3D object. The 3D object is only visible if it has
 		 * at least one layer in common with the camera in use. This property can also be
@@ -422,6 +443,33 @@ class Object3D extends EventDispatcher {
 		if ( this._visible === value ) return;
 		this._visible = value;
 		touchDrawList( this );
+
+	}
+
+	get matrixAutoUpdate() {
+
+		return this._matrixAutoUpdate;
+
+	}
+
+	set matrixAutoUpdate( value ) {
+
+		if ( this._matrixAutoUpdate === value ) return;
+		this._matrixAutoUpdate = value;
+		markTransformDirty( this );
+
+	}
+
+	get matrixWorldNeedsUpdate() {
+
+		return this._transformDirty;
+
+	}
+
+	set matrixWorldNeedsUpdate( value ) {
+
+		if ( value === true ) markTransformDirty( this );
+		else this._transformDirty = false;
 
 	}
 
@@ -770,6 +818,7 @@ class Object3D extends EventDispatcher {
 			object.parent = this;
 			this.children.push( object );
 			touchDrawList( this );
+			markTransformDirty( object );
 
 			object.dispatchEvent( _addedEvent );
 
@@ -897,6 +946,7 @@ class Object3D extends EventDispatcher {
 		object.parent = this;
 		this.children.push( object );
 		touchDrawList( this );
+		markTransformDirty( object );
 
 		object.updateWorldMatrix( false, true );
 
@@ -1137,7 +1187,7 @@ class Object3D extends EventDispatcher {
 
 		this.matrix.compose( this.position, this.quaternion, this.scale );
 
-		this.matrixWorldNeedsUpdate = true;
+		if ( this._transformDirty !== true ) markTransformDirty( this );
 
 	}
 
@@ -1154,9 +1204,16 @@ class Object3D extends EventDispatcher {
 	 */
 	updateMatrixWorld( force ) {
 
-		if ( this.matrixAutoUpdate ) this.updateMatrix();
+		if ( force !== true && this._transformDirty !== true && this._dirtyBelow !== true ) return;
 
-		if ( this.matrixWorldNeedsUpdate || force ) {
+		const descendantsMoved = this._dirtyBelow;
+		this._dirtyBelow = false;
+
+		if ( this._transformDirty === true || force === true ) {
+
+			this._transformDirty = true;
+
+			if ( this.matrixAutoUpdate ) this.updateMatrix();
 
 			if ( this.matrixWorldAutoUpdate === true ) {
 
@@ -1172,23 +1229,25 @@ class Object3D extends EventDispatcher {
 
 			}
 
-			this.matrixWorldNeedsUpdate = false;
+			this._transformDirty = false;
 
 			force = true;
 
 		}
 
-		// make sure descendants are updated if required
+		if ( force === true || descendantsMoved === true ) {
 
-		const children = this.children;
+			const children = this.children;
 
-		for ( let i = 0, l = children.length; i < l; i ++ ) {
+			for ( let i = 0, l = children.length; i < l; i ++ ) {
 
-			const child = children[ i ];
+				children[ i ].updateMatrixWorld( force );
 
-			child.updateMatrixWorld( force );
+			}
 
 		}
+
+		if ( this.updatesEveryFrame === true ) markTransformDirty( this );
 
 	}
 
@@ -1202,12 +1261,17 @@ class Object3D extends EventDispatcher {
 	updateWorldMatrix( updateParents, updateChildren ) {
 
 		const parent = this.parent;
+		let ancestorsMoved = false;
 
 		if ( updateParents === true && parent !== null ) {
 
-			parent.updateWorldMatrix( true, false );
+			ancestorsMoved = parent.updateWorldMatrix( true, false );
 
 		}
+
+		const moved = ancestorsMoved || this._transformDirty === true;
+
+		if ( updateParents === true && updateChildren !== true && moved === false ) return false;
 
 		if ( this.matrixAutoUpdate ) this.updateMatrix();
 
@@ -1240,6 +1304,8 @@ class Object3D extends EventDispatcher {
 			}
 
 		}
+
+		return true;
 
 	}
 
@@ -1633,6 +1699,8 @@ Object3D.DEFAULT_UP = /*@__PURE__*/ new Vector3( 0, 1, 0 );
  * @default true
  */
 Object3D.DEFAULT_MATRIX_AUTO_UPDATE = true;
+
+Object3D.prototype.updatesEveryFrame = false;
 
 /**
  * The default setting for {@link Object3D#matrixWorldAutoUpdate} for

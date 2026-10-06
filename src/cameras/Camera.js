@@ -113,9 +113,11 @@ class Camera extends Object3D {
 
 	updateWorldMatrix( updateParents, updateChildren ) {
 
-		super.updateWorldMatrix( updateParents, updateChildren );
+		const moved = super.updateWorldMatrix( updateParents, updateChildren );
 
 		this.matrixWorldInverse.copy( this.matrixWorld ).invert();
+
+		return moved;
 
 	}
 

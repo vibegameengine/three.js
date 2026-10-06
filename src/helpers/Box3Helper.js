@@ -46,6 +46,7 @@ class Box3Helper extends LineSegments {
 		this.box = box;
 
 		this.type = 'Box3Helper';
+		this.updatesEveryFrame = true;
 
 		this.geometry.computeBoundingSphere();
 

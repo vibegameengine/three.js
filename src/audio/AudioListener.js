@@ -31,6 +31,7 @@ class AudioListener extends Object3D {
 		super();
 
 		this.type = 'AudioListener';
+		this.updatesEveryFrame = true;
 
 		/**
 		 * The native audio context.

@@ -69,6 +69,7 @@ class SkeletonHelper extends LineSegments {
 		this.isSkeletonHelper = true;
 
 		this.type = 'SkeletonHelper';
+		this.updatesEveryFrame = true;
 
 		/**
 		 * The object being visualized.
