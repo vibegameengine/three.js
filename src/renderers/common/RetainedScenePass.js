@@ -4,6 +4,7 @@ import { listenForDirtyBuffers, takeDirtyBuffers } from '../../core/DrawListRevi
 import { AttributeType } from './Constants.js';
 import RetainedDrawList from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
+import RetainedTransparents from './RetainedTransparents.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 
@@ -18,6 +19,7 @@ class RetainedScenePass {
 	constructor() {
 
 		this.list = new RetainedDrawList();
+		this.transparents = new RetainedTransparents();
 		this.culling = null;
 		this.bundleGroup = { version: 0, static: true };
 		this.encoded = { listVersion: - 1, context: null, contextNode: null, contextNodeVersion: - 1 };
@@ -43,7 +45,6 @@ class RetainedScenePass {
 
 		for ( const light of this.list.lights ) renderList.pushLight( light );
 
-		this._pushVisible( this.list.transparent, renderList, renderContext, frustum, projScreenMatrix, camera );
 		this._pushVisible( this.list.direct, renderList, renderContext, frustum, projScreenMatrix, camera );
 
 	}
@@ -53,6 +54,7 @@ class RetainedScenePass {
 		const gpuScene = renderer.gpuScene;
 
 		for ( const item of this.list.items ) gpuScene.sync( item.object, gpuSceneFrame );
+		for ( const item of this.list.transparent ) gpuScene.sync( item.object, gpuSceneFrame );
 
 		renderer._flushGpuScene();
 
@@ -91,6 +93,13 @@ class RetainedScenePass {
 
 	}
 
+	drawTransparent( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix } ) {
+
+		const encodeKey = `${ renderContext.id }:${ renderer.contextNode.id }:${ renderer.contextNode.version }:${ this.list.version }`;
+		this.transparents.draw( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix, encodeKey } );
+
+	}
+
 	dispose() {
 
 		this._unbind();
@@ -115,6 +124,8 @@ class RetainedScenePass {
 		this._unbind();
 		this.culling = new RetainedCulling( renderer.gpuScene, this.list.items.length );
 		this._describeItems( renderer, camera, renderContext );
+		for ( const item of this.list.transparent ) item.clippingContext = renderContext.clippingContext;
+		this.transparents.rebuild( this.list.transparent );
 		this.reencode = true;
 
 	}

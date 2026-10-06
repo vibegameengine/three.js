@@ -2338,6 +2338,7 @@ class WebGPUBackend extends Backend {
 		const renderContextData = this.get( renderContext );
 
 		this._beginPendingPass( renderContextData );
+		this._executeCachedDraws( renderContextData );
 		renderContextData._currentPass = renderContextData.currentPass;
 		renderContextData._currentSets = renderContextData.currentSets;
 

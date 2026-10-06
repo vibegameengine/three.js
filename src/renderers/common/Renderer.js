@@ -1555,7 +1555,7 @@ class Renderer {
 
 			if ( this.opaque === true ) retained.draw( this, sceneRef, lightsNode, renderContext, camera );
 			if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
-			if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
+			if ( this.transparent === true ) retained.drawTransparent( this, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix: _projScreenMatrix } );
 
 		} else {
 
