@@ -60,6 +60,8 @@ class RetainedScenePass {
 
 		this._uploadChangedBuffers( renderer );
 
+		if ( this.culling.drawsKnown === false ) return;
+
 		this.culling.aim( frustum );
 		renderer.compute( this.culling.node );
 
@@ -125,8 +127,9 @@ class RetainedScenePass {
 		this.culling.primitives.array.set( previous.primitives.array );
 		this.culling.instances.array.set( previous.instances.array );
 		this.culling.args.array.set( previous.args.array );
+		this.culling.drawsKnown = previous.drawsKnown;
 		this.culling.upload();
-		for ( const binding of this.bindings ) binding.indirect = this.culling.args;
+		for ( const { binding } of this.bindings ) binding.indirect = this.culling.args;
 		this.reencode = true;
 
 	}
@@ -208,8 +211,10 @@ class RetainedScenePass {
 		if ( renderObjects.length !== this.list.items.length ) throw new Error( `RetainedScenePass: encoded ${ renderObjects.length } draws for ${ this.list.items.length } retained items.` );
 
 		renderObjects.forEach( ( renderObject, index ) => this.culling.writeDraw( index, renderObject.getDrawParameters() ) );
+		this.culling.drawsKnown = true;
 		this.culling.upload();
 		renderer._attributes.update( this.culling.args, AttributeType.INDIRECT );
+		renderer._attributes.update( this.culling.instances, AttributeType.STORAGE );
 
 		this._remember( renderer, renderObjects );
 

@@ -20,6 +20,7 @@ class RetainedCulling {
 		this.instances = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
 		this.planes = uniformArray( Array.from( { length: FRUSTUM_PLANES }, () => new Vector4() ), 'vec4' );
 		this.gpuScene = gpuScene;
+		this.drawsKnown = false;
 		this.recordsAttribute = gpuScene.records;
 		this.node = this._kernel();
 
