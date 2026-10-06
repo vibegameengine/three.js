@@ -291,7 +291,7 @@ class Object3D extends EventDispatcher {
 		 * @type {boolean}
 		 * @default false
 		 */
-		this.castShadow = false;
+		this._castShadow = false;
 
 		/**
 		 * When set to `true`, the 3D object is affected by shadows in the scene.
@@ -421,6 +421,20 @@ class Object3D extends EventDispatcher {
 
 		if ( this._visible === value ) return;
 		this._visible = value;
+		touchDrawList( this );
+
+	}
+
+	get castShadow() {
+
+		return this._castShadow;
+
+	}
+
+	set castShadow( value ) {
+
+		if ( this._castShadow === value ) return;
+		this._castShadow = value;
 		touchDrawList( this );
 
 	}

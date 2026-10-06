@@ -62,6 +62,12 @@ class GpuScene {
 
 	}
 
+	syncRead( object, frameId ) {
+
+		if ( this.primitives.has( object ) ) this.sync( object, frameId );
+
+	}
+
 	sync( object, frameId ) {
 
 		const primitive = this.primitiveOf( object );
@@ -94,9 +100,9 @@ class GpuScene {
 
 	syncRenderList( renderList, frameId ) {
 
-		for ( const item of renderList.opaque ) this.sync( item.object, frameId );
-		for ( const item of renderList.transparent ) this.sync( item.object, frameId );
-		for ( const item of renderList.transparentDoublePass ) this.sync( item.object, frameId );
+		for ( const item of renderList.opaque ) this.syncRead( item.object, frameId );
+		for ( const item of renderList.transparent ) this.syncRead( item.object, frameId );
+		for ( const item of renderList.transparentDoublePass ) this.syncRead( item.object, frameId );
 		for ( const bundle of renderList.bundles ) {
 
 			const group = bundle.bundleGroup;
