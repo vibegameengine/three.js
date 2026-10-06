@@ -915,9 +915,9 @@ class RenderObject {
 
 		}
 
-		const culling = instanceCullingFor( this.object, this.camera );
+		const culling = instanceCullingFor( this.object, this.camera, this.context );
 
-		if ( culling !== null ) {
+		if ( culling !== null && culling.instanceIds !== null ) {
 
 			cacheKey = hash( cacheKey, culling.instanceIds.id, culling.idBase );
 

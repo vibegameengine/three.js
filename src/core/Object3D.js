@@ -280,6 +280,7 @@ class Object3D extends EventDispatcher {
 		 * @type {Layers}
 		 */
 		this.layers = new Layers();
+		this.layers._owner = this;
 
 		this.drawListRevision = 0;
 		this._visible = true;

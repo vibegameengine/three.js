@@ -15,6 +15,7 @@ import ClippingContext from './ClippingContext.js';
 import QuadMesh from './QuadMesh.js';
 import RenderBundles from './RenderBundles.js';
 import RenderObjectPass from './RenderObjectPass.js';
+import RetainedScenePass from './RetainedScenePass.js';
 import NodeLibrary from './nodes/NodeLibrary.js';
 import Lighting from './Lighting.js';
 import XRManager from './XRManager.js';
@@ -1150,7 +1151,7 @@ class Renderer {
 	 * @param {Scene} sceneRef - The scene the render bundle belongs to.
 	 * @param {LightsNode} lightsNode - The lights node.
 	 */
-	_renderBundle( bundle, sceneRef, lightsNode ) {
+	_renderBundle( bundle, sceneRef, lightsNode, inPassOrder = false ) {
 
 		const { bundleGroup, camera, renderList } = bundle;
 
@@ -1234,7 +1235,8 @@ class Renderer {
 
 		}
 
-		this.backend.addBundle( renderContext, renderBundle );
+		if ( inPassOrder ) this.backend.drawBundle( renderContext, renderBundle );
+		else this.backend.addBundle( renderContext, renderBundle );
 
 	}
 
@@ -1371,7 +1373,21 @@ class Renderer {
 
 	}
 
-	_renderScene( scene, camera, useFrameBufferTarget = true, objectPass = null ) {
+	createRetainedPass() {
+
+		return new RetainedScenePass();
+
+	}
+
+	renderRetained( scene, camera, retained ) {
+
+		if ( this.backend.beginBundle === undefined ) throw new Error( 'RetainedScenePass requires a render-bundle backend.' );
+		if ( this._renderObjectFunction !== null ) throw new Error( 'RetainedScenePass records its own draws; a custom render function cannot be active.' );
+		this._renderScene( scene, camera, true, null, retained );
+
+	}
+
+	_renderScene( scene, camera, useFrameBufferTarget = true, objectPass = null, retained = null ) {
 
 		if ( this._isDeviceLost === true ) return;
 
@@ -1492,11 +1508,16 @@ class Renderer {
 		const renderList = this._renderLists.get( scene, camera );
 		renderList.begin();
 
-		this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext, objectPass );
+		if ( retained !== null ) retained.collectFrame( this, scene, camera, renderContext, renderList, frustum, _projScreenMatrix );
+		else this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext, objectPass );
 
 		renderList.finish();
 
-		if ( this.gpuScene !== null ) this._syncGpuScene( renderList, { topLevel: previousRenderContext === null, toScreen: outputRenderTarget === null } );
+		const gpuSceneFrame = { topLevel: previousRenderContext === null, toScreen: outputRenderTarget === null };
+
+		if ( this.gpuScene !== null ) this._syncGpuScene( renderList, gpuSceneFrame );
+
+		if ( retained !== null ) retained.syncAndCull( this, this._gpuSceneFrame( gpuSceneFrame.topLevel, gpuSceneFrame.toScreen ), frustum );
 
 		if ( this.sortObjects === true ) {
 
@@ -1529,6 +1550,12 @@ class Renderer {
 		if ( objectPass !== null ) {
 
 			this._renderBundle( objectPass.prepare( renderList, sceneRef, renderContext, this ), sceneRef, lightsNode );
+
+		} else if ( retained !== null ) {
+
+			if ( this.opaque === true ) retained.draw( this, sceneRef, lightsNode, renderContext, camera );
+			if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
+			if ( this.transparent === true && transparentObjects.length > 0 ) this._renderTransparents( transparentObjects, transparentDoublePassObjects, camera, sceneRef, lightsNode );
 
 		} else {
 

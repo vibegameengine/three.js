@@ -255,6 +255,8 @@ class PassNode extends TempNode {
 		 */
 		this.overrideMaterial = null;
 
+		this.retained = null;
+
 		/**
 		 * Whether the pass is transparent.
 		 *
@@ -829,7 +831,8 @@ class PassNode extends TempNode {
 
 		scene.name = this.name ? this.name : scene.name;
 
-		renderer.render( scene, camera );
+		if ( this.retained !== null ) renderer.renderRetained( scene, camera, this.retained );
+		else renderer.render( scene, camera );
 
 		scene.name = currentSceneName;
 		scene.overrideMaterial = currentOverrideMaterial;

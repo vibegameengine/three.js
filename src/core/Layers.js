@@ -1,4 +1,4 @@
-import { touchLayers } from './DrawListRevision.js';
+import { touchDrawList } from './DrawListRevision.js';
 
 /**
  * A layers object assigns an 3D object to 1 or more of 32
@@ -21,6 +21,7 @@ class Layers {
 	constructor() {
 
 		this._mask = 1 | 0;
+		this._owner = null;
 
 	}
 
@@ -34,7 +35,7 @@ class Layers {
 
 		if ( this._mask === value ) return;
 		this._mask = value;
-		touchLayers();
+		if ( this._owner !== null && this._owner.isCamera !== true ) touchDrawList( this._owner );
 
 	}
 

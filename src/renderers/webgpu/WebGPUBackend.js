@@ -2382,6 +2382,26 @@ class WebGPUBackend extends Backend {
 
 	}
 
+	drawBundle( renderContext, bundle ) {
+
+		const renderContextData = this.get( renderContext );
+		const bundleGPU = this.get( bundle ).bundleGPU;
+
+		this._beginPendingPass( renderContextData );
+
+		if ( renderContextData.cachedDraws !== undefined ) {
+
+			renderContextData.cachedDraws.push( bundleGPU );
+			return;
+
+		}
+
+		renderContextData.cachedDraws = [ bundleGPU ];
+		this._executeCachedDraws( renderContextData );
+		renderContextData.cachedDraws = undefined;
+
+	}
+
 	// bindings
 
 	/**

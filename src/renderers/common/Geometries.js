@@ -325,7 +325,7 @@ class Geometries extends DataMap {
 
 		const culling = instanceCullingOf( renderObject );
 
-		if ( culling !== null ) return culling.indirectOffset;
+		if ( culling !== null ) return culling.groupOffsets === undefined ? culling.indirectOffset : culling.groupOffsets.get( renderObject.group );
 
 		return renderObject.geometry.indirectOffset;
 

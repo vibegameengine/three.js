@@ -1,4 +1,4 @@
-const revisions = { layers: 0, materials: 0 };
+const revisions = { materials: 0 };
 const dirtyBuffers = new Set();
 let bufferListeners = 0;
 
@@ -16,21 +16,9 @@ export function touchDrawList( object ) {
 
 }
 
-export function touchLayers() {
-
-	revisions.layers ++;
-
-}
-
 export function touchMaterials() {
 
 	revisions.materials ++;
-
-}
-
-export function layersRevision() {
-
-	return revisions.layers;
 
 }
 
