@@ -7,6 +7,7 @@ import { Layers } from './Layers.js';
 import { Matrix3 } from '../math/Matrix3.js';
 import { generateUUID } from '../math/MathUtils.js';
 import { error } from '../utils.js';
+import { touchDrawList } from './DrawListRevision.js';
 
 let _object3DId = 0;
 
@@ -280,13 +281,8 @@ class Object3D extends EventDispatcher {
 		 */
 		this.layers = new Layers();
 
-		/**
-		 * When set to `true`, the 3D object gets rendered.
-		 *
-		 * @type {boolean}
-		 * @default true
-		 */
-		this.visible = true;
+		this.drawListRevision = 0;
+		this._visible = true;
 
 		/**
 		 * When set to `true`, the 3D object gets rendered into shadow maps.
@@ -413,6 +409,20 @@ class Object3D extends EventDispatcher {
 	 * @param {Object} group - The geometry group data.
 	 */
 	onAfterRender( /* renderer, scene, camera, geometry, material, group */ ) {}
+
+	get visible() {
+
+		return this._visible;
+
+	}
+
+	set visible( value ) {
+
+		if ( this._visible === value ) return;
+		this._visible = value;
+		touchDrawList( this );
+
+	}
 
 	/**
 	 * Applies the given transformation matrix to the object and updates the object's position,
@@ -744,6 +754,7 @@ class Object3D extends EventDispatcher {
 			object.removeFromParent();
 			object.parent = this;
 			this.children.push( object );
+			touchDrawList( this );
 
 			object.dispatchEvent( _addedEvent );
 
@@ -790,6 +801,7 @@ class Object3D extends EventDispatcher {
 
 			object.parent = null;
 			this.children.splice( index, 1 );
+			touchDrawList( this );
 
 			object.dispatchEvent( _removedEvent );
 
@@ -869,6 +881,7 @@ class Object3D extends EventDispatcher {
 		object.removeFromParent();
 		object.parent = this;
 		this.children.push( object );
+		touchDrawList( this );
 
 		object.updateWorldMatrix( false, true );
 

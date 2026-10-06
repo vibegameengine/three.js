@@ -8,6 +8,7 @@ import { Triangle } from '../math/Triangle.js';
 import { BackSide, FrontSide } from '../constants.js';
 import { MeshBasicMaterial } from '../materials/MeshBasicMaterial.js';
 import { BufferGeometry } from '../core/BufferGeometry.js';
+import { defineDrawableAccessors } from '../core/DrawListRevision.js';
 
 const _inverseMatrix = /*@__PURE__*/ new Matrix4();
 const _ray = /*@__PURE__*/ new Ray();
@@ -492,5 +493,7 @@ function checkGeometryIntersection( object, material, raycaster, ray, uv, uv1, n
 	return intersection;
 
 }
+
+defineDrawableAccessors( Mesh.prototype );
 
 export { Mesh };

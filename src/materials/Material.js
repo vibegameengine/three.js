@@ -3,6 +3,7 @@ import { EventDispatcher } from '../core/EventDispatcher.js';
 import { FrontSide, NormalBlending, LessEqualDepth, AddEquation, OneMinusSrcAlphaFactor, SrcAlphaFactor, AlwaysStencilFunc, KeepStencilOp } from '../constants.js';
 import { generateUUID } from '../math/MathUtils.js';
 import { warn } from '../utils.js';
+import { touchMaterials } from '../core/DrawListRevision.js';
 
 let _materialId = 0;
 
@@ -1008,7 +1009,9 @@ class Material extends EventDispatcher {
 	 */
 	set needsUpdate( value ) {
 
-		if ( value === true ) this.version ++;
+		if ( value !== true ) return;
+		this.version ++;
+		touchMaterials();
 
 	}
 

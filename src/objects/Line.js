@@ -7,6 +7,7 @@ import { LineBasicMaterial } from '../materials/LineBasicMaterial.js';
 import { BufferGeometry } from '../core/BufferGeometry.js';
 import { Float32BufferAttribute } from '../core/BufferAttribute.js';
 import { warn } from '../utils.js';
+import { defineDrawableAccessors } from '../core/DrawListRevision.js';
 
 const _vStart = /*@__PURE__*/ new Vector3();
 const _vEnd = /*@__PURE__*/ new Vector3();
@@ -325,5 +326,7 @@ function checkIntersection( object, raycaster, ray, thresholdSq, a, b, i ) {
 	};
 
 }
+
+defineDrawableAccessors( Line.prototype );
 
 export { Line };

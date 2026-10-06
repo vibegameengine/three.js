@@ -1,3 +1,5 @@
+import { touchLayers } from './DrawListRevision.js';
+
 /**
  * A layers object assigns an 3D object to 1 or more of 32
  * layers numbered `0` to `31` - internally the layers are stored as a
@@ -18,13 +20,21 @@ class Layers {
 	 */
 	constructor() {
 
-		/**
-		 * A bit mask storing which of the 32 layers this layers object is currently
-		 * a member of.
-		 *
-		 * @type {number}
-		 */
-		this.mask = 1 | 0;
+		this._mask = 1 | 0;
+
+	}
+
+	get mask() {
+
+		return this._mask;
+
+	}
+
+	set mask( value ) {
+
+		if ( this._mask === value ) return;
+		this._mask = value;
+		touchLayers();
 
 	}
 

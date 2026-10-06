@@ -3,6 +3,7 @@ import { Vector2 } from '../math/Vector2.js';
 import { denormalize, normalize } from '../math/MathUtils.js';
 import { StaticDrawUsage, FloatType } from '../constants.js';
 import { fromHalfFloat, toHalfFloat } from '../extras/DataUtils.js';
+import { markBufferDirty } from './DrawListRevision.js';
 
 const _vector = /*@__PURE__*/ new Vector3();
 const _vector2 = /*@__PURE__*/ new Vector2();
@@ -151,7 +152,9 @@ class BufferAttribute {
 	 */
 	set needsUpdate( value ) {
 
-		if ( value === true ) this.version ++;
+		if ( value !== true ) return;
+		this.version ++;
+		markBufferDirty( this );
 
 	}
 

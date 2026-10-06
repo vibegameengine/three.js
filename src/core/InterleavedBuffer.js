@@ -1,5 +1,6 @@
 import { generateUUID } from '../math/MathUtils.js';
 import { StaticDrawUsage } from '../constants.js';
+import { markBufferDirty } from './DrawListRevision.js';
 
 /**
  * "Interleaved" means that multiple attributes, possibly of different types,
@@ -100,7 +101,9 @@ class InterleavedBuffer {
 	 */
 	set needsUpdate( value ) {
 
-		if ( value === true ) this.version ++;
+		if ( value !== true ) return;
+		this.version ++;
+		markBufferDirty( this );
 
 	}
 

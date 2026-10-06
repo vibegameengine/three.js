@@ -8,6 +8,7 @@ import { InterleavedBuffer } from '../core/InterleavedBuffer.js';
 import { InterleavedBufferAttribute } from '../core/InterleavedBufferAttribute.js';
 import { SpriteMaterial } from '../materials/SpriteMaterial.js';
 import { error } from '../utils.js';
+import { defineDrawableAccessors } from '../core/DrawListRevision.js';
 
 let _geometry;
 
@@ -241,5 +242,7 @@ function transformVertex( vertexPosition, mvPosition, center, scale, sin, cos ) 
 	vertexPosition.applyMatrix4( _viewWorldMatrix );
 
 }
+
+defineDrawableAccessors( Sprite.prototype );
 
 export { Sprite };
