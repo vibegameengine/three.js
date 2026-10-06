@@ -23,6 +23,7 @@ class GpuScene {
 		this.records = new StorageBufferAttribute( new Float32Array( capacity * PRIMITIVE_FLOATS ), 4 );
 		this.recordsNode = null;
 		this.primitives = new WeakMap();
+		this.syncedBundles = new WeakMap();
 		this.freeIds = [];
 		this.nextId = 0;
 		this.dirtyFirst = Infinity;
@@ -96,7 +97,20 @@ class GpuScene {
 		for ( const item of renderList.opaque ) this.sync( item.object, frameId );
 		for ( const item of renderList.transparent ) this.sync( item.object, frameId );
 		for ( const item of renderList.transparentDoublePass ) this.sync( item.object, frameId );
-		for ( const bundle of renderList.bundles ) this.syncRenderList( bundle.renderList, frameId );
+		for ( const bundle of renderList.bundles ) {
+
+			const group = bundle.bundleGroup;
+
+			if ( group.objectsChangeOncePerFrame === true ) {
+
+				if ( this.syncedBundles.get( group ) === frameId ) continue;
+				this.syncedBundles.set( group, frameId );
+
+			}
+
+			this.syncRenderList( bundle.renderList, frameId );
+
+		}
 
 	}
 

@@ -1215,6 +1215,18 @@ class Renderer {
 		} else {
 
 			const { renderObjects } = renderBundleData;
+			const frameId = this._nodes.nodeFrame.frameId;
+
+			if ( bundleGroup.objectsChangeOncePerFrame === true && renderBundleData.refreshedFrame === frameId ) {
+
+				if ( renderObjects.length > 0 ) this._bindings.updateForRender( renderObjects[ 0 ] );
+				if ( inPassOrder ) this.backend.drawBundle( renderContext, renderBundle );
+				else this.backend.addBundle( renderContext, renderBundle );
+				return;
+
+			}
+
+			renderBundleData.refreshedFrame = frameId;
 
 			for ( let i = 0, l = renderObjects.length; i < l; i ++ ) {
 
