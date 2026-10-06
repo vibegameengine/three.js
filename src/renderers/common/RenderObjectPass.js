@@ -80,6 +80,7 @@ class RenderObjectPass {
 				value( object.skeleton?.boneTexture );
 				value( geometry.index );
 				value( geometry.index?.version );
+				value( geometry.drawIndex );
 				for ( const name in geometry.attributes ) {
 
 					const attribute = geometry.attributes[ name ];

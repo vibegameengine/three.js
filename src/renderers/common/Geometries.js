@@ -342,7 +342,7 @@ class Geometries extends DataMap {
 
 		const { geometry, material } = renderObject;
 
-		let index = geometry.index;
+		let index = geometry.drawIndex ?? geometry.index;
 
 		if ( material.wireframe === true ) {
 
