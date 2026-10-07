@@ -75,18 +75,19 @@ class GpuScenePrimitiveWorldNode extends Node {
 
 	}
 
-	constructor( primitive ) {
+	constructor( primitive, field = 'world' ) {
 
 		super( 'mat4' );
 
 		this.primitive = primitive;
+		this.field = field;
 
 	}
 
 	setup( builder ) {
 
 		const records = gpuSceneRecords( builder.renderer.gpuScene );
-		const base = uint( this.primitive ).mul( uint( PRIMITIVE_VEC4S ) ).add( uint( PrimitiveLayout.world ) ).toVar();
+		const base = uint( this.primitive ).mul( uint( PRIMITIVE_VEC4S ) ).add( uint( PrimitiveLayout[ this.field ] ) ).toVar();
 		const column = ( index ) => records.element( base.add( uint( index ) ) );
 
 		return mat4( column( 0 ), column( 1 ), column( 2 ), column( 3 ) );
@@ -96,6 +97,7 @@ class GpuScenePrimitiveWorldNode extends Node {
 }
 
 export const gpuSceneWorldOf = ( primitive ) => nodeObject( new GpuScenePrimitiveWorldNode( primitive ) );
+export const gpuScenePreviousWorldOf = ( primitive ) => nodeObject( new GpuScenePrimitiveWorldNode( primitive, 'previousWorld' ) );
 
 export const gpuSceneWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'world' );
 export const gpuScenePreviousWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'previousWorld' );
