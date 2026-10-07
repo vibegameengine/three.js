@@ -34,8 +34,10 @@ class GpuScene {
 		this.loopFrameId = - 1;
 		this.presented = false;
 		this.movedFrame = - 1;
-		this.moving = [];
-		this.stillMoving = [];
+		this.unsettled = [];
+		this.settling = [];
+		this.queued = [];
+		this.visits = 0;
 		this.releaser = new FinalizationRegistry( ( id ) => this.release( id ) );
 
 	}
@@ -104,22 +106,32 @@ class GpuScene {
 
 	syncMoved( frameId ) {
 
-		const candidates = takeMovedPrimitives( this.moving );
-		const unsettled = this.stillMoving;
-		unsettled.length = 0;
+		const newFrame = this.movedFrame !== frameId;
+		const candidates = takeMovedPrimitives( newFrame ? this.unsettled : this.queued );
+		const stillMoving = newFrame ? this.settling : this.unsettled;
+		if ( newFrame ) stillMoving.length = 0;
+		const visit = ++ this.visits;
 
 		for ( let i = 0, l = candidates.length; i < l; i ++ ) {
 
 			const object = candidates[ i ];
 			const primitive = this.primitives.get( object );
-			if ( primitive === undefined || primitive.frame === frameId && primitive.settled === true ) continue;
+			if ( primitive === undefined || primitive.visit === visit ) continue;
+			primitive.visit = visit;
+			const wasSettled = primitive.settled;
 			this.sync( object, frameId );
-			if ( primitive.settled === false ) unsettled.push( object );
+			if ( primitive.settled === false && ( newFrame || wasSettled ) ) stillMoving.push( object );
 
 		}
 
-		this.stillMoving = candidates;
-		this.moving = unsettled;
+		if ( newFrame ) {
+
+			this.settling = candidates;
+			this.unsettled = stillMoving;
+
+		}
+
+		candidates.length = newFrame ? candidates.length : 0;
 		this.movedFrame = frameId;
 
 	}
@@ -167,7 +179,7 @@ class GpuScene {
 			const id = this.allocate();
 			const attribute = new InstancedBufferAttribute( new Uint32Array( [ id ] ), 1 );
 			attribute.isGpuScenePrimitive = true;
-			primitive = { id, attribute, frame: - 1, settled: true };
+			primitive = { id, attribute, frame: - 1, settled: true, visit: 0 };
 			this.primitives.set( object, primitive );
 			object._gpuScenePrimitive = true;
 			this.releaser.register( object, id );
