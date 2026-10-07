@@ -1,4 +1,5 @@
 import { Material } from '../Material.js';
+import { signalSource } from '../../core/SourceSignals.js';
 
 import { hashArray, hashString } from '../../nodes/core/NodeUtils.js';
 import { output, diffuseColor, emissive, varyingProperty } from '../../nodes/core/PropertyNode.js';
@@ -444,7 +445,10 @@ class NodeMaterial extends Material {
 
 	set uniformsNeedUpdate( value ) {
 
-		if ( value === true ) this.uniformsVersion ++;
+		if ( value !== true ) return;
+
+		this.uniformsVersion ++;
+		signalSource( this );
 
 	}
 
