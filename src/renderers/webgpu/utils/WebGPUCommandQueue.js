@@ -5,6 +5,7 @@ const REPEATED_FAILURE_REPORT = 300;
 const UNKNOWN = 0;
 const VALID = 1;
 const INVALID = 2;
+const BUNDLE_LISTED_FLUSHES = 64;
 
 /**
  * Collects the command buffers of a frame and submits them together, instead of one
@@ -46,6 +47,8 @@ class WebGPUCommandQueue {
 		this.device = device;
 		this.waiting = [];
 		this.referenced = new Set();
+		this.flushes = 0;
+		this.bundlesReading = new WeakMap();
 		this.validity = new WeakMap();
 		this.buffersOfGroup = new WeakMap();
 		this.textureOfView = new WeakMap();
@@ -156,7 +159,7 @@ class WebGPUCommandQueue {
 
 		queue.writeBuffer = ( buffer, ...rest ) => {
 
-			if ( this.opaqueWaiting || this.referenced.has( buffer ) ) this.flush();
+			if ( this.opaqueWaiting || this.referenced.has( buffer ) || this.replayedBundleReads( buffer ) ) this.flush();
 			return writeBuffer( buffer, ...rest );
 
 		};
@@ -314,7 +317,7 @@ class WebGPUCommandQueue {
 	observeBundleEncoder( encoder ) {
 
 		const references = new Set();
-		const contents = { referenced: null, uses: new Set(), trusted: false };
+		const contents = { referenced: null, uses: new Set(), trusted: false, replayedInFlush: - 1, listed: false };
 		const use = ( object ) => { if ( object ) contents.uses.add( object ); };
 		const reference = ( buffer ) => { if ( buffer ) { references.add( buffer ); contents.uses.add( buffer ); } };
 
@@ -537,8 +540,8 @@ class WebGPUCommandQueue {
 
 		for ( const contents of recording.bundles ) {
 
-			const referenced = contents.referenced;
-			for ( let i = 0, l = referenced.length; i < l; i ++ ) this.referenced.add( referenced[ i ] );
+			contents.replayedInFlush = this.flushes;
+			if ( contents.listed === false ) this.listBundleReads( contents );
 
 		}
 
@@ -554,6 +557,44 @@ class WebGPUCommandQueue {
 		recording.groups.clear();
 
 		if ( recording.opaque ) this.opaqueWaiting = true;
+
+	}
+
+	listBundleReads( contents ) {
+
+		const relisted = contents.listedBefore === true;
+		contents.listed = contents.listedBefore = true;
+
+		for ( const buffer of contents.referenced ) {
+
+			let bundles = this.bundlesReading.get( buffer );
+			if ( bundles === undefined ) this.bundlesReading.set( buffer, bundles = [] );
+			if ( relisted === false || bundles.includes( contents ) === false ) bundles.push( contents );
+
+		}
+
+	}
+
+	replayedBundleReads( buffer ) {
+
+		const bundles = this.bundlesReading.get( buffer );
+		if ( bundles === undefined ) return false;
+
+		let replayed = false;
+		let kept = 0;
+
+		for ( let i = 0, l = bundles.length; i < l; i ++ ) {
+
+			const contents = bundles[ i ];
+			if ( contents.replayedInFlush === this.flushes ) replayed = true;
+
+			if ( this.flushes - contents.replayedInFlush > BUNDLE_LISTED_FLUSHES ) contents.listed = false;
+			else bundles[ kept ++ ] = contents;
+
+		}
+
+		bundles.length = kept;
+		return replayed;
 
 	}
 
@@ -701,6 +742,7 @@ class WebGPUCommandQueue {
 		const waiting = this.waiting;
 		this.waiting = [];
 		this.referenced.clear();
+		this.flushes ++;
 		this.opaqueWaiting = false;
 
 		let batch = [];
