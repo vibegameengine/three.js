@@ -1,3 +1,5 @@
+import { ChangeJournal } from './ChangeJournal.js';
+
 const revisions = { materials: 0 };
 const dirtyBuffers = new Set();
 let bufferListeners = 0;
@@ -21,28 +23,18 @@ const VISIBILITY_JOURNAL_LIMIT = 8192;
 export function touchVisibility( object ) {
 
 	const root = drawListRoot( object );
-	root.visibilityRevision ++;
-	const journal = root.visibilityJournal ?? ( root.visibilityJournal = { first: root.visibilityRevision, objects: [] } );
-	journal.objects.push( object );
-
-	if ( journal.objects.length > VISIBILITY_JOURNAL_LIMIT ) {
-
-		const dropped = journal.objects.length - VISIBILITY_JOURNAL_LIMIT / 2;
-		journal.objects.splice( 0, dropped );
-		journal.first += dropped;
-
-	}
+	const journal = root.visibilityJournal ?? ( root.visibilityJournal = new ChangeJournal( VISIBILITY_JOURNAL_LIMIT, root.visibilityRevision ) );
+	journal.note( object );
+	root.visibilityRevision = journal.revision;
 
 }
 
 export function visibilityChangesSince( root, seenRevision ) {
 
 	if ( seenRevision === root.visibilityRevision ) return [];
+	if ( root.visibilityJournal === undefined ) return null;
 
-	const journal = root.visibilityJournal;
-	if ( journal === undefined || seenRevision + 1 < journal.first ) return null;
-
-	return journal.objects.slice( seenRevision + 1 - journal.first );
+	return root.visibilityJournal.since( seenRevision );
 
 }
 

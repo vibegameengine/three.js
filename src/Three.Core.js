@@ -103,6 +103,7 @@ export { GLBufferAttribute } from './core/GLBufferAttribute.js';
 export * from './core/BufferAttribute.js';
 export { Object3D } from './core/Object3D.js';
 export { materialsRevision, visibilityChangesSince } from './core/DrawListRevision.js';
+export { transformChangesSince, transformRevision } from './core/TransformJournal.js';
 export { Raycaster } from './core/Raycaster.js';
 export { Layers } from './core/Layers.js';
 export { EventDispatcher } from './core/EventDispatcher.js';
