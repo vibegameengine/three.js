@@ -4,6 +4,7 @@ import { Fn, nodeImmutable, vec3, vec4 } from '../tsl/TSLBase.js';
 import { length, normalize } from '../math/MathNode.js';
 import { gpuSceneWorldMatrix, gpuSceneNormalMatrix, gpuSceneWorldInverseMatrix, usesGpuScene } from './GpuSceneNode.js';
 import { uniform } from '../core/UniformNode.js';
+import { NodeUpdateScope } from '../core/constants.js';
 
 import { Matrix4 } from '../../math/Matrix4.js';
 import { cameraViewMatrix } from './Camera.js';
@@ -35,6 +36,8 @@ class ModelNode extends Object3DNode {
 		super( scope );
 
 		this.isModelNode = true;
+
+		if ( this.readsGpuScene() ) this.updateScope = NodeUpdateScope.PRIMITIVE;
 
 	}
 

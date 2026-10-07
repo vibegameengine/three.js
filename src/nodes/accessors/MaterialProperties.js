@@ -1,6 +1,7 @@
 import { Euler } from '../../math/Euler.js';
 import { Matrix4 } from '../../math/Matrix4.js';
 import { uniform } from '../core/UniformNode.js';
+import { NodeUpdateScope } from '../core/constants.js';
 
 const _e1 = /*@__PURE__*/ new Euler();
 const _m1 = /*@__PURE__*/ new Matrix4();
@@ -11,7 +12,8 @@ const _m1 = /*@__PURE__*/ new Matrix4();
  * @tsl
  * @type {UniformNode<float>}
  */
-export const materialRefractionRatio = /*@__PURE__*/ uniform( 0 ).onReference( ( { material } ) => material ).onObjectUpdate( ( { material } ) => material.refractionRatio );
+export const materialRefractionRatio = /*@__PURE__*/ uniform( 0 ).onReference( ( { material } ) => material ).onObjectUpdate( ( { material } ) => material.refractionRatio )
+	.setUpdateScope( NodeUpdateScope.MATERIAL, { material: [ 'refractionRatio' ] } );
 
 /**
  * TSL object that represents the intensity of environment maps of PBR materials.
@@ -24,7 +26,7 @@ export const materialEnvIntensity = /*@__PURE__*/ uniform( 1 ).onReference( ( { 
 
 	return material.envMap ? material.envMapIntensity : scene.environmentIntensity;
 
-} );
+} ).setUpdateScope( NodeUpdateScope.MATERIAL, { material: [ 'envMap', 'envMapIntensity' ], scene: [ 'environmentIntensity' ] } );
 
 /**
  * TSL object that represents the rotation of environment maps.
@@ -56,4 +58,4 @@ export const materialEnvRotation = /*@__PURE__*/ uniform( new Matrix4() ).onRefe
 
 	return _m1;
 
-} );
+} ).setUpdateScope( NodeUpdateScope.MATERIAL, { material: [ 'envMap', 'envMapRotation' ], scene: [ 'environment', 'environmentRotation' ] } );

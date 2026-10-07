@@ -1,24 +1,48 @@
-import { NodeUpdateType } from '../../nodes/core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../../nodes/core/constants.js';
 import { objectGroup } from '../../nodes/core/UniformGroupNode.js';
 
 const _tracked = new WeakMap();
 
-export function trackUniformProperty( material, property ) {
+function markChanged( owner ) {
 
-	let tracked = _tracked.get( material );
+	owner.uniformsVersion = ( owner.uniformsVersion || 0 ) + 1;
 
-	if ( tracked === undefined ) _tracked.set( material, tracked = new Set() );
+}
+
+function watchInPlace( owner, value ) {
+
+	if ( value === null || value === undefined || value.isEuler !== true ) return;
+
+	const previous = value._onChangeCallback;
+
+	value._onChange( () => {
+
+		previous();
+		markChanged( owner );
+
+	} );
+
+}
+
+export function trackUniformProperty( owner, property ) {
+
+	let tracked = _tracked.get( owner );
+
+	if ( tracked === undefined ) _tracked.set( owner, tracked = new Set() );
 	if ( tracked.has( property ) ) return;
 
 	tracked.add( property );
+	if ( owner.uniformsVersion === undefined ) owner.uniformsVersion = 0;
 
-	const own = Object.getOwnPropertyDescriptor( material, property );
+	const own = Object.getOwnPropertyDescriptor( owner, property );
 
 	if ( own === undefined || Object.hasOwn( own, 'value' ) === false ) return;
 
 	let current = own.value;
 
-	Object.defineProperty( material, property, {
+	watchInPlace( owner, current );
+
+	Object.defineProperty( owner, property, {
 		configurable: true,
 		enumerable: own.enumerable,
 		get() {
@@ -31,22 +55,23 @@ export function trackUniformProperty( material, property ) {
 			if ( value === current ) return;
 
 			current = value;
-			material.uniformsVersion ++;
+			watchInPlace( owner, value );
+			markChanged( owner );
 
 		}
 	} );
 
 }
 
-function readsOnlyItsMaterial( node ) {
+function refreshedOnInvalidation( node ) {
 
-	return node.isMaterialReferenceNode === true || node.isTextureNode === true || ( node.isModelNode === true && node.readsGpuScene() === true );
+	return node.updateType === NodeUpdateType.OBJECT && ( node.updateScope === NodeUpdateScope.MATERIAL || node.updateScope === NodeUpdateScope.PRIMITIVE );
 
 }
 
 export function liveUpdateNodes( updateNodes ) {
 
-	return updateNodes.filter( ( node ) => node.updateType !== NodeUpdateType.OBJECT || readsOnlyItsMaterial( node ) === false );
+	return updateNodes.filter( ( node ) => refreshedOnInvalidation( node ) === false );
 
 }
 
@@ -56,18 +81,29 @@ function inMaterialGroup( binding ) {
 
 }
 
-function refilledBy( updateNodes ) {
+function refilledBy( nodes ) {
 
 	const refilled = new Set();
-	const add = ( node ) => {
 
-		if ( node === null || node === undefined ) return;
+	for ( const node of nodes ) for ( const uniform of node.getRefilledUniforms() ) refilled.add( uniform );
 
-		refilled.add( node );
-		if ( node.isTextureNode === true ) {
+	return refilled;
 
-			refilled.add( node._matrixUniform );
-			refilled.add( node._flipYUniform );
+}
+
+function readSources( renderObject, updateNodes ) {
+
+	const owners = new Set( [ renderObject.material ] );
+	const properties = [];
+	const read = ( owner, names ) => {
+
+		if ( owner === null || owner === undefined || names === null || names === undefined ) return;
+
+		owners.add( owner );
+		for ( const property of names ) {
+
+			trackUniformProperty( owner, property );
+			properties.push( { owner, property } );
 
 		}
 
@@ -75,35 +111,14 @@ function refilledBy( updateNodes ) {
 
 	for ( const node of updateNodes ) {
 
-		if ( node.isReferenceNode === true || node.isMaterialReferenceNode === true ) add( node.node );
-		add( node.uniformNode );
-		if ( node.isTextureNode === true ) add( node );
+		if ( node.updateScope !== NodeUpdateScope.MATERIAL ) continue;
+
+		read( node.material !== null && node.material !== undefined ? node.material : renderObject.material, node.readsMaterial );
+		read( renderObject.scene, node.readsScene );
 
 	}
 
-	return refilled;
-
-}
-
-function propertySources( material, updateNodes ) {
-
-	const sources = [];
-	const materials = new Set( [ material ] );
-
-	for ( const node of updateNodes ) {
-
-		if ( node.isMaterialReferenceNode !== true ) continue;
-
-		const owner = node.material !== null && node.material !== undefined ? node.material : material;
-		const property = node.property.split( '.' )[ 0 ];
-
-		trackUniformProperty( owner, property );
-		materials.add( owner );
-		sources.push( { owner, property } );
-
-	}
-
-	return { materials: [ ...materials ], properties: sources };
+	return { owners: [ ...owners ], properties };
 
 }
 
@@ -112,29 +127,25 @@ export class SteadyUniformSources {
 	constructor( renderObject, textureData ) {
 
 		const updateNodes = renderObject.getNodeBuilderState().updateNodes;
-		const refilled = refilledBy( updateNodes );
-		const { materials, properties } = propertySources( renderObject.material, updateNodes );
+		const { owners, properties } = readSources( renderObject, updateNodes );
 
 		this.textureData = textureData;
 		this.liveNodes = liveUpdateNodes( updateNodes );
-		this.materials = materials;
-		this.propertyTextures = properties;
+		this.owners = owners;
+		this.properties = properties;
 		this.uniformNodes = [];
 		this.textureBindings = [];
 		this.storageBindings = [];
 		this.steady = true;
 
-		const fedByLiveNodes = new Set( this.liveNodes );
-
-		for ( const node of this.liveNodes ) if ( node._output !== undefined && node._output !== null ) fedByLiveNodes.add( node._output );
+		const refilled = refilledBy( updateNodes.filter( refreshedOnInvalidation ) );
+		const fedByLiveNodes = new Set( [ ...this.liveNodes, ...refilledBy( this.liveNodes ) ] );
 
 		for ( const bindGroup of renderObject.getBindings() ) {
 
 			for ( const binding of bindGroup.bindings ) {
 
-				if ( inMaterialGroup( binding ) === false ) continue;
-
-				this._follow( binding, refilled, fedByLiveNodes );
+				if ( inMaterialGroup( binding ) ) this._follow( binding, refilled, fedByLiveNodes );
 
 			}
 
@@ -160,7 +171,8 @@ export class SteadyUniformSources {
 
 		} else if ( binding.isSampledTexture === true ) {
 
-			if ( refilled.has( binding.textureNode ) === false ) this.textureBindings.push( binding );
+			if ( fedByLiveNodes.has( binding.textureNode ) ) this.steady = false;
+			else if ( refilled.has( binding.textureNode ) === false ) this.textureBindings.push( binding );
 
 		} else if ( binding.isStorageBuffer === true ) {
 
@@ -208,13 +220,13 @@ export class SteadyUniformSources {
 
 	_visit( same ) {
 
-		for ( const material of this.materials ) {
+		for ( const owner of this.owners ) {
 
-			if ( same( material.version ) === false || same( material.uniformsVersion ) === false ) return false;
+			if ( same( owner.version ) === false || same( owner.uniformsVersion ) === false ) return false;
 
 		}
 
-		for ( const { owner, property } of this.propertyTextures ) {
+		for ( const { owner, property } of this.properties ) {
 
 			if ( this._visitTexture( owner[ property ], same ) === false ) return false;
 

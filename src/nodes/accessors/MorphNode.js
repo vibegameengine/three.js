@@ -1,5 +1,5 @@
 import Node from '../core/Node.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { float, nodeProxy, Fn, ivec2, int, If } from '../tsl/TSLBase.js';
 import { uniform } from '../core/UniformNode.js';
 import { reference } from './ReferenceNode.js';
@@ -199,6 +199,8 @@ class MorphNode extends Node {
 		 * @type {string}
 		 */
 		this.updateType = NodeUpdateType.OBJECT;
+
+		this.updateScope = NodeUpdateScope.OBJECT;
 
 	}
 

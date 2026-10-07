@@ -1,6 +1,7 @@
 import Node from '../core/Node.js';
 import { NodeUpdateType } from '../core/constants.js';
 import { uniform } from '../core/UniformNode.js';
+import { renderGroup } from '../core/UniformGroupNode.js';
 import { Fn, nodeImmutable, vec2 } from '../tsl/TSLBase.js';
 
 import { Vector2 } from '../../math/Vector2.js';
@@ -100,6 +101,12 @@ class ScreenNode extends Node {
 
 	}
 
+	getRefilledUniforms() {
+
+		return this._output !== undefined && this._output !== null && this._output.isUniformNode === true ? [ this._output ] : [];
+
+	}
+
 	/**
 	 * `ScreenNode` implements {@link Node#update} to retrieve viewport and size information
 	 * from the current renderer.
@@ -153,15 +160,15 @@ class ScreenNode extends Node {
 
 		if ( scope === ScreenNode.SIZE ) {
 
-			output = uniform( _screenSizeVec || ( _screenSizeVec = new Vector2() ) );
+			output = uniform( _screenSizeVec || ( _screenSizeVec = new Vector2() ) ).setGroup( renderGroup );
 
 		} else if ( scope === ScreenNode.VIEWPORT ) {
 
-			output = uniform( _viewportVec || ( _viewportVec = new Vector4() ) );
+			output = uniform( _viewportVec || ( _viewportVec = new Vector4() ) ).setGroup( renderGroup );
 
 		} else if ( scope === ScreenNode.DPR ) {
 
-			output = uniform( 1 );
+			output = uniform( 1 ).setGroup( renderGroup );
 
 		} else {
 

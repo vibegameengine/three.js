@@ -1,5 +1,5 @@
 import Node from '../core/Node.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { nodeObject } from '../tsl/TSLBase.js';
 import { attribute } from '../core/AttributeNode.js';
 import { reference, referenceBuffer } from './ReferenceNode.js';
@@ -53,6 +53,8 @@ class SkinningNode extends Node {
 		 * @type {string}
 		 */
 		this.updateType = NodeUpdateType.OBJECT;
+
+		this.updateScope = NodeUpdateScope.OBJECT;
 
 		//
 

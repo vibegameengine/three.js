@@ -5,7 +5,7 @@ import { colorSpaceToWorking } from '../display/ColorSpaceNode.js';
 import { expression } from '../code/ExpressionNode.js';
 import { maxMipLevel } from '../utils/MaxMipLevelNode.js';
 import { nodeProxy, vec3, nodeObject, int, Fn } from '../tsl/TSLBase.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 
 import { IntType, NearestFilter, UnsignedIntType } from '../../constants.js';
 
@@ -47,6 +47,8 @@ class TextureNode extends UniformNode {
 		 * @default true
 		 */
 		this.isTextureNode = true;
+
+		this.updateScope = NodeUpdateScope.MATERIAL;
 
 		/**
 		 * Represents the texture coordinates.
@@ -781,6 +783,12 @@ class TextureNode extends UniformNode {
 		this.sampler = data.sampler;
 		this.updateMatrix = data.updateMatrix;
 		this.updateType = data.updateType;
+
+	}
+
+	getRefilledUniforms() {
+
+		return [ this._matrixUniform, this._flipYUniform ].filter( ( node ) => node !== null );
 
 	}
 

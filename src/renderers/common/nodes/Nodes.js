@@ -6,7 +6,7 @@ import { cubeMapNode } from '../../../nodes/utils/CubeMapNode.js';
 import { NodeFrame } from '../../../nodes/Nodes.js';
 import { objectGroup, renderGroup, frameGroup, cubeTexture, texture, texture3D, vec3, fog, rangeFogFactor, densityFogFactor, reference, pmremTexture, screenUV } from '../../../nodes/TSL.js';
 import { builtin } from '../../../nodes/accessors/BuiltinNode.js';
-import { bindingsFollowMaterial } from '../../../nodes/accessors/GpuSceneNode.js';
+import { bindingsFollowMaterial, requireDeclaredScopes } from '../../../nodes/accessors/GpuSceneNode.js';
 
 import { CubeUVReflectionMapping, EquirectangularReflectionMapping, EquirectangularRefractionMapping } from '../../../constants.js';
 import { hashArray } from '../../../nodes/core/NodeUtils.js';
@@ -315,6 +315,8 @@ class Nodes extends DataMap {
 		const nodeBuilderState = this._describeNodeBuilderState( nodeBuilder );
 
 		if ( this.renderer.gpuScene === null || nodeBuilder.material === null ) return nodeBuilderState;
+
+		requireDeclaredScopes( nodeBuilder );
 
 		nodeBuilderState.bindings = nodeBuilderState.bindings.map( ( bindGroup ) => this._shareAcrossStates( bindGroup ) );
 

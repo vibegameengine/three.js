@@ -1,5 +1,5 @@
 import Node from '../core/Node.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import UniformNode from '../core/UniformNode.js';
 import { nodeProxy } from '../tsl/TSLBase.js';
 import { Vector3 } from '../../math/Vector3.js';
@@ -61,6 +61,8 @@ class Object3DNode extends Node {
 		 */
 		this.updateType = NodeUpdateType.OBJECT;
 
+		this.updateScope = NodeUpdateScope.OBJECT;
+
 		/**
 		 * Holds the value of the node as a uniform.
 		 *
@@ -92,6 +94,12 @@ class Object3DNode extends Node {
 			return 'float';
 
 		}
+
+	}
+
+	getRefilledUniforms() {
+
+		return [ this.uniformNode ];
 
 	}
 

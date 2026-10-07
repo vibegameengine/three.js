@@ -2,7 +2,7 @@ import TempNode from '../core/TempNode.js';
 import { modelViewMatrix } from './ModelNode.js';
 import { positionLocal, positionPrevious } from './Position.js';
 import { nodeImmutable } from '../tsl/TSLBase.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { Matrix4 } from '../../math/Matrix4.js';
 import { uniform } from '../core/UniformNode.js';
 import { sub } from '../math/OperatorNode.js';
@@ -52,6 +52,8 @@ class VelocityNode extends TempNode {
 		 * @default 'object'
 		 */
 		this.updateType = NodeUpdateType.OBJECT;
+
+		this.updateScope = NodeUpdateScope.VIEW;
 
 		/**
 		 * Overwritten since velocity nodes save data after the update.

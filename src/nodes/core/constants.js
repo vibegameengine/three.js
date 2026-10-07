@@ -24,6 +24,13 @@ export const NodeUpdateType = {
 	OBJECT: 'object'
 };
 
+export const NodeUpdateScope = {
+	VIEW: 'view',
+	PRIMITIVE: 'primitive',
+	MATERIAL: 'material',
+	OBJECT: 'object'
+};
+
 /**
  * Data types of a node.
  *

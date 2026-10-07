@@ -1,4 +1,4 @@
-import { NodeUpdateType } from './constants.js';
+import { NodeUpdateScope, NodeUpdateType } from './constants.js';
 import { hash, hashArray, hashString } from './NodeUtils.js';
 
 import { EventDispatcher } from '../../core/EventDispatcher.js';
@@ -65,6 +65,12 @@ class Node extends EventDispatcher {
 		 * @default 'none'
 		 */
 		this.updateAfterType = NodeUpdateType.NONE;
+
+		this.updateScope = null;
+
+		this.readsMaterial = null;
+
+		this.readsScene = null;
 
 		/**
 		 * The UUID of the node.
@@ -224,7 +230,25 @@ class Node extends EventDispatcher {
 	 */
 	onObjectUpdate( callback ) {
 
+		this.updateScope = NodeUpdateScope.OBJECT;
+
 		return this.onUpdate( callback, NodeUpdateType.OBJECT );
+
+	}
+
+	setUpdateScope( scope, { material = null, scene = null } = {} ) {
+
+		this.updateScope = scope;
+		this.readsMaterial = material;
+		this.readsScene = scene;
+
+		return this;
+
+	}
+
+	getRefilledUniforms() {
+
+		return this.isUniformNode === true && this.updateType !== NodeUpdateType.NONE ? [ this ] : [];
 
 	}
 

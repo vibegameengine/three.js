@@ -1,5 +1,6 @@
 import ReferenceBaseNode from './ReferenceBaseNode.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
+import { NodeUpdateScope } from '../core/constants.js';
 
 /**
  * This node is a special type of reference node which is intended
@@ -42,6 +43,8 @@ class RendererReferenceNode extends ReferenceBaseNode {
 		this.renderer = renderer;
 
 		this.setGroup( renderGroup );
+
+		this.updateScope = NodeUpdateScope.VIEW;
 
 	}
 

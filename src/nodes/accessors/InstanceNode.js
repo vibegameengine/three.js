@@ -4,7 +4,7 @@ import { instancedBufferAttribute, instancedDynamicBufferAttribute } from './Buf
 import { normalLocal, transformNormal } from './Normal.js';
 import { positionLocal, positionPrevious } from './Position.js';
 import { nodeProxy, vec3, mat4 } from '../tsl/TSLBase.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { buffer } from '../accessors/BufferNode.js';
 import { storage } from './StorageBufferNode.js';
 import { instanceIndex } from '../core/IndexNode.js';
@@ -88,6 +88,8 @@ class InstanceNode extends Node {
 		 * @default 'frame'
 		 */
 		this.updateType = NodeUpdateType.FRAME;
+
+		this.updateScope = NodeUpdateScope.OBJECT;
 
 		/**
 		 * A reference to a buffer that is used by `instanceMatrixNode`.

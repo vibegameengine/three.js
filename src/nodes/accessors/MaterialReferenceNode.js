@@ -1,4 +1,5 @@
 import ReferenceNode from './ReferenceNode.js';
+import { NodeUpdateScope } from '../core/constants.js';
 
 /**
  * This node is a special type of reference node which is intended
@@ -48,6 +49,10 @@ class MaterialReferenceNode extends ReferenceNode {
 		 * @default true
 		 */
 		this.isMaterialReferenceNode = true;
+
+		this.updateScope = NodeUpdateScope.MATERIAL;
+
+		this.readsMaterial = [ property.split( '.' )[ 0 ] ];
 
 	}
 

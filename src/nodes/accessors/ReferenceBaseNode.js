@@ -1,5 +1,5 @@
 import Node from '../core/Node.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { uniform } from '../core/UniformNode.js';
 import { nodeObject } from '../tsl/TSLCore.js';
 import ArrayElementNode from '../utils/ArrayElementNode.js';
@@ -173,6 +173,14 @@ class ReferenceBaseNode extends Node {
 		 * @default 'object'
 		 */
 		this.updateType = NodeUpdateType.OBJECT;
+
+		this.updateScope = NodeUpdateScope.OBJECT;
+
+	}
+
+	getRefilledUniforms() {
+
+		return this.node !== null ? [ this.node ] : [];
 
 	}
 

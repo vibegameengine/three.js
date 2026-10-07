@@ -2,7 +2,7 @@ import Node from '../core/Node.js';
 import BufferAttributeNode from './BufferAttributeNode.js';
 import { storage } from './StorageBufferNode.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
-import { NodeUpdateType } from '../core/constants.js';
+import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { nodeImmutable, nodeObject, mat3, mat4, uint } from '../tsl/TSLBase.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout, gpuScenePrimitiveTemplate } from '../../renderers/common/GpuScene.js';
 
@@ -111,9 +111,9 @@ export function bindingsFollowMaterial( object, { updateNodes, updateBeforeNodes
 
 	if ( isPlainMesh( object ) === false ) return false;
 
-	return updateNodes.every( ( node ) => updatesFromMaterial( node, node.updateType, 'update' ) )
-		&& updateBeforeNodes.every( ( node ) => updatesFromMaterial( node, node.updateBeforeType, 'updateBefore' ) )
-		&& updateAfterNodes.every( ( node ) => updatesFromMaterial( node, node.updateAfterType, 'updateAfter' ) );
+	return updateNodes.every( ( node ) => updatesFromMaterial( node, node.updateType ) )
+		&& updateBeforeNodes.every( ( node ) => updatesFromMaterial( node, node.updateBeforeType ) )
+		&& updateAfterNodes.every( ( node ) => updatesFromMaterial( node, node.updateAfterType ) );
 
 }
 
@@ -125,12 +125,27 @@ function isPlainMesh( object ) {
 
 }
 
-function updatesFromMaterial( node, updateType, method ) {
+const SHARED_ACROSS_OBJECTS = new Set( [ NodeUpdateScope.MATERIAL, NodeUpdateScope.PRIMITIVE, NodeUpdateScope.VIEW ] );
 
-	if ( updateType !== NodeUpdateType.OBJECT ) return true;
+function updatesFromMaterial( node, updateType ) {
 
-	if ( Object.hasOwn( node, method ) ) return false;
+	return updateType !== NodeUpdateType.OBJECT || SHARED_ACROSS_OBJECTS.has( node.updateScope );
 
-	return node.isMaterialReferenceNode === true || node.isTextureNode === true || node.isVelocityNode === true || ( node.isModelNode === true && node.readsGpuScene() );
+}
+
+export function requireDeclaredScopes( { updateNodes, updateBeforeNodes, updateAfterNodes } ) {
+
+	const undeclared = [
+		...updateNodes.filter( ( node ) => node.updateType === NodeUpdateType.OBJECT ),
+		...updateBeforeNodes.filter( ( node ) => node.updateBeforeType === NodeUpdateType.OBJECT ),
+		...updateAfterNodes.filter( ( node ) => node.updateAfterType === NodeUpdateType.OBJECT )
+	].filter( ( node ) => node.updateScope === null || node.updateScope === undefined );
+
+	if ( undeclared.length > 0 ) {
+
+		const names = [ ...new Set( undeclared.map( ( node ) => node.constructor.type ?? node.constructor.name ) ) ].join( ', ' );
+		throw new Error( `GpuScene: ${ names } update per object without a declared update scope (view, primitive, material or object); declare it with setUpdateScope().` );
+
+	}
 
 }
