@@ -66,6 +66,8 @@ class WebGPUCommandQueue {
 		this.openPassEnded = 0;
 		this.passOpen = false;
 		this.splitPass = null;
+		this.closeOpenPass = null;
+		this.openRecording = null;
 		this.cleanFlushesSinceEncoderError = 0;
 
 		const queue = device.queue;
@@ -89,6 +91,8 @@ class WebGPUCommandQueue {
 	}
 
 	openEncoder() {
+
+		if ( this.closeOpenPass !== null ) this.closeOpenPass();
 
 		if ( this.passOpen || this.batching === false || this.sharedEncoderOnHold() ) return null;
 
@@ -116,12 +120,21 @@ class WebGPUCommandQueue {
 		if ( encoder === null ) return;
 
 		this.open = null;
+		this.openRecording = null;
 		this.passOpen = false;
 		this.add( [ encoder.finish() ] );
 
 	}
 
+	recordOpenPassReferences() {
+
+		if ( this.openRecording !== null ) this.referenceRecorded( this.openRecording );
+
+	}
+
 	orderQueueWork() {
+
+		if ( this.closeOpenPass !== null ) this.closeOpenPass();
 
 		if ( this.open === null ) return;
 
@@ -462,6 +475,7 @@ class WebGPUCommandQueue {
 	observeEncoder( encoder, label, shared = false ) {
 
 		const recording = { references: new Set(), uses: new Set(), groups: new Set(), bundles: [], opaque: false, label, shared };
+		if ( shared ) this.openRecording = recording;
 		const use = ( object ) => { if ( object ) recording.uses.add( object ); };
 		const recordReference = ( buffer ) => { if ( buffer ) { recording.references.add( buffer ); recording.uses.add( buffer ); } };
 		const reference = shared ? ( buffer ) => { recordReference( buffer ); if ( this.passOpen === false ) this.referenceRecorded( recording ); } : recordReference;

@@ -224,6 +224,17 @@ class WebGPUBackend extends Backend {
 		this.device = device;
 
 		this.commandQueue = new WebGPUCommandQueue( device );
+		this._openComputePass = null;
+		this._openComputeEncoder = null;
+		this._closeComputePass = () => {
+
+			const pass = this._openComputePass;
+			this._openComputePass = null;
+			this._openComputeEncoder = null;
+			this.commandQueue.closeOpenPass = null;
+			pass.end();
+
+		};
 
 		this.trackTimestamp = this.trackTimestamp && this.hasFeature( GPUFeatureName.TimestampQuery );
 
@@ -1438,6 +1449,19 @@ class WebGPUBackend extends Backend {
 
 		if ( groupGPU.passEncoderGPU !== null ) return;
 
+		if ( this._openComputePass !== null && groupGPU.computeDescriptor.timestampWrites === undefined && this.commandQueue.open === this._openComputeEncoder ) {
+
+			groupGPU.cmdEncoderGPU = this._openComputeEncoder;
+			groupGPU.passEncoderGPU = this._openComputePass;
+			groupGPU.sharedEncoder = true;
+			this._openComputePass = null;
+			this._openComputeEncoder = null;
+			this.commandQueue.closeOpenPass = null;
+			this.commandQueue.splitPass = () => this._splitComputePass( computeGroup, groupGPU );
+			return;
+
+		}
+
 		const shared = this.commandQueue.openEncoder();
 
 		groupGPU.cmdEncoderGPU = shared ?? this.device.createCommandEncoder( { label: 'computeGroup_' + computeGroup.id } );
@@ -1582,6 +1606,18 @@ class WebGPUBackend extends Backend {
 		if ( groupData.passEncoderGPU === null && groupData.computeDescriptor.timestampWrites === undefined ) return;
 
 		this._beginPendingCompute( computeGroup, groupData );
+
+		if ( groupData.sharedEncoder === true && groupData.computeDescriptor.timestampWrites === undefined ) {
+
+			this.commandQueue.recordOpenPassReferences();
+			this.commandQueue.splitPass = null;
+			this._openComputePass = groupData.passEncoderGPU;
+			this._openComputeEncoder = groupData.cmdEncoderGPU;
+			this.commandQueue.closeOpenPass = this._closeComputePass;
+			return;
+
+		}
+
 		groupData.passEncoderGPU.end();
 
 		if ( groupData.sharedEncoder === true ) {
