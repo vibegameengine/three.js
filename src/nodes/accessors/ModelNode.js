@@ -2,7 +2,7 @@ import Object3DNode from './Object3DNode.js';
 import Node from '../core/Node.js';
 import { Fn, nodeImmutable, vec3, vec4 } from '../tsl/TSLBase.js';
 import { length, normalize } from '../math/MathNode.js';
-import { gpuSceneWorldMatrix, gpuSceneNormalMatrix, usesGpuScene } from './GpuSceneNode.js';
+import { gpuSceneWorldMatrix, gpuSceneNormalMatrix, gpuSceneWorldInverseMatrix, usesGpuScene } from './GpuSceneNode.js';
 import { uniform } from '../core/UniformNode.js';
 
 import { Matrix4 } from '../../math/Matrix4.js';
@@ -180,7 +180,31 @@ export const modelNormalMatrix = /*@__PURE__*/ nodeImmutable( ModelNormalMatrixN
  * @tsl
  * @type {UniformNode<mat4>}
  */
-export const modelWorldMatrixInverse = /*@__PURE__*/ uniform( new Matrix4() ).onObjectUpdate( ( { object }, self ) => self.value.copy( object.matrixWorld ).invert() );
+const modelWorldMatrixInverseUniform = /*@__PURE__*/ uniform( new Matrix4() ).onObjectUpdate( ( { object }, self ) => self.value.copy( object.matrixWorld ).invert() );
+
+class ModelWorldMatrixInverseNode extends Node {
+
+	static get type() {
+
+		return 'ModelWorldMatrixInverseNode';
+
+	}
+
+	constructor() {
+
+		super( 'mat4' );
+
+	}
+
+	setup( builder ) {
+
+		return usesGpuScene( builder ) ? gpuSceneWorldInverseMatrix : modelWorldMatrixInverseUniform;
+
+	}
+
+}
+
+export const modelWorldMatrixInverse = /*@__PURE__*/ nodeImmutable( ModelWorldMatrixInverseNode );
 
 /**
  * TSL object that represents the object's model view matrix.

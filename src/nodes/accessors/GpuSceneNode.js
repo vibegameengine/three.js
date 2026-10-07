@@ -34,7 +34,7 @@ export function gpuSceneRecords( gpuScene ) {
 
 }
 
-const RECORD_FIELD_TYPES = { world: 'mat4', previousWorld: 'mat4', normal: 'mat3', custom: 'vec4' };
+const RECORD_FIELD_TYPES = { world: 'mat4', previousWorld: 'mat4', normal: 'mat3', custom: 'vec4', worldInverse: 'mat4' };
 
 class GpuSceneRecordNode extends Node {
 
@@ -103,6 +103,7 @@ export const gpuSceneWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNo
 export const gpuScenePreviousWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'previousWorld' );
 export const gpuSceneNormalMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'normal' );
 export const gpuSceneCustomData = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'custom' );
+export const gpuSceneWorldInverseMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'worldInverse' );
 
 export const usesGpuScene = ( builder ) => builder.renderer.gpuScene !== null && builder.renderer.gpuScene !== undefined;
 
