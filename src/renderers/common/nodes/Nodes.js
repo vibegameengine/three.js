@@ -865,6 +865,18 @@ class Nodes extends DataMap {
 
 	}
 
+	updateLiveForRender( renderObject, liveNodes ) {
+
+		const nodeFrame = this.getNodeFrameForRender( renderObject );
+
+		for ( const node of liveNodes ) {
+
+			nodeFrame.updateNode( node );
+
+		}
+
+	}
+
 	/**
 	 * Returns `true` if the given render object requires a refresh.
 	 *

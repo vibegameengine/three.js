@@ -69,6 +69,8 @@ class NodeMaterial extends Material {
 		 */
 		this.isNodeMaterial = true;
 
+		this.uniformsVersion = 0;
+
 		/**
 		 * Whether this material is affected by fog or not.
 		 *
@@ -437,6 +439,12 @@ class NodeMaterial extends Material {
 		}
 
 		return children;
+
+	}
+
+	set uniformsNeedUpdate( value ) {
+
+		if ( value === true ) this.uniformsVersion ++;
 
 	}
 

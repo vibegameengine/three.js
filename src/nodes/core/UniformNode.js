@@ -55,6 +55,32 @@ class UniformNode extends InputNode {
 
 	}
 
+	get value() {
+
+		return this._value;
+
+	}
+
+	set value( value ) {
+
+		if ( value === this._value ) return;
+
+		this._value = value;
+		this.valueVersion = ( this.valueVersion || 0 ) + 1;
+
+	}
+
+	set needsUpdate( value ) {
+
+		if ( value === true ) {
+
+			this.version ++;
+			this.valueVersion = ( this.valueVersion || 0 ) + 1;
+
+		}
+
+	}
+
 	/**
 	 * Sets the {@link UniformNode#name} property.
 	 *

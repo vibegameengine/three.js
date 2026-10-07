@@ -1,5 +1,6 @@
 import DataMap from './DataMap.js';
 import { AttributeType } from './Constants.js';
+import { objectGroup } from '../../nodes/core/UniformGroupNode.js';
 
 /**
  * This renderer module manages the bindings of the renderer.
@@ -150,6 +151,18 @@ class Bindings extends DataMap {
 	updateForRender( renderObject ) {
 
 		this._updateBindings( this.getForRender( renderObject ) );
+
+	}
+
+	updateSharedForRender( renderObject ) {
+
+		const bindings = this.getForRender( renderObject );
+
+		for ( const bindGroup of bindings ) {
+
+			if ( bindGroup.name !== objectGroup.name ) this._update( bindGroup, bindings );
+
+		}
 
 	}
 

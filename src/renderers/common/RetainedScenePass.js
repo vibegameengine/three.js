@@ -5,6 +5,7 @@ import { AttributeType } from './Constants.js';
 import RetainedDrawList from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
 import RetainedTransparents from './RetainedTransparents.js';
+import { SteadyUniformSources } from './SteadyUniforms.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 
@@ -32,6 +33,8 @@ class RetainedScenePass {
 		this.bundleGroup = { version: 0, static: true };
 		this.encoded = { listVersion: - 1, context: null, contextNode: null, contextNodeVersion: - 1 };
 		this.representatives = [];
+		this.steadySources = new Map();
+		this.calledBack = new Set();
 		this.bindGroups = new Map();
 		this.uploads = new Map();
 		this.dynamicUploads = [];
@@ -262,6 +265,16 @@ class RetainedScenePass {
 		const backend = renderer.backend;
 		const sharedBindings = new Set();
 
+		this.steadySources.clear();
+		this.calledBack.clear();
+		const callbacks = new Set( this.list.callbacks );
+
+		for ( const renderObject of renderObjects ) {
+
+			if ( callbacks.has( renderObject.object ) && renderObject.getMaterialBindings() !== null ) this.calledBack.add( renderObject.getMaterialBindings() );
+
+		}
+
 		this.representatives.length = 0;
 		this.bindGroups.clear();
 		this.uploads.clear();
@@ -344,6 +357,15 @@ class RetainedScenePass {
 
 		for ( const renderObject of this.representatives ) {
 
+			const sources = this.steadySources.get( renderObject );
+
+			if ( sources !== undefined && sources !== null && sources.changed() === false ) {
+
+				this._refreshShared( renderer, renderObject, sources );
+				continue;
+
+			}
+
 			if ( nodes.needsRefresh( renderObject ) && renderer._refreshedWithMaterial( renderObject ) === false ) {
 
 				nodes.updateBefore( renderObject );
@@ -353,7 +375,40 @@ class RetainedScenePass {
 
 			}
 
+			if ( sources === undefined ) this._rememberSources( renderer, renderObject );
+			else if ( sources !== null ) sources.remember();
+
 		}
+
+	}
+
+	_refreshShared( renderer, renderObject, sources ) {
+
+		if ( renderer._refreshedWithMaterial( renderObject ) === true ) return;
+
+		const nodes = renderer._nodes;
+
+		nodes.updateBefore( renderObject );
+		nodes.updateLiveForRender( renderObject, sources.liveNodes );
+		renderer._bindings.updateSharedForRender( renderObject );
+		nodes.updateAfter( renderObject );
+
+	}
+
+	_rememberSources( renderer, renderObject ) {
+
+		const materialBindings = renderObject.getMaterialBindings();
+
+		if ( materialBindings === null || this.calledBack.has( materialBindings ) ) {
+
+			this.steadySources.set( renderObject, null );
+			return;
+
+		}
+
+		const sources = new SteadyUniformSources( renderObject, ( texture ) => renderer._textures.get( texture ) );
+
+		this.steadySources.set( renderObject, sources.steady ? sources : null );
 
 	}
 
