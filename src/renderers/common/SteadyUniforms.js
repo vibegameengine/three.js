@@ -87,6 +87,12 @@ export function liveUpdateNodes( updateNodes ) {
 
 }
 
+function rebuildsMipmapsAfterWrites( texture ) {
+
+	return texture !== null && texture !== undefined && texture.isStorageTexture === true && texture.mipmapsAutoUpdate === true;
+
+}
+
 function inMaterialGroup( binding ) {
 
 	return binding.groupNode !== undefined && binding.groupNode.name === objectGroup.name;
@@ -183,7 +189,7 @@ export class SteadyUniformSources {
 
 		} else if ( binding.isSampledTexture === true ) {
 
-			if ( fedByLiveNodes.has( binding.textureNode ) ) this.steady = false;
+			if ( fedByLiveNodes.has( binding.textureNode ) || rebuildsMipmapsAfterWrites( binding.texture ) ) this.steady = false;
 			else if ( refilled.has( binding.textureNode ) === false ) this.textureBindings.push( binding );
 
 		} else if ( binding.isStorageBuffer === true ) {
