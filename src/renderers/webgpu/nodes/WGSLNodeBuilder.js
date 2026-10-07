@@ -2209,11 +2209,12 @@ fn main( ${shaderData.varyings} ) -> ${shaderData.returnType} {
 	_getWGSLComputeCode( shaderData, workgroupSize ) {
 
 		const [ workgroupSizeX, workgroupSizeY, workgroupSizeZ ] = workgroupSize;
+		const subgroupsOverActiveLanes = /enable\s+subgroups/.test( shaderData.directives ) ? 'diagnostic( off, subgroup_uniformity );\n' : '';
 
 		return `${ this.getSignature() }
 // directives
 ${ shaderData.directives }
-
+${ subgroupsOverActiveLanes }
 // system
 var<private> instanceIndex : u32;
 
