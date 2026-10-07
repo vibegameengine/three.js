@@ -126,6 +126,29 @@ class Geometries extends DataMap {
 		 */
 		this._geometryDisposeListeners = new Map();
 
+		this.attributeUsers = new WeakMap();
+
+	}
+
+	addAttributeUser( attribute, geometry ) {
+
+		const users = this.attributeUsers.get( attribute );
+
+		if ( users === undefined ) this.attributeUsers.set( attribute, new Set( [ geometry ] ) );
+		else users.add( geometry );
+
+	}
+
+	removeAttributeUser( attribute, geometry ) {
+
+		const users = this.attributeUsers.get( attribute );
+		if ( users === undefined ) return 0;
+
+		users.delete( geometry );
+		if ( users.size === 0 ) this.attributeUsers.delete( attribute );
+
+		return users.size;
+
 	}
 
 	/**
@@ -169,22 +192,22 @@ class Geometries extends DataMap {
 
 		this.info.memory.geometries ++;
 
+		const used = new Set( renderObject.getAttributes() );
+		if ( geometry.index !== null ) used.add( geometry.index );
+		for ( const attribute of used ) this.addAttributeUser( attribute, geometry );
+
 		const onDispose = () => {
 
 			this.info.memory.geometries --;
 
 			const index = geometry.index;
-			const geometryAttributes = renderObject.getAttributes();
 
-			if ( index !== null ) {
+			if ( index !== null ) used.add( index );
+			for ( const geometryAttribute of renderObject.getAttributes() ) used.add( geometryAttribute );
 
-				this.attributes.delete( index );
+			for ( const attribute of used ) {
 
-			}
-
-			for ( const geometryAttribute of geometryAttributes ) {
-
-				this.attributes.delete( geometryAttribute );
+				if ( this.removeAttributeUser( attribute, geometry ) === 0 ) this.attributes.delete( attribute );
 
 			}
 
