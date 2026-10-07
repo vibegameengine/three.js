@@ -14,6 +14,14 @@ function bufferOf( attribute ) {
 
 }
 
+function shownInWorld( object ) {
+
+	for ( let node = object; node !== null; node = node.parent ) if ( node.visible === false ) return false;
+
+	return true;
+
+}
+
 class RetainedScenePass {
 
 	constructor() {
@@ -42,8 +50,9 @@ class RetainedScenePass {
 
 		this._updateLods( camera );
 		if ( this.list.isCurrent( scene, camera ) === false ) this._rebuild( renderer, scene, camera, renderContext );
+		else this._applyVisibility( scene );
 
-		for ( const light of this.list.lights ) renderList.pushLight( light );
+		for ( const light of this.list.lights ) if ( shownInWorld( light ) ) renderList.pushLight( light );
 
 		this._pushVisible( this.list.direct, renderList, renderContext, frustum, projScreenMatrix, camera );
 
@@ -112,6 +121,12 @@ class RetainedScenePass {
 
 	}
 
+	_applyVisibility( scene ) {
+
+		for ( const draw of this.list.applyVisibility( scene ) ) if ( draw.cullIndex !== undefined ) this.culling.hide( draw.cullIndex, draw.hidden );
+
+	}
+
 	_rebuild( renderer, scene, camera, renderContext ) {
 
 		this.list.build( scene, camera );
@@ -136,6 +151,8 @@ class RetainedScenePass {
 		this.culling.spheres.array.set( previous.spheres.array );
 		this.culling.primitives.array.set( previous.primitives.array );
 		this.culling.instances.array.set( previous.instances.array );
+		this.culling.drawInstances.set( previous.drawInstances );
+		this.culling.hidden.set( previous.hidden );
 		this.culling.args.array.set( previous.args.array );
 		this.culling.drawsKnown = previous.drawsKnown;
 		this.culling.upload();
@@ -155,6 +172,8 @@ class RetainedScenePass {
 			if ( geometry.boundingSphere === null ) geometry.computeBoundingSphere();
 			const alwaysDrawn = object.frustumCulled === false || object.isSkinnedMesh === true || object.isSprite === true;
 			this.culling.describe( index, { sphere: geometry.boundingSphere, primitive: gpuScene.primitiveOf( object ).id, alwaysDrawn } );
+			item.cullIndex = index;
+			this.culling.hidden[ index ] = item.hidden ? 1 : 0;
 
 			if ( object.instanceCulling !== undefined && object.instanceCulling !== null && object.instanceCulling.retained !== true ) return;
 
@@ -187,6 +206,7 @@ class RetainedScenePass {
 
 		for ( const item of items ) {
 
+			if ( item.hidden === true ) continue;
 			const { object, geometry, material, group, groupOrder } = item;
 			const visible = object.frustumCulled === false || ( object.isSprite === true ? frustum.intersectsSprite( object, camera ) : frustum.intersectsObject( object, camera ) );
 			if ( visible === false ) continue;

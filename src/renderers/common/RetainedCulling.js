@@ -18,6 +18,8 @@ class RetainedCulling {
 		this.spheres = new StorageBufferAttribute( new Float32Array( Math.max( 1, count ) * 4 ), 4 );
 		this.primitives = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
 		this.instances = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
+		this.drawInstances = new Uint32Array( Math.max( 1, count ) );
+		this.hidden = new Uint8Array( Math.max( 1, count ) );
 		this.planes = uniformArray( Array.from( { length: FRUSTUM_PLANES }, () => new Vector4() ), 'vec4' );
 		this.gpuScene = gpuScene;
 		this.drawsKnown = false;
@@ -48,7 +50,17 @@ class RetainedCulling {
 		args[ at + 2 ] = drawParams === null ? 0 : drawParams.firstVertex;
 		args[ at + 3 ] = 0;
 		args[ at + 4 ] = 0;
-		this.instances.array[ index ] = instances;
+		this.drawInstances[ index ] = instances;
+		this.instances.array[ index ] = this.hidden[ index ] === 1 ? 0 : instances;
+
+	}
+
+	hide( index, hidden ) {
+
+		this.hidden[ index ] = hidden ? 1 : 0;
+		this.instances.array[ index ] = hidden ? 0 : this.drawInstances[ index ];
+		this.instances.addUpdateRange( index, 1 );
+		this.instances.needsUpdate = true;
 
 	}
 

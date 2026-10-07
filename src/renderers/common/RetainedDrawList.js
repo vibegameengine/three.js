@@ -1,9 +1,17 @@
 import { Object3D } from '../../core/Object3D.js';
-import { materialsRevision } from '../../core/DrawListRevision.js';
+import { materialsRevision, visibilityChangesSince } from '../../core/DrawListRevision.js';
 
 function retainedDrawOrder( a, b ) {
 
 	return ( a.groupOrder - b.groupOrder ) || ( a.object.renderOrder - b.object.renderOrder ) || ( a.material.id - b.material.id ) || ( a.geometry.id - b.geometry.id );
+
+}
+
+function shownInWorld( object ) {
+
+	for ( let node = object; node !== null; node = node.parent ) if ( node.visible === false ) return false;
+
+	return true;
 
 }
 
@@ -18,6 +26,8 @@ class RetainedDrawList {
 		this.lods = [];
 		this.callbacks = [];
 		this.materials = new Map();
+		this.drawsOf = new Map();
+		this.visibilitySeen = - 1;
 		this.scene = null;
 		this.sceneRevision = - 1;
 		this.cameraMask = - 1;
@@ -53,21 +63,78 @@ class RetainedDrawList {
 		this.lods.length = 0;
 		this.callbacks.length = 0;
 		this.materials.clear();
+		this.drawsOf.clear();
 
-		this._collect( scene, camera, 0 );
+		this._collect( scene, camera, 0, true );
 		this.items.sort( retainedDrawOrder );
 
 		this.scene = scene;
 		this.sceneRevision = scene.drawListRevision;
 		this.cameraMask = camera.layers.mask;
 		this.materialsRevision = materialsRevision();
+		this.visibilitySeen = scene.visibilityRevision;
 		this.version ++;
 
 	}
 
-	_collect( object, camera, groupOrder ) {
+	applyVisibility( scene ) {
 
-		if ( object.visible === false ) return;
+		const changed = visibilityChangesSince( scene, this.visibilitySeen );
+		this.visibilitySeen = scene.visibilityRevision;
+		const updated = [];
+
+		if ( changed === null ) {
+
+			for ( const [ object, draws ] of this.drawsOf ) this._refreshHidden( object, draws, updated );
+			return updated;
+
+		}
+
+		const visited = new Set();
+
+		for ( const object of changed ) {
+
+			if ( visited.has( object ) ) continue;
+			visited.add( object );
+			object.traverse( ( descendant ) => {
+
+				const draws = this.drawsOf.get( descendant );
+				if ( draws !== undefined ) this._refreshHidden( descendant, draws, updated );
+
+			} );
+
+		}
+
+		return updated;
+
+	}
+
+	_refreshHidden( object, draws, updated ) {
+
+		const hidden = shownInWorld( object ) === false;
+
+		for ( const draw of draws ) {
+
+			if ( draw.hidden === hidden ) continue;
+			draw.hidden = hidden;
+			updated.push( draw );
+
+		}
+
+	}
+
+	_remember( object, draw, list ) {
+
+		list.push( draw );
+		const draws = this.drawsOf.get( object );
+		if ( draws === undefined ) this.drawsOf.set( object, [ draw ] );
+		else draws.push( draw );
+
+	}
+
+	_collect( object, camera, groupOrder, shown ) {
+
+		shown = shown && object.visible;
 
 		if ( object.isBundleGroup === true ) throw new Error( 'RetainedDrawList: a BundleGroup inside a retained scene is not supported; render it in its own pass.' );
 		if ( object.isClippingGroup === true ) throw new Error( 'RetainedDrawList: a ClippingGroup inside a retained scene is not supported.' );
@@ -77,17 +144,17 @@ class RetainedDrawList {
 			if ( object.isGroup === true ) groupOrder = object.renderOrder;
 			else if ( object.isLOD === true ) this.lods.push( object );
 			else if ( object.isLight === true ) this.lights.push( object );
-			else if ( object.isMesh === true || object.isLine === true || object.isPoints === true || object.isSprite === true ) this._collectDrawable( object, groupOrder );
+			else if ( object.isMesh === true || object.isLine === true || object.isPoints === true || object.isSprite === true ) this._collectDrawable( object, groupOrder, shown );
 
 		}
 
 		const children = object.children;
 
-		for ( let i = 0, l = children.length; i < l; i ++ ) this._collect( children[ i ], camera, groupOrder );
+		for ( let i = 0, l = children.length; i < l; i ++ ) this._collect( children[ i ], camera, groupOrder, shown );
 
 	}
 
-	_collectDrawable( object, groupOrder ) {
+	_collectDrawable( object, groupOrder, shown ) {
 
 		const { geometry, material } = object;
 
@@ -98,27 +165,27 @@ class RetainedDrawList {
 			for ( const group of geometry.groups ) {
 
 				const groupMaterial = material[ group.materialIndex ];
-				if ( groupMaterial && groupMaterial.visible ) this._push( object, geometry, groupMaterial, group, groupOrder );
+				if ( groupMaterial && groupMaterial.visible ) this._push( object, geometry, groupMaterial, group, groupOrder, shown );
 
 			}
 
 		} else if ( material.visible ) {
 
-			this._push( object, geometry, material, null, groupOrder );
+			this._push( object, geometry, material, null, groupOrder, shown );
 
 		}
 
 	}
 
-	_push( object, geometry, material, group, groupOrder ) {
+	_push( object, geometry, material, group, groupOrder, shown ) {
 
 		this.materials.set( material, material.version );
 
-		const item = { object, geometry, material, group, groupOrder };
+		const item = { object, geometry, material, group, groupOrder, hidden: ! shown };
 
-		if ( material.transparent === true || material.transmission > 0 ) this.transparent.push( item );
-		else if ( this._drawsEveryFrame( object ) ) this.direct.push( item );
-		else this.items.push( item );
+		if ( material.transparent === true || material.transmission > 0 ) this._remember( object, item, this.transparent );
+		else if ( this._drawsEveryFrame( object ) ) this._remember( object, item, this.direct );
+		else this._remember( object, item, this.items );
 
 	}
 

@@ -8,7 +8,7 @@ import { Layers } from './Layers.js';
 import { Matrix3 } from '../math/Matrix3.js';
 import { generateUUID } from '../math/MathUtils.js';
 import { error } from '../utils.js';
-import { touchDrawList } from './DrawListRevision.js';
+import { touchDrawList, touchVisibility } from './DrawListRevision.js';
 import { ObservedVector3 } from '../math/ObservedVector3.js';
 
 function markTransformDirty( object ) {
@@ -314,6 +314,7 @@ class Object3D extends EventDispatcher {
 		this.layers._owner = this;
 
 		this.drawListRevision = 0;
+		this.visibilityRevision = 0;
 		this._visible = true;
 
 		/**
@@ -452,7 +453,7 @@ class Object3D extends EventDispatcher {
 
 		if ( this._visible === value ) return;
 		this._visible = value;
-		touchDrawList( this );
+		touchVisibility( this );
 
 	}
 

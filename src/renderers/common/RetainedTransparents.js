@@ -64,6 +64,7 @@ class RetainedTransparents {
 
 		for ( const entry of this.entries ) {
 
+			if ( entry.item.hidden === true ) continue;
 			const { object, geometry } = entry.item;
 			const inside = object.frustumCulled === false || ( object.isSprite === true ? frustum.intersectsSprite( object, camera ) : frustum.intersectsObject( object, camera ) );
 			if ( inside === false ) continue;
