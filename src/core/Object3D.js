@@ -150,6 +150,7 @@ class Object3D extends EventDispatcher {
 		this.up = Object3D.DEFAULT_UP.clone();
 
 		this._transformDirty = true;
+		this._localTransformDirty = true;
 		this._dirtyBelow = false;
 
 		/**
@@ -169,6 +170,7 @@ class Object3D extends EventDispatcher {
 
 		function onTransformChange() {
 
+			object._localTransformDirty = true;
 			if ( object._transformDirty !== true ) markTransformDirty( object );
 
 		}
@@ -468,6 +470,7 @@ class Object3D extends EventDispatcher {
 
 		if ( this._matrixAutoUpdate === value ) return;
 		this._matrixAutoUpdate = value;
+		this._localTransformDirty = true;
 		markTransformDirty( this );
 
 	}
@@ -1198,6 +1201,7 @@ class Object3D extends EventDispatcher {
 	updateMatrix() {
 
 		this.matrix.compose( this.position, this.quaternion, this.scale );
+		this._localTransformDirty = false;
 
 		if ( this._transformDirty !== true ) markTransformDirty( this );
 
@@ -1225,7 +1229,7 @@ class Object3D extends EventDispatcher {
 
 			this._transformDirty = true;
 
-			if ( this.matrixAutoUpdate ) this.updateMatrix();
+			if ( this.matrixAutoUpdate && this._localTransformDirty !== false ) this.updateMatrix();
 
 			if ( this.matrixWorldAutoUpdate === true ) {
 
@@ -1288,7 +1292,7 @@ class Object3D extends EventDispatcher {
 
 		if ( updateParents === true && updateChildren !== true && moved === false ) return false;
 
-		if ( this.matrixAutoUpdate ) this.updateMatrix();
+		if ( this.matrixAutoUpdate && this._localTransformDirty !== false ) this.updateMatrix();
 
 		this.matrixWorldVersion ++;
 		noteTransformChanged( this );
