@@ -12,6 +12,10 @@ export function instanceCullingFor( object, camera, context = null ) {
 
 export function instanceCullingOf( renderObject ) {
 
-	return instanceCullingFor( renderObject.object, renderObject.camera, renderObject.context );
+	const culling = instanceCullingFor( renderObject.object, renderObject.camera, renderObject.context );
+
+	if ( culling !== null && culling.groupOffsets !== undefined && culling.groupOffsets.has( renderObject.group ) === false ) return null;
+
+	return culling;
 
 }
