@@ -2,6 +2,7 @@ import { Vector2 } from '../math/Vector2.js';
 import { MeshStandardMaterial } from './MeshStandardMaterial.js';
 import { Color } from '../math/Color.js';
 import { clamp } from '../math/MathUtils.js';
+import { signalSource } from '../core/SourceSignals.js';
 
 /**
  * An extension of the {@link MeshStandardMaterial}, providing more advanced
@@ -340,6 +341,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._anisotropy > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -366,6 +368,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._clearcoat > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -390,6 +393,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._iridescence > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -416,6 +420,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._dispersion > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -440,6 +445,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._sheen > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -470,6 +476,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
 		if ( this._transmission > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 

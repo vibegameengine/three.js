@@ -3,6 +3,7 @@ import { objectGroup } from './UniformGroupNode.js';
 import { getConstNodeType } from '../tsl/TSLCore.js';
 import { getValueFromType } from './NodeUtils.js';
 import { warn } from '../../utils.js';
+import { signalSource } from '../../core/SourceSignals.js';
 
 /**
  * Class for representing a uniform.
@@ -67,6 +68,7 @@ class UniformNode extends InputNode {
 
 		this._value = value;
 		this.valueVersion = ( this.valueVersion || 0 ) + 1;
+		signalSource( this );
 
 	}
 
@@ -76,6 +78,7 @@ class UniformNode extends InputNode {
 
 			this.version ++;
 			this.valueVersion = ( this.valueVersion || 0 ) + 1;
+			signalSource( this );
 
 		}
 

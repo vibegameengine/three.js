@@ -265,6 +265,7 @@ class RetainedScenePass {
 		const backend = renderer.backend;
 		const sharedBindings = new Set();
 
+		for ( const sources of this.steadySources.values() ) if ( sources !== null ) sources.release();
 		this.steadySources.clear();
 		this.calledBack.clear();
 		const callbacks = new Set( this.list.callbacks );
@@ -406,7 +407,7 @@ class RetainedScenePass {
 
 		}
 
-		const sources = new SteadyUniformSources( renderObject, ( texture ) => renderer._textures.get( texture ) );
+		const sources = new SteadyUniformSources( renderObject );
 
 		this.steadySources.set( renderObject, sources.steady ? sources : null );
 

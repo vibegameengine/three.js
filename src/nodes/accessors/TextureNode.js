@@ -1,4 +1,5 @@
 import UniformNode, { uniform } from '../core/UniformNode.js';
+import { signalSource } from '../../core/SourceSignals.js';
 import { uv } from './UV.js';
 import { textureSize } from './TextureSizeNode.js';
 import { colorSpaceToWorking } from '../display/ColorSpaceNode.js';
@@ -179,9 +180,10 @@ class TextureNode extends UniformNode {
 
 			this.referenceNode.value = value;
 
-		} else {
+		} else if ( this._value !== value ) {
 
 			this._value = value;
+			signalSource( this );
 
 		}
 

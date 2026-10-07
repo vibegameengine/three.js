@@ -4,6 +4,7 @@ import { denormalize, normalize } from '../math/MathUtils.js';
 import { StaticDrawUsage, FloatType } from '../constants.js';
 import { fromHalfFloat, toHalfFloat } from '../extras/DataUtils.js';
 import { markBufferDirty } from './DrawListRevision.js';
+import { signalSource } from './SourceSignals.js';
 
 const _vector = /*@__PURE__*/ new Vector3();
 const _vector2 = /*@__PURE__*/ new Vector2();
@@ -155,6 +156,7 @@ class BufferAttribute {
 		if ( value !== true ) return;
 		this.version ++;
 		markBufferDirty( this );
+		signalSource( this );
 
 	}
 

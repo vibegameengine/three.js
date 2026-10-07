@@ -4,6 +4,7 @@ import { FrontSide, NormalBlending, LessEqualDepth, AddEquation, OneMinusSrcAlph
 import { generateUUID } from '../math/MathUtils.js';
 import { warn } from '../utils.js';
 import { touchMaterials } from '../core/DrawListRevision.js';
+import { signalSource } from '../core/SourceSignals.js';
 
 let _materialId = 0;
 
@@ -496,6 +497,7 @@ class Material extends EventDispatcher {
 		if ( this._alphaTest > 0 !== value > 0 ) {
 
 			this.version ++;
+			signalSource( this );
 
 		}
 
@@ -1012,6 +1014,7 @@ class Material extends EventDispatcher {
 		if ( value !== true ) return;
 		this.version ++;
 		touchMaterials();
+		signalSource( this );
 
 	}
 

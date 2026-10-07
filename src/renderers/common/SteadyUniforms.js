@@ -1,11 +1,23 @@
 import { NodeUpdateScope, NodeUpdateType } from '../../nodes/core/constants.js';
 import { objectGroup } from '../../nodes/core/UniformGroupNode.js';
+import { signalSource, unwatchSource, watchSource } from '../../core/SourceSignals.js';
 
 const _tracked = new WeakMap();
 
 function markChanged( owner ) {
 
 	owner.uniformsVersion = ( owner.uniformsVersion || 0 ) + 1;
+	signalSource( owner );
+
+}
+
+function textureValueOwner( textureNode ) {
+
+	let owner = textureNode;
+
+	while ( owner.referenceNode !== null && owner.referenceNode !== undefined && owner.referenceNode.isTextureNode === true ) owner = owner.referenceNode;
+
+	return owner;
 
 }
 
@@ -124,12 +136,11 @@ function readSources( renderObject, updateNodes ) {
 
 export class SteadyUniformSources {
 
-	constructor( renderObject, textureData ) {
+	constructor( renderObject ) {
 
 		const updateNodes = renderObject.getNodeBuilderState().updateNodes;
 		const { owners, properties } = readSources( renderObject, updateNodes );
 
-		this.textureData = textureData;
 		this.liveNodes = liveUpdateNodes( updateNodes );
 		this.owners = owners;
 		this.properties = properties;
@@ -151,8 +162,9 @@ export class SteadyUniformSources {
 
 		}
 
-		this.versions = [];
-		this.remember();
+		this.watched = [];
+		this.sourcesChanged = false;
+		if ( this.steady ) this.remember();
 
 	}
 
@@ -189,70 +201,50 @@ export class SteadyUniformSources {
 
 	remember() {
 
-		this.versions.length = 0;
-		this._visit( ( value ) => {
+		this.release();
 
-			this.versions.push( value );
-
-			return true;
-
-		} );
-
-	}
-
-	changed() {
-
-		let index = 0;
-
-		return this._visit( ( value ) => this.versions[ index ++ ] === value ) === false;
-
-	}
-
-	_visitTexture( texture, same ) {
-
-		if ( texture === null || texture === undefined || texture.isTexture !== true ) return same( texture );
-
-		const data = this.textureData( texture );
-
-		return same( texture ) && same( texture.version ) && same( data.generation ) && same( data.creation );
-
-	}
-
-	_visit( same ) {
-
-		for ( const owner of this.owners ) {
-
-			if ( same( owner.version ) === false || same( owner.uniformsVersion ) === false ) return false;
-
-		}
-
-		for ( const { owner, property } of this.properties ) {
-
-			if ( this._visitTexture( owner[ property ], same ) === false ) return false;
-
-		}
-
-		for ( const node of this.uniformNodes ) {
-
-			if ( same( node.valueVersion ) === false ) return false;
-
-		}
+		for ( const owner of this.owners ) this._watch( owner );
+		for ( const { owner, property } of this.properties ) this._watch( owner[ property ] );
+		for ( const node of this.uniformNodes ) this._watch( node );
 
 		for ( const binding of this.textureBindings ) {
 
-			if ( this._visitTexture( binding.textureNode.value, same ) === false ) return false;
+			this._watch( textureValueOwner( binding.textureNode ) );
+			this._watch( binding.textureNode.value );
 
 		}
 
 		for ( const binding of this.storageBindings ) {
 
-			const attribute = binding.nodeUniform.value;
-
-			if ( same( attribute ) === false || same( attribute.version ) === false ) return false;
+			this._watch( binding.nodeUniform );
+			this._watch( binding.nodeUniform.value );
 
 		}
 
-		return true;
+		this.sourcesChanged = false;
+
+	}
+
+	changed() {
+
+		return this.sourcesChanged;
+
+	}
+
+	release() {
+
+		for ( const source of this.watched ) unwatchSource( source, this );
+
+		this.watched.length = 0;
+
+	}
+
+	_watch( source ) {
+
+		if ( source === null || source === undefined || typeof source !== 'object' ) return;
+
+		watchSource( source, this );
+		this.watched.push( source );
 
 	}
 

@@ -1,4 +1,5 @@
 import DataMap from './DataMap.js';
+import { signalSource } from '../../core/SourceSignals.js';
 
 import { Vector3 } from '../../math/Vector3.js';
 import { DepthTexture } from '../../textures/DepthTexture.js';
@@ -316,6 +317,8 @@ class Textures extends DataMap {
 			}
 
 		}
+
+		signalSource( texture );
 
 		// dispose handler
 

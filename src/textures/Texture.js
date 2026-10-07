@@ -1,4 +1,5 @@
 import { EventDispatcher } from '../core/EventDispatcher.js';
+import { signalSource } from '../core/SourceSignals.js';
 import {
 	MirroredRepeatWrapping,
 	ClampToEdgeWrapping,
@@ -746,6 +747,7 @@ class Texture extends EventDispatcher {
 
 			this.version ++;
 			this.source.needsUpdate = true;
+			signalSource( this );
 
 		}
 
