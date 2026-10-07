@@ -350,7 +350,7 @@ class Geometries extends DataMap {
 
 		if ( culling !== null ) return culling.groupOffsets === undefined ? culling.indirectOffset : culling.groupOffsets.get( renderObject.group );
 
-		return renderObject.geometry.indirectOffset;
+		return renderObject.group?.indirectOffset ?? renderObject.geometry.indirectOffset;
 
 	}
 
