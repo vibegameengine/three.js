@@ -150,6 +150,15 @@ class Object3D extends EventDispatcher {
 		this._transformDirty = true;
 		this._dirtyBelow = false;
 
+		/**
+		 * Counts how often the world matrix was recomputed, so a consumer that caches
+		 * something derived from it can tell what moved since it last looked.
+		 *
+		 * @type {number}
+		 * @default 0
+		 */
+		this.matrixWorldVersion = 0;
+
 		const position = new ObservedVector3();
 		const rotation = new Euler();
 		const quaternion = new Quaternion();
@@ -1230,6 +1239,7 @@ class Object3D extends EventDispatcher {
 			}
 
 			this._transformDirty = false;
+			this.matrixWorldVersion ++;
 
 			force = true;
 
@@ -1274,6 +1284,8 @@ class Object3D extends EventDispatcher {
 		if ( updateParents === true && updateChildren !== true && moved === false ) return false;
 
 		if ( this.matrixAutoUpdate ) this.updateMatrix();
+
+		this.matrixWorldVersion ++;
 
 		if ( this.matrixWorldAutoUpdate === true ) {
 
