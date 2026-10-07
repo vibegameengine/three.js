@@ -1228,9 +1228,19 @@ class Renderer {
 
 			renderBundleData.refreshedFrame = frameId;
 
+			let sharedGroupsUpdated = false;
+
 			for ( let i = 0, l = renderObjects.length; i < l; i ++ ) {
 
 				const renderObject = renderObjects[ i ];
+
+				if ( renderObject.object.uniformsFixedAfterRecording === true ) {
+
+					if ( sharedGroupsUpdated === false ) this._bindings.updateForRender( renderObject );
+					sharedGroupsUpdated = true;
+					continue;
+
+				}
 
 				if ( this._nodes.needsRefresh( renderObject ) && this._refreshedWithMaterial( renderObject ) === false ) {
 
