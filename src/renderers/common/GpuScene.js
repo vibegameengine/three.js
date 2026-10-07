@@ -1,6 +1,7 @@
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
 import { Matrix3 } from '../../math/Matrix3.js';
 import StorageBufferAttribute from './StorageBufferAttribute.js';
+import { takeMovedPrimitives } from '../../core/PrimitiveMotion.js';
 
 export const PrimitiveLayout = Object.freeze( { world: 0, previousWorld: 4, normal: 8, custom: 11 } );
 export const PRIMITIVE_VEC4S = 12;
@@ -32,6 +33,9 @@ class GpuScene {
 		this.frame = 0;
 		this.loopFrameId = - 1;
 		this.presented = false;
+		this.movedFrame = - 1;
+		this.moving = [];
+		this.stillMoving = [];
 		this.releaser = new FinalizationRegistry( ( id ) => this.release( id ) );
 
 	}
@@ -98,25 +102,31 @@ class GpuScene {
 
 	}
 
-	syncRenderList( renderList, frameId ) {
+	syncMoved( frameId ) {
 
-		for ( const item of renderList.opaque ) this.syncRead( item.object, frameId );
-		for ( const item of renderList.transparent ) this.syncRead( item.object, frameId );
-		for ( const item of renderList.transparentDoublePass ) this.syncRead( item.object, frameId );
-		for ( const bundle of renderList.bundles ) {
+		const candidates = takeMovedPrimitives( this.moving );
+		const unsettled = this.stillMoving;
+		unsettled.length = 0;
 
-			const group = bundle.bundleGroup;
+		for ( let i = 0, l = candidates.length; i < l; i ++ ) {
 
-			if ( group.objectsChangeOncePerFrame === true ) {
-
-				if ( this.syncedBundles.get( group ) === frameId ) continue;
-				this.syncedBundles.set( group, frameId );
-
-			}
-
-			this.syncRenderList( bundle.renderList, frameId );
+			const object = candidates[ i ];
+			const primitive = this.primitives.get( object );
+			if ( primitive === undefined || primitive.frame === frameId && primitive.settled === true ) continue;
+			this.sync( object, frameId );
+			if ( primitive.settled === false ) unsettled.push( object );
 
 		}
+
+		this.stillMoving = candidates;
+		this.moving = unsettled;
+		this.movedFrame = frameId;
+
+	}
+
+	syncRenderList( renderList, frameId ) {
+
+		this.syncMoved( frameId );
 
 	}
 
@@ -159,6 +169,7 @@ class GpuScene {
 			attribute.isGpuScenePrimitive = true;
 			primitive = { id, attribute, frame: - 1, settled: true };
 			this.primitives.set( object, primitive );
+			object._gpuScenePrimitive = true;
 			this.releaser.register( object, id );
 
 			const base = id * PRIMITIVE_FLOATS;

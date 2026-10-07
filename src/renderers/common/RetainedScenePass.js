@@ -53,8 +53,7 @@ class RetainedScenePass {
 
 		const gpuScene = renderer.gpuScene;
 
-		for ( const item of this.list.items ) gpuScene.sync( item.object, gpuSceneFrame );
-		for ( const item of this.list.transparent ) gpuScene.sync( item.object, gpuSceneFrame );
+		gpuScene.syncMoved( gpuSceneFrame );
 
 		renderer._flushGpuScene();
 

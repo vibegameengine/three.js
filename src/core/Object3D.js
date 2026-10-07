@@ -1,3 +1,4 @@
+import { notePrimitiveMoved } from './PrimitiveMotion.js';
 import { Quaternion } from '../math/Quaternion.js';
 import { Vector3 } from '../math/Vector3.js';
 import { Matrix4 } from '../math/Matrix4.js';
@@ -1240,6 +1241,7 @@ class Object3D extends EventDispatcher {
 
 			this._transformDirty = false;
 			this.matrixWorldVersion ++;
+			if ( this._gpuScenePrimitive === true ) notePrimitiveMoved( this );
 
 			force = true;
 
@@ -1286,6 +1288,7 @@ class Object3D extends EventDispatcher {
 		if ( this.matrixAutoUpdate ) this.updateMatrix();
 
 		this.matrixWorldVersion ++;
+		if ( this._gpuScenePrimitive === true ) notePrimitiveMoved( this );
 
 		if ( this.matrixWorldAutoUpdate === true ) {
 
