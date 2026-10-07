@@ -73,7 +73,7 @@ export * from './accessors/RendererReferenceNode.js';
 export * from './accessors/MorphNode.js';
 export * from './accessors/TextureBicubic.js';
 export * from './accessors/ModelNode.js';
-export { gpuSceneCustomData } from './accessors/GpuSceneNode.js';
+export { gpuSceneCustomData, gpuSceneWorldOf } from './accessors/GpuSceneNode.js';
 export * from './accessors/ModelViewProjectionNode.js';
 export * from './accessors/Normal.js';
 export * from './accessors/Object3DNode.js';

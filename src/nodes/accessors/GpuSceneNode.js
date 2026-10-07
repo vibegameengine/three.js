@@ -67,6 +67,36 @@ class GpuSceneRecordNode extends Node {
 
 }
 
+class GpuScenePrimitiveWorldNode extends Node {
+
+	static get type() {
+
+		return 'GpuScenePrimitiveWorldNode';
+
+	}
+
+	constructor( primitive ) {
+
+		super( 'mat4' );
+
+		this.primitive = primitive;
+
+	}
+
+	setup( builder ) {
+
+		const records = gpuSceneRecords( builder.renderer.gpuScene );
+		const base = uint( this.primitive ).mul( uint( PRIMITIVE_VEC4S ) ).add( uint( PrimitiveLayout.world ) ).toVar();
+		const column = ( index ) => records.element( base.add( uint( index ) ) );
+
+		return mat4( column( 0 ), column( 1 ), column( 2 ), column( 3 ) );
+
+	}
+
+}
+
+export const gpuSceneWorldOf = ( primitive ) => nodeObject( new GpuScenePrimitiveWorldNode( primitive ) );
+
 export const gpuSceneWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'world' );
 export const gpuScenePreviousWorldMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'previousWorld' );
 export const gpuSceneNormalMatrix = /*@__PURE__*/ nodeImmutable( GpuSceneRecordNode, 'normal' );

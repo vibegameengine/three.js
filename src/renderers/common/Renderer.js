@@ -3451,6 +3451,21 @@ class Renderer {
 
 	}
 
+	syncGpuScene() {
+
+		if ( this.gpuScene === null ) return;
+
+		this.gpuScene.syncMoved( this._gpuSceneFrame( true, false ) );
+		this._flushGpuScene();
+
+	}
+
+	primitiveIdOf( object ) {
+
+		return this.gpuScene.primitiveOf( object ).id;
+
+	}
+
 	_syncGpuSceneObject( object, { topLevel, toScreen } ) {
 
 		this.gpuScene.sync( object, this._gpuSceneFrame( topLevel, toScreen ) );

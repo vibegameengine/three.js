@@ -330,6 +330,7 @@ export const modelViewPosition = TSL.modelViewPosition;
 export const modelViewProjection = TSL.modelViewProjection;
 export const modelWorldMatrix = TSL.modelWorldMatrix;
 export const gpuSceneCustomData = TSL.gpuSceneCustomData;
+export const gpuSceneWorldOf = TSL.gpuSceneWorldOf;
 export const modelWorldMatrixInverse = TSL.modelWorldMatrixInverse;
 export const morphReference = TSL.morphReference;
 export const mrt = TSL.mrt;
