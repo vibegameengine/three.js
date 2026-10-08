@@ -190,7 +190,8 @@ class GpuScene {
 			const base = id * PRIMITIVE_FLOATS;
 			this.writeCurrent( base, object.matrixWorld );
 			this.records.array.copyWithin( base + PREVIOUS_OFFSET, base + WORLD_OFFSET, base + WORLD_OFFSET + 16 );
-			this.records.array.fill( 0, base + CUSTOM_OFFSET, base + CUSTOM_OFFSET + 4 );
+			if ( object.gpuSceneCustomData !== undefined ) this.records.array.set( object.gpuSceneCustomData, base + CUSTOM_OFFSET );
+			else this.records.array.fill( 0, base + CUSTOM_OFFSET, base + CUSTOM_OFFSET + 4 );
 			this.markDirty( id );
 
 		}
