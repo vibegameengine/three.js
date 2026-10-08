@@ -140,6 +140,13 @@ class VelocityNode extends TempNode {
 			cameraData.currentProjectionMatrix.copy( this.projectionMatrix || camera.projectionMatrix );
 			cameraData.currentCameraViewMatrix.copy( camera.matrixWorldInverse );
 
+		}
+
+		if ( this.previousCameraFrameId !== frameId || this.previousCamera !== camera ) {
+
+			this.previousCameraFrameId = frameId;
+			this.previousCamera = camera;
+
 			this.previousProjectionMatrix.value.copy( cameraData.previousProjectionMatrix );
 			this.previousCameraViewMatrix.value.copy( cameraData.previousCameraViewMatrix );
 
@@ -186,6 +193,35 @@ class VelocityNode extends TempNode {
 
 }
 
+class PreviousViewDepthRatioNode extends VelocityNode {
+
+	static get type() {
+
+		return 'PreviousViewDepthRatioNode';
+
+	}
+
+	constructor() {
+
+		super();
+
+		this.nodeType = 'float';
+
+	}
+
+	setup( builder ) {
+
+		const projectionMatrix = ( this.projectionMatrix === null ) ? cameraProjectionMatrix : uniform( this.projectionMatrix );
+		const previousModelWorldMatrix = usesGpuScene( builder ) ? gpuScenePreviousWorldMatrix : this.previousModelWorldMatrix;
+		const clipPositionCurrent = projectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
+		const clipPositionPrevious = this.previousProjectionMatrix.mul( this.previousCameraViewMatrix.mul( previousModelWorldMatrix ) ).mul( positionPrevious );
+
+		return clipPositionPrevious.w.div( clipPositionCurrent.w ).sub( 1 );
+
+	}
+
+}
+
 function getData( object ) {
 
 	let objectData = _objectData.get( object );
@@ -227,3 +263,5 @@ export default VelocityNode;
  * @type {VelocityNode}
  */
 export const velocity = /*@__PURE__*/ nodeImmutable( VelocityNode );
+
+export const previousViewDepthRatio = /*@__PURE__*/ nodeImmutable( PreviousViewDepthRatioNode );

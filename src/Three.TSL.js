@@ -608,6 +608,7 @@ export const vec3 = TSL.vec3;
 export const vec4 = TSL.vec4;
 export const vectorComponents = TSL.vectorComponents;
 export const velocity = TSL.velocity;
+export const previousViewDepthRatio = TSL.previousViewDepthRatio;
 export const vertexColor = TSL.vertexColor;
 export const vertexIndex = TSL.vertexIndex;
 export const vertexStage = TSL.vertexStage;
