@@ -32,6 +32,8 @@ class RetainedDrawList {
 		this.scene = null;
 		this.rasterBins = null;
 		this.binned = false;
+		this.binnedShown = new Map();
+		this.binnedRevision = 0;
 		this.sceneRevision = - 1;
 		this.cameraMask = - 1;
 		this.materialsRevision = - 1;
@@ -67,6 +69,8 @@ class RetainedDrawList {
 		this.callbacks.length = 0;
 		this.materials.clear();
 		this.drawsOf.clear();
+		this.binnedShown.clear();
+		this.binnedRevision ++;
 
 		this.binned = rasterBins !== null;
 		this._collect( scene, camera, 0, true );
@@ -92,6 +96,7 @@ class RetainedDrawList {
 		if ( changed === null ) {
 
 			for ( const [ object, draws ] of this.drawsOf ) this._refreshHidden( object, draws, updated );
+			for ( const object of this.binnedShown.keys() ) this._refreshBinned( object );
 			return updated;
 
 		}
@@ -106,12 +111,23 @@ class RetainedDrawList {
 
 				const draws = this.drawsOf.get( descendant );
 				if ( draws !== undefined ) this._refreshHidden( descendant, draws, updated );
+				if ( this.binnedShown.has( descendant ) ) this._refreshBinned( descendant );
 
 			} );
 
 		}
 
 		return updated;
+
+	}
+
+	_refreshBinned( object ) {
+
+		const shown = shownInWorld( object );
+
+		if ( this.binnedShown.get( object ) === shown ) return;
+		this.binnedShown.set( object, shown );
+		this.binnedRevision ++;
 
 	}
 
@@ -162,7 +178,12 @@ class RetainedDrawList {
 
 	_collectDrawable( object, groupOrder, shown ) {
 
-		if ( this.binned === true && object.drawnByRasterBins === true ) return;
+		if ( this.binned === true && object.drawnByRasterBins === true ) {
+
+			this.binnedShown.set( object, shown );
+			return;
+
+		}
 
 		if ( object.onBeforeRender !== Object3D.prototype.onBeforeRender || object.onAfterRender !== Object3D.prototype.onAfterRender ) this.callbacks.push( object );
 
