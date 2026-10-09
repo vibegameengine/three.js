@@ -7,7 +7,7 @@ import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
 import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
 import { SteadyUniformSources } from './SteadyUniforms.js';
-import RetainedViewRefresh from './RetainedViewRefresh.js';
+import RetainedViewRefresh, { refreshFully, refreshShared } from './RetainedViewRefresh.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 
@@ -117,6 +117,7 @@ class RetainedScenePass {
 
 		this._unbind();
 		this.viewRefresh.release();
+		this.transparents.dispose();
 		this.stopListening();
 
 	}
@@ -369,38 +370,12 @@ class RetainedScenePass {
 
 		this._refreshSteps = {
 			renderer,
-			full: ( renderObject ) => this._refreshFully( renderer, renderObject ),
-			shared: ( renderObject, sources ) => this._refreshShared( renderer, renderObject, sources ),
+			full: ( renderObject ) => refreshFully( renderer, renderObject ),
+			shared: ( renderObject, sources ) => refreshShared( renderer, renderObject, sources ),
 			sources: ( renderObject ) => this._steadySourcesOf( renderObject )
 		};
 
 		return this._refreshSteps;
-
-	}
-
-	_refreshFully( renderer, renderObject ) {
-
-		const nodes = renderer._nodes;
-
-		if ( nodes.needsRefresh( renderObject ) === false || renderer._refreshedWithMaterial( renderObject ) === true ) return;
-
-		nodes.updateBefore( renderObject );
-		nodes.updateForRender( renderObject );
-		renderer._bindings.updateForRender( renderObject );
-		nodes.updateAfter( renderObject );
-
-	}
-
-	_refreshShared( renderer, renderObject, sources ) {
-
-		if ( renderer._refreshedWithMaterial( renderObject ) === true ) return;
-
-		const nodes = renderer._nodes;
-
-		nodes.updateBefore( renderObject );
-		nodes.updateLiveForRender( renderObject, sources.liveNodes );
-		renderer._bindings.updateSharedForRender( renderObject );
-		nodes.updateAfter( renderObject );
 
 	}
 

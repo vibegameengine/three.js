@@ -1,6 +1,8 @@
 import { DoubleSide, FrontSide } from '../../constants.js';
 import { Vector4 } from '../../math/Vector4.js';
 import { drawnAtThisSize } from './ScreenSizeLods.js';
+import RetainedViewRefresh, { refreshFully, refreshRepresentatives, refreshShared } from './RetainedViewRefresh.js';
+import { SteadyUniformSources } from './SteadyUniforms.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 const NO_DRAWS = Object.freeze( [] );
@@ -20,6 +22,16 @@ export function transparentDrawSequence( visible ) {
 
 }
 
+function steadySourcesOf( renderObject ) {
+
+	if ( renderObject.getMaterialBindings() === null ) return null;
+
+	const sources = new SteadyUniformSources( renderObject );
+
+	return sources.steady ? sources : null;
+
+}
+
 function needsDoublePass( material ) {
 
 	const hasTransmission = material.transmission > 0 || ( material.transmissionNode && material.transmissionNode.isNode );
@@ -34,11 +46,14 @@ class RetainedTransparents {
 
 		this.entries = [];
 		this.visible = [];
+		this.viewRefresh = new RetainedViewRefresh();
+		this.refreshSteps = null;
 
 	}
 
 	rebuild( items ) {
 
+		this.viewRefresh.release();
 		this.entries = items.map( ( item ) => ( {
 			item,
 			groupOrder: item.groupOrder,
@@ -76,29 +91,58 @@ class RetainedTransparents {
 
 		}
 
-		for ( const { entry, side } of transparentDrawSequence( this.visible ) ) this._drawSide( renderer, frame, entry, entry[ side ] );
+		this.viewRefresh.refresh( renderer, this._steps( renderer ) );
+
+		let encoded = false;
+
+		for ( const { entry, side } of transparentDrawSequence( this.visible ) ) encoded = this._drawSide( renderer, frame, entry, entry[ side ] ) || encoded;
+
+		if ( encoded ) this._trackEncodedDraws();
+
+	}
+
+	dispose() {
+
+		this.viewRefresh.release();
+
+	}
+
+	_steps( renderer ) {
+
+		if ( this.refreshSteps !== null && this.refreshSteps.renderer === renderer ) return this.refreshSteps;
+
+		this.refreshSteps = {
+			renderer,
+			full: ( renderObject ) => refreshFully( renderer, renderObject ),
+			shared: ( renderObject, sources ) => refreshShared( renderer, renderObject, sources ),
+			sources: ( renderObject ) => steadySourcesOf( renderObject )
+		};
+
+		return this.refreshSteps;
+
+	}
+
+	_trackEncodedDraws() {
+
+		const renderObjects = [];
+
+		for ( const entry of this.entries ) for ( const draw of [ entry.front, entry.back ] ) renderObjects.push( ...draw.renderObjects );
+
+		this.viewRefresh.reset( refreshRepresentatives( renderObjects ) );
 
 	}
 
 	_drawSide( renderer, frame, entry, draw ) {
 
-		if ( this._needsEncode( renderer, frame, draw ) ) {
+		if ( this._needsEncode( renderer, frame, draw ) || this._bindGroupsChanged( renderer, draw ) ) {
 
 			this._encode( renderer, frame, entry, draw );
-			return;
-
-		}
-
-		this._refresh( renderer, draw );
-
-		if ( this._bindGroupsChanged( renderer, draw ) ) {
-
-			this._encode( renderer, frame, entry, draw );
-			return;
+			return true;
 
 		}
 
 		renderer.backend.drawBundle( frame.renderContext, draw.renderBundle );
+		return false;
 
 	}
 
@@ -129,25 +173,6 @@ class RetainedTransparents {
 		draw.encodedFor = frame.encodeKey;
 		draw.bindGroups.clear();
 		for ( const renderObject of draw.renderObjects ) for ( const bindGroup of renderObject.getBindings() ) draw.bindGroups.set( bindGroup, renderer.backend.get( bindGroup ).group );
-
-	}
-
-	_refresh( renderer, draw ) {
-
-		const nodes = renderer._nodes;
-
-		for ( const renderObject of draw.renderObjects ) {
-
-			if ( nodes.needsRefresh( renderObject ) && renderer._refreshedWithMaterial( renderObject ) === false ) {
-
-				nodes.updateBefore( renderObject );
-				nodes.updateForRender( renderObject );
-				renderer._bindings.updateForRender( renderObject );
-				nodes.updateAfter( renderObject );
-
-			}
-
-		}
 
 	}
 

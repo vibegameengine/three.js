@@ -22,6 +22,52 @@ function readsRenderedObject( renderer, node, updateType ) {
 
 }
 
+export function refreshRepresentatives( renderObjects ) {
+
+	const seen = new Set();
+	const representatives = [];
+
+	for ( const renderObject of renderObjects ) {
+
+		const materialBindings = renderObject.getMaterialBindings();
+
+		if ( materialBindings !== null && seen.has( materialBindings ) ) continue;
+
+		if ( materialBindings !== null ) seen.add( materialBindings );
+		representatives.push( renderObject );
+
+	}
+
+	return representatives;
+
+}
+
+export function refreshFully( renderer, renderObject ) {
+
+	const nodes = renderer._nodes;
+
+	if ( nodes.needsRefresh( renderObject ) === false || renderer._refreshedWithMaterial( renderObject ) === true ) return;
+
+	nodes.updateBefore( renderObject );
+	nodes.updateForRender( renderObject );
+	renderer._bindings.updateForRender( renderObject );
+	nodes.updateAfter( renderObject );
+
+}
+
+export function refreshShared( renderer, renderObject, sources ) {
+
+	if ( renderer._refreshedWithMaterial( renderObject ) === true ) return;
+
+	const nodes = renderer._nodes;
+
+	nodes.updateBefore( renderObject );
+	nodes.updateLiveForRender( renderObject, sources.liveNodes );
+	renderer._bindings.updateSharedForRender( renderObject );
+	nodes.updateAfter( renderObject );
+
+}
+
 export function viewKey( renderer, renderObject, liveNodes ) {
 
 	const state = renderObject.getNodeBuilderState();
