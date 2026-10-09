@@ -24,8 +24,9 @@ class GpuScene {
 		this.syncedBundles = new WeakMap();
 		this.freeIds = [];
 		this.nextId = 0;
-		this.dirtyFirst = Infinity;
-		this.dirtyLast = - 1;
+		this.dirty = [];
+		this.dirtyMarks = new Uint8Array( capacity );
+		this.scatter = scatterBuffers( capacity );
 		this.grown = false;
 		this.frame = 0;
 		this.loopFrameId = - 1;
@@ -141,23 +142,42 @@ class GpuScene {
 
 	flush() {
 
-		if ( this.dirtyLast < 0 ) return false;
+		const dirty = this.dirty;
+		const count = this.grown ? 0 : dirty.length;
+		const { ids, records } = this.scatter;
+		const source = this.records.array;
 
-		if ( this.grown === true ) {
+		for ( let i = 0; i < count; i ++ ) {
 
-			this.records.clearUpdateRanges();
-			this.grown = false;
-
-		} else {
-
-			this.records.addUpdateRange( this.dirtyFirst * PRIMITIVE_FLOATS, ( this.dirtyLast - this.dirtyFirst + 1 ) * PRIMITIVE_FLOATS );
+			const id = dirty[ i ];
+			ids.array[ i ] = id;
+			records.array.set( source.subarray( id * PRIMITIVE_FLOATS, ( id + 1 ) * PRIMITIVE_FLOATS ), i * PRIMITIVE_FLOATS );
 
 		}
 
-		this.records.needsUpdate = true;
-		this.dirtyFirst = Infinity;
-		this.dirtyLast = - 1;
-		return true;
+		for ( let i = 0, l = dirty.length; i < l; i ++ ) this.dirtyMarks[ dirty[ i ] ] = 0;
+		dirty.length = 0;
+
+		if ( count > 0 ) {
+
+			ids.clearUpdateRanges();
+			ids.addUpdateRange( 0, count );
+			ids.needsUpdate = true;
+			records.clearUpdateRanges();
+			records.addUpdateRange( 0, count * PRIMITIVE_FLOATS );
+			records.needsUpdate = true;
+
+		}
+
+		return count;
+
+	}
+
+	takeGrown() {
+
+		const grown = this.grown;
+		this.grown = false;
+		return grown;
 
 	}
 
@@ -222,8 +242,12 @@ class GpuScene {
 
 		const array = new Float32Array( capacity * PRIMITIVE_FLOATS );
 		array.set( this.records.array );
+		const marks = new Uint8Array( capacity );
+		marks.set( this.dirtyMarks );
 		this.capacity = capacity;
 		this.records = new StorageBufferAttribute( array, 4 );
+		this.dirtyMarks = marks;
+		this.scatter = scatterBuffers( capacity );
 		this.grown = true;
 
 		if ( this.recordsNode !== null ) this.recordsNode.value = this.records;
@@ -238,10 +262,20 @@ class GpuScene {
 
 	markDirty( id ) {
 
-		if ( id < this.dirtyFirst ) this.dirtyFirst = id;
-		if ( id > this.dirtyLast ) this.dirtyLast = id;
+		if ( this.dirtyMarks[ id ] === 1 ) return;
+		this.dirtyMarks[ id ] = 1;
+		this.dirty.push( id );
 
 	}
+
+}
+
+function scatterBuffers( capacity ) {
+
+	return {
+		ids: new StorageBufferAttribute( new Uint32Array( capacity ), 1 ),
+		records: new StorageBufferAttribute( new Float32Array( capacity * PRIMITIVE_FLOATS ), 4 )
+	};
 
 }
 

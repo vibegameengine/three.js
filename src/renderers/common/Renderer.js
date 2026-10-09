@@ -39,6 +39,7 @@ import { float, vec3, vec4 } from '../../nodes/tsl/TSLCore.js';
 import { reference } from '../../nodes/accessors/ReferenceNode.js';
 import { highpModelNormalViewMatrix, highpModelViewMatrix } from '../../nodes/accessors/ModelNode.js';
 import { context } from '../../nodes/core/ContextNode.js';
+import GpuSceneScatter from './GpuSceneScatter.js';
 import { error, warn, warnOnce } from '../../utils.js';
 
 const _scene = /*@__PURE__*/ new Scene();
@@ -3488,8 +3489,20 @@ class Renderer {
 	_flushGpuScene() {
 
 		const gpuScene = this.gpuScene;
+		const scattered = gpuScene.flush();
 
-		if ( gpuScene.flush() === true ) this._attributes.update( gpuScene.records, AttributeType.STORAGE );
+		if ( gpuScene.takeGrown() === true || this.backend.has( gpuScene.records ) === false ) {
+
+			this._attributes.update( gpuScene.records, AttributeType.STORAGE );
+			return;
+
+		}
+
+		if ( scattered === 0 ) return;
+
+		if ( this._gpuSceneScatter === undefined ) this._gpuSceneScatter = new GpuSceneScatter();
+
+		this._gpuSceneScatter.dispatch( this, gpuScene, scattered );
 
 	}
 
