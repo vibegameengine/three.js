@@ -87,21 +87,23 @@ class RenderObjects {
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 * @return {RenderObject} The render object.
 	 */
-	get( object, material, scene, camera, lightsNode, renderContext, clippingContext, passId ) {
+	get( object, material, scene, camera, lightsNode, renderContext, clippingContext, passId, geometry = object.geometry ) {
 
 		const chainMap = this.getChainMap( passId );
+		const levelGeometry = geometry === object.geometry ? null : geometry;
 
 		// reuse chainArray
 		_chainKeys[ 0 ] = object;
 		_chainKeys[ 1 ] = material;
 		_chainKeys[ 2 ] = renderContext;
 		_chainKeys[ 3 ] = lightsNode;
+		_chainKeys[ 4 ] = levelGeometry === null ? object : levelGeometry;
 
 		let renderObject = chainMap.get( _chainKeys );
 
 		if ( renderObject === undefined ) {
 
-			renderObject = this.createRenderObject( this.nodes, this.geometries, this.renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, passId );
+			renderObject = this.createRenderObject( this.nodes, this.geometries, this.renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, passId, levelGeometry );
 
 			chainMap.set( _chainKeys, renderObject );
 
@@ -111,7 +113,7 @@ class RenderObjects {
 
 			if ( renderObject.needsGeometryUpdate ) {
 
-				renderObject.setGeometry( object.geometry );
+				renderObject.setGeometry( levelGeometry === null ? object.geometry : levelGeometry );
 
 			}
 
@@ -121,7 +123,7 @@ class RenderObjects {
 
 					renderObject.dispose();
 
-					renderObject = this.get( object, material, scene, camera, lightsNode, renderContext, clippingContext, passId );
+					renderObject = this.get( object, material, scene, camera, lightsNode, renderContext, clippingContext, passId, geometry );
 
 				} else {
 
@@ -176,11 +178,11 @@ class RenderObjects {
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 * @return {RenderObject} The render object.
 	 */
-	createRenderObject( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, passId ) {
+	createRenderObject( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, passId, levelGeometry = null ) {
 
 		const chainMap = this.getChainMap( passId );
 
-		const renderObject = new RenderObject( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext );
+		const renderObject = new RenderObject( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, levelGeometry );
 
 		renderObject.onDispose = () => {
 

@@ -4,6 +4,7 @@ import { listenForDirtyBuffers, takeDirtyBuffers } from '../../core/DrawListRevi
 import { AttributeType } from './Constants.js';
 import RetainedDrawList from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
+import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
 import { SteadyUniformSources } from './SteadyUniforms.js';
 
@@ -46,7 +47,7 @@ class RetainedScenePass {
 
 	}
 
-	collectFrame( renderer, scene, camera, renderContext, renderList, frustum, projScreenMatrix ) {
+	collectFrame( renderer, scene, camera, renderContext, renderList, frustum, projScreenMatrix, lodView = camera ) {
 
 		if ( renderer.gpuScene === null || renderer.gpuScene === undefined ) throw new Error( 'RetainedScenePass: the renderer needs a GpuScene; retained draws read every transform from it.' );
 		if ( camera.isArrayCamera === true ) throw new Error( 'RetainedScenePass: an ArrayCamera is not supported; the GPU culls against one frustum.' );
@@ -57,11 +58,11 @@ class RetainedScenePass {
 
 		for ( const light of this.list.lights ) if ( shownInWorld( light ) ) renderList.pushLight( light );
 
-		this._pushVisible( this.list.direct, renderList, renderContext, frustum, projScreenMatrix, camera );
+		this._pushVisible( this.list.direct, renderList, renderContext, { frustum, projScreenMatrix, camera, lodView } );
 
 	}
 
-	syncAndCull( renderer, gpuSceneFrame, frustum ) {
+	syncAndCull( renderer, gpuSceneFrame, frustum, camera ) {
 
 		const gpuScene = renderer.gpuScene;
 
@@ -75,7 +76,7 @@ class RetainedScenePass {
 
 		if ( this.culling.drawsKnown === false ) return;
 
-		this.culling.aim( frustum );
+		this.culling.aim( frustum, camera );
 		renderer.compute( this.culling.node );
 
 	}
@@ -104,10 +105,10 @@ class RetainedScenePass {
 
 	}
 
-	drawTransparent( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix } ) {
+	drawTransparent( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix, lodView } ) {
 
 		const encodeKey = `${ renderContext.id }:${ renderer.contextNode.id }:${ renderer.contextNode.version }:${ this.list.version }`;
-		this.transparents.draw( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix, encodeKey } );
+		this.transparents.draw( renderer, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix, encodeKey, lodView } );
 
 	}
 
@@ -154,6 +155,7 @@ class RetainedScenePass {
 		this.culling.spheres.array.set( previous.spheres.array );
 		this.culling.primitives.array.set( previous.primitives.array );
 		this.culling.instances.array.set( previous.instances.array );
+		this.culling.bands.array.set( previous.bands.array );
 		this.culling.drawInstances.set( previous.drawInstances );
 		this.culling.hidden.set( previous.hidden );
 		this.culling.args.array.set( previous.args.array );
@@ -171,10 +173,11 @@ class RetainedScenePass {
 
 		this.list.items.forEach( ( item, index ) => {
 
-			const { object, geometry } = item;
-			if ( geometry.boundingSphere === null ) geometry.computeBoundingSphere();
+			const { object, band } = item;
+			const bounds = object.geometry;
+			if ( bounds.boundingSphere === null ) bounds.computeBoundingSphere();
 			const alwaysDrawn = object.frustumCulled === false || object.isSkinnedMesh === true || object.isSprite === true;
-			this.culling.describe( index, { sphere: geometry.boundingSphere, primitive: gpuScene.primitiveOf( object ).id, alwaysDrawn } );
+			this.culling.describe( index, { sphere: bounds.boundingSphere, primitive: gpuScene.primitiveOf( object ).id, alwaysDrawn, band } );
 			item.cullIndex = index;
 			this.culling.hidden[ index ] = item.hidden ? 1 : 0;
 
@@ -191,7 +194,7 @@ class RetainedScenePass {
 
 			}
 
-			binding.groupOffsets.set( item.group, index * ARGS_STRIDE );
+			binding.groupOffsets.set( drawSlotKey( item ), index * ARGS_STRIDE );
 
 		} );
 
@@ -205,11 +208,11 @@ class RetainedScenePass {
 
 	}
 
-	_pushVisible( items, renderList, renderContext, frustum, projScreenMatrix, camera ) {
+	_pushVisible( items, renderList, renderContext, { frustum, projScreenMatrix, camera, lodView } ) {
 
 		for ( const item of items ) {
 
-			if ( item.hidden === true ) continue;
+			if ( item.hidden === true || drawnAtThisSize( item, lodView ) === false ) continue;
 			const { object, geometry, material, group, groupOrder } = item;
 			const visible = object.frustumCulled === false || ( object.isSprite === true ? frustum.intersectsSprite( object, camera ) : frustum.intersectsObject( object, camera ) );
 			if ( visible === false ) continue;

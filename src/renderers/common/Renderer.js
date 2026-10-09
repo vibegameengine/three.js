@@ -40,6 +40,7 @@ import { reference } from '../../nodes/accessors/ReferenceNode.js';
 import { highpModelNormalViewMatrix, highpModelViewMatrix } from '../../nodes/accessors/ModelNode.js';
 import { context } from '../../nodes/core/ContextNode.js';
 import GpuSceneScatter from './GpuSceneScatter.js';
+import { levelGeometryFor } from './ScreenSizeLods.js';
 import { error, warn, warnOnce } from '../../utils.js';
 
 const _scene = /*@__PURE__*/ new Scene();
@@ -545,6 +546,8 @@ class Renderer {
 		 * @default null
 		 */
 		this._currentRenderObjectFunction = null;
+
+		this._lodView = null;
 
 		/**
 		 * Used to keep track of the current render bundle.
@@ -1531,8 +1534,13 @@ class Renderer {
 		const renderList = this._renderLists.get( scene, camera );
 		renderList.begin();
 
-		if ( retained !== null ) retained.collectFrame( this, scene, camera, renderContext, renderList, frustum, _projScreenMatrix );
+		const lodView = scene.lodView ?? camera;
+		this._lodView = lodView;
+
+		if ( retained !== null ) retained.collectFrame( this, scene, camera, renderContext, renderList, frustum, _projScreenMatrix, lodView );
 		else this._projectObject( scene, camera, 0, renderList, renderContext.clippingContext, objectPass );
+
+		this._lodView = null;
 
 		renderList.finish();
 
@@ -1540,7 +1548,7 @@ class Renderer {
 
 		if ( this.gpuScene !== null ) this._syncGpuScene( renderList, gpuSceneFrame );
 
-		if ( retained !== null ) retained.syncAndCull( this, this._gpuSceneFrame( gpuSceneFrame.topLevel, gpuSceneFrame.toScreen ), frustum );
+		if ( retained !== null ) retained.syncAndCull( this, this._gpuSceneFrame( gpuSceneFrame.topLevel, gpuSceneFrame.toScreen ), frustum, lodView );
 
 		if ( this.sortObjects === true ) {
 
@@ -1578,7 +1586,7 @@ class Renderer {
 
 			if ( this.opaque === true ) retained.draw( this, sceneRef, lightsNode, renderContext, camera );
 			if ( this.opaque === true && opaqueObjects.length > 0 ) this._renderObjects( opaqueObjects, camera, sceneRef, lightsNode );
-			if ( this.transparent === true ) retained.drawTransparent( this, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix: _projScreenMatrix } );
+			if ( this.transparent === true ) retained.drawTransparent( this, { sceneRef, lightsNode, renderContext, camera, frustum, projScreenMatrix: _projScreenMatrix, lodView: scene.lodView ?? camera } );
 
 		} else {
 
@@ -3036,7 +3044,8 @@ class Renderer {
 
 				if ( ! object.frustumCulled || frustum.intersectsObject( object, camera ) ) {
 
-					const { geometry, material } = object;
+					const material = object.material;
+					const geometry = levelGeometryFor( object, this._lodView ?? camera );
 
 					if ( this.sortObjects === true ) {
 
@@ -3398,16 +3407,16 @@ class Renderer {
 		if ( material.transparent === true && material.side === DoubleSide && material.forceSinglePass === false ) {
 
 			material.side = BackSide;
-			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, 'backSide' ); // create backSide pass id
+			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, 'backSide', geometry ); // create backSide pass id
 
 			material.side = FrontSide;
-			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, passId ); // use default pass id
+			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, passId, geometry ); // use default pass id
 
 			material.side = DoubleSide;
 
 		} else {
 
-			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, passId );
+			this._handleObjectFunction( object, material, scene, camera, lightsNode, group, clippingContext, passId, geometry );
 
 		}
 
@@ -3522,10 +3531,10 @@ class Renderer {
 
 	}
 
-	_renderObjectDirect( object, material, scene, camera, lightsNode, group, clippingContext, passId ) {
+	_renderObjectDirect( object, material, scene, camera, lightsNode, group, clippingContext, passId, geometry = object.geometry ) {
 
-		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId );
-		renderObject.drawRange = object.geometry.drawRange;
+		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId, geometry );
+		renderObject.drawRange = geometry.drawRange;
 		renderObject.group = group;
 
 		//
@@ -3589,10 +3598,10 @@ class Renderer {
 	 * @param {ClippingContext} clippingContext - The clipping context.
 	 * @param {string} [passId] - An optional ID for identifying the pass.
 	 */
-	_createObjectPipeline( object, material, scene, camera, lightsNode, group, clippingContext, passId ) {
+	_createObjectPipeline( object, material, scene, camera, lightsNode, group, clippingContext, passId, geometry = object.geometry ) {
 
-		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId );
-		renderObject.drawRange = object.geometry.drawRange;
+		const renderObject = this._objects.get( object, material, scene, camera, lightsNode, this._currentRenderContext, clippingContext, passId, geometry );
+		renderObject.drawRange = geometry.drawRange;
 		renderObject.group = group;
 
 		//

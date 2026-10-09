@@ -1,5 +1,6 @@
 import { DoubleSide, FrontSide } from '../../constants.js';
 import { Vector4 } from '../../math/Vector4.js';
+import { drawnAtThisSize } from './ScreenSizeLods.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 const NO_DRAWS = Object.freeze( [] );
@@ -59,12 +60,12 @@ class RetainedTransparents {
 
 	draw( renderer, frame ) {
 
-		const { renderContext, camera, frustum, projScreenMatrix } = frame;
+		const { renderContext, camera, frustum, projScreenMatrix, lodView = camera } = frame;
 		this.visible.length = 0;
 
 		for ( const entry of this.entries ) {
 
-			if ( entry.item.hidden === true ) continue;
+			if ( entry.item.hidden === true || drawnAtThisSize( entry.item, lodView ) === false ) continue;
 			const { object, geometry } = entry.item;
 			const inside = object.frustumCulled === false || ( object.isSprite === true ? frustum.intersectsSprite( object, camera ) : frustum.intersectsObject( object, camera ) );
 			if ( inside === false ) continue;

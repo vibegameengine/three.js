@@ -1,3 +1,5 @@
+import { drawSlotKey } from './ScreenSizeLods.js';
+
 export function instanceCullingFor( object, camera, context = null ) {
 
 	const culling = object.instanceCulling;
@@ -14,7 +16,7 @@ export function instanceCullingOf( renderObject ) {
 
 	const culling = instanceCullingFor( renderObject.object, renderObject.camera, renderObject.context );
 
-	if ( culling !== null && culling.groupOffsets !== undefined && culling.groupOffsets.has( renderObject.group ) === false ) return null;
+	if ( culling !== null && culling.groupOffsets !== undefined && culling.groupOffsets.has( drawSlotKey( renderObject ) ) === false ) return null;
 
 	return culling;
 
