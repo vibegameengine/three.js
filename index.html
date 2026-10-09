@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>three.js fork vs r182</title>
+<meta name="description" content="The same WebGPU city drawn by stock three.js r182 and by the vibegameengine fork, side by side, each pane timed on its own.">
+<style>
+	:root { --bg: #0e1116; --panel: #161b22; --text: #e6edf3; --muted: #8b949e; --stock: #f0883e; --fork: #3fb950; --line: #30363d; }
+	* { box-sizing: border-box; }
+	body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
+	header { padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; border-bottom: 1px solid var(--line); }
+	header h1 { font-size: 18px; margin: 0; }
+	header p { margin: 0; color: var(--muted); }
+	header a { color: #58a6ff; }
+	main { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--line); }
+	.pane { position: relative; background: var(--panel); height: calc(100vh - 150px); min-height: 320px; }
+	.pane iframe { border: 0; width: 100%; height: 100%; display: block; }
+	.badge { position: absolute; left: 12px; top: 12px; padding: 10px 14px; border-radius: 10px; background: rgba(13, 17, 23, 0.82); backdrop-filter: blur(4px); min-width: 230px; }
+	.badge .name { font-weight: 600; }
+	.badge .fps { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+	.badge .detail { color: var(--muted); font-variant-numeric: tabular-nums; }
+	.stock .fps, .stock .name { color: var(--stock); }
+	.fork .fps, .fork .name { color: var(--fork); }
+	.state { position: absolute; right: 12px; top: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(13, 17, 23, 0.82); color: var(--muted); font-size: 13px; }
+	.state.live { color: var(--text); }
+	footer { padding: 10px 18px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; color: var(--muted); }
+	footer button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+	footer strong { color: var(--text); }
+	@media (max-width: 760px) { main { grid-template-columns: 1fr; } .pane { height: 46vh; } .badge { min-width: 0; } .badge .fps { font-size: 32px; } }
+</style>
+</head>
+<body>
+<header>
+	<h1>three.js r182 vs the vibegameengine fork</h1>
+	<p>Same city, same code, same canvas size. The panes take turns: only one draws at a time, so each number is that renderer alone. <a href="https://github.com/vibegameengine/three.js/tree/vibe#readme">What the fork changes</a></p>
+</header>
+<main>
+	<section class="pane stock">
+		<iframe id="stock" src="city.html?three=stock&paused=1" title="stock three.js r182"></iframe>
+		<div class="badge"><div class="name">three.js r182 (stock)</div><div class="fps" id="stock-fps">…</div><div class="detail" id="stock-detail">loading</div></div>
+		<div class="state" id="stock-state">waiting</div>
+	</section>
+	<section class="pane fork">
+		<iframe id="fork" src="city.html?three=fork&paused=1" title="vibegameengine three.js fork"></iframe>
+		<div class="badge"><div class="name">vibegameengine fork</div><div class="fps" id="fork-fps">…</div><div class="detail" id="fork-detail">loading</div></div>
+		<div class="state" id="fork-state">waiting</div>
+	</section>
+</main>
+<footer>
+	<span id="summary">Each turn lasts <strong>5 s</strong>; the first turn of each pane builds its pipelines and is not counted.</span>
+	<button id="both">Run both at once (visual only)</button>
+	<span>WebGPU required. Numbers are capped at your display's refresh rate; the render-call time shows the headroom beyond it.</span>
+</footer>
+<script>
+	const TURN_MS = 5000;
+	const panes = { stock: document.getElementById( 'stock' ), fork: document.getElementById( 'fork' ) };
+	const ready = new Set();
+	const turns = { stock: 0, fork: 0 };
+	const best = { stock: 0, fork: 0 };
+	let current = null;
+	let together = false;
+	let timer = 0;
+
+	function show( pane, text, detail ) {
+		document.getElementById( `${ pane }-fps` ).textContent = text;
+		if ( detail ) document.getElementById( `${ pane }-detail` ).textContent = detail;
+	}
+
+	function state( pane, label, live ) {
+		const element = document.getElementById( `${ pane }-state` );
+		element.textContent = label;
+		element.classList.toggle( 'live', live );
+	}
+
+	function run( pane, on ) {
+		panes[ pane ].contentWindow.postMessage( { run: on }, '*' );
+		state( pane, on ? 'drawing' : 'paused', on );
+	}
+
+	const timedTurnEnding = { stock: false, fork: false };
+
+	function nextTurn() {
+		if ( together ) return;
+		if ( current ) {
+			timedTurnEnding[ current ] = true;
+			run( current, false );
+		}
+		current = current === 'stock' ? 'fork' : 'stock';
+		run( current, true );
+		timer = setTimeout( nextTurn, TURN_MS );
+	}
+
+	addEventListener( 'message', ( event ) => {
+		const { pane } = event.data ?? {};
+		if ( ! pane ) return;
+		if ( event.data.ready ) {
+			ready.add( pane );
+			show( pane, '…', `${ event.data.meshes.toLocaleString() } meshes, waiting for its turn` );
+			if ( ready.size === 2 && current === null ) nextTurn();
+			return;
+		}
+		if ( ! timedTurnEnding[ pane ] ) return;
+		timedTurnEnding[ pane ] = false;
+		turns[ pane ] ++;
+		if ( turns[ pane ] === 1 ) {
+			show( pane, '…', `${ event.data.meshes.toLocaleString() } meshes, warm-up turn done` );
+			return;
+		}
+		best[ pane ] = Math.max( best[ pane ], event.data.fps );
+		show( pane, `${ event.data.fps.toFixed( 1 ) } FPS`, `${ ( 1000 / event.data.fps ).toFixed( 1 ) } ms a frame · render call ${ event.data.renderMs.toFixed( 2 ) } ms · ${ event.data.meshes.toLocaleString() } meshes` );
+		if ( best.stock > 0 && best.fork > 0 ) document.getElementById( 'summary' ).innerHTML = `Best turn: stock <strong>${ best.stock.toFixed( 1 ) } FPS</strong>, fork <strong>${ best.fork.toFixed( 1 ) } FPS</strong> — <strong>${ ( best.fork / best.stock ).toFixed( 2 ) }×</strong>.`;
+	} );
+
+	document.getElementById( 'both' ).addEventListener( 'click', ( event ) => {
+		together = ! together;
+		clearTimeout( timer );
+		event.target.textContent = together ? 'Back to timed turns' : 'Run both at once (visual only)';
+		if ( together ) {
+			run( 'stock', true );
+			run( 'fork', true );
+		} else {
+			run( 'stock', false );
+			run( 'fork', false );
+			current = null;
+			nextTurn();
+		}
+	} );
+</script>
+</body>
+</html>

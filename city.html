@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City pane</title>
+<style>html, body { margin: 0; height: 100%; overflow: hidden; background: #8fa3b8; } canvas { display: block; }</style>
+<script>
+	const fork = new URLSearchParams( location.search ).get( 'three' ) === 'fork';
+	const stock = 'https://cdn.jsdelivr.net/npm/three@0.182.0/build/';
+	const imports = fork
+		? { 'three': './src/Three.WebGPU.js', 'three/webgpu': './src/Three.WebGPU.js', 'three/tsl': './src/Three.TSL.js' }
+		: { 'three': stock + 'three.webgpu.js', 'three/webgpu': stock + 'three.webgpu.js', 'three/tsl': stock + 'three.tsl.js' };
+	const map = document.createElement( 'script' );
+	map.type = 'importmap';
+	map.textContent = JSON.stringify( { imports } );
+	document.currentScript.after( map );
+</script>
+</head>
+<body>
+<script type="module" src="./city.js"></script>
+</body>
+</html>
