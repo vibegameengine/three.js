@@ -127,6 +127,8 @@ class Mesh extends Object3D {
 		this.material = Array.isArray( source.material ) ? source.material.slice() : source.material;
 		this.geometry = source.geometry;
 
+		if ( source.screenSizeLods !== undefined ) this.screenSizeLods = source.screenSizeLods;
+
 		return this;
 
 	}
