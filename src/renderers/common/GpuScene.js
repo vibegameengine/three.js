@@ -1,20 +1,14 @@
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
-import { Matrix3 } from '../../math/Matrix3.js';
-import { Matrix4 } from '../../math/Matrix4.js';
 import StorageBufferAttribute from './StorageBufferAttribute.js';
 import { takeMovedPrimitives } from '../../core/PrimitiveMotion.js';
 
-export const PrimitiveLayout = Object.freeze( { world: 0, previousWorld: 4, normal: 8, custom: 11, worldInverse: 12 } );
-export const PRIMITIVE_VEC4S = 16;
+export const PrimitiveLayout = Object.freeze( { world: 0, previousWorld: 4, custom: 8 } );
+export const PRIMITIVE_VEC4S = 9;
 export const PRIMITIVE_FLOATS = PRIMITIVE_VEC4S * 4;
 
 const WORLD_OFFSET = PrimitiveLayout.world * 4;
 const PREVIOUS_OFFSET = PrimitiveLayout.previousWorld * 4;
-const NORMAL_OFFSET = PrimitiveLayout.normal * 4;
 const CUSTOM_OFFSET = PrimitiveLayout.custom * 4;
-const INVERSE_OFFSET = PrimitiveLayout.worldInverse * 4;
-const _normalMatrix = /*@__PURE__*/ new Matrix3();
-const _worldInverse = /*@__PURE__*/ new Matrix4();
 
 export const gpuScenePrimitiveTemplate = /*@__PURE__*/ new InstancedBufferAttribute( new Uint32Array( 1 ), 1 );
 gpuScenePrimitiveTemplate.isGpuScenePrimitiveTemplate = true;
@@ -238,20 +232,7 @@ class GpuScene {
 
 	writeCurrent( base, matrixWorld ) {
 
-		const array = this.records.array;
-		array.set( matrixWorld.elements, base + WORLD_OFFSET );
-		array.set( _worldInverse.copy( matrixWorld ).invert().elements, base + INVERSE_OFFSET );
-
-		const normal = _normalMatrix.getNormalMatrix( matrixWorld ).elements;
-
-		for ( let column = 0; column < 3; column ++ ) {
-
-			const at = base + NORMAL_OFFSET + column * 4;
-			array[ at ] = normal[ column * 3 ];
-			array[ at + 1 ] = normal[ column * 3 + 1 ];
-			array[ at + 2 ] = normal[ column * 3 + 2 ];
-
-		}
+		this.records.array.set( matrixWorld.elements, base + WORLD_OFFSET );
 
 	}
 
