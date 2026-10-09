@@ -30,6 +30,8 @@ class RetainedDrawList {
 		this.drawsOf = new Map();
 		this.visibilitySeen = - 1;
 		this.scene = null;
+		this.rasterBins = null;
+		this.binned = false;
 		this.sceneRevision = - 1;
 		this.cameraMask = - 1;
 		this.materialsRevision = - 1;
@@ -37,9 +39,9 @@ class RetainedDrawList {
 
 	}
 
-	isCurrent( scene, camera ) {
+	isCurrent( scene, camera, rasterBins = null ) {
 
-		if ( this.scene !== scene || this.sceneRevision !== scene.drawListRevision || this.cameraMask !== camera.layers.mask ) return false;
+		if ( this.scene !== scene || this.rasterBins !== rasterBins || this.sceneRevision !== scene.drawListRevision || this.cameraMask !== camera.layers.mask ) return false;
 
 		if ( this.materialsRevision === materialsRevision() ) return true;
 
@@ -55,7 +57,7 @@ class RetainedDrawList {
 
 	}
 
-	build( scene, camera ) {
+	build( scene, camera, rasterBins = null ) {
 
 		this.items.length = 0;
 		this.transparent.length = 0;
@@ -66,10 +68,13 @@ class RetainedDrawList {
 		this.materials.clear();
 		this.drawsOf.clear();
 
+		this.binned = rasterBins !== null;
 		this._collect( scene, camera, 0, true );
+		if ( rasterBins !== null ) this._collect( rasterBins, camera, 0, true );
 		this.items.sort( retainedDrawOrder );
 
 		this.scene = scene;
+		this.rasterBins = rasterBins;
 		this.sceneRevision = scene.drawListRevision;
 		this.cameraMask = camera.layers.mask;
 		this.materialsRevision = materialsRevision();
@@ -156,6 +161,8 @@ class RetainedDrawList {
 	}
 
 	_collectDrawable( object, groupOrder, shown ) {
+
+		if ( this.binned === true && object.drawnByRasterBins === true ) return;
 
 		if ( object.onBeforeRender !== Object3D.prototype.onBeforeRender || object.onAfterRender !== Object3D.prototype.onAfterRender ) this.callbacks.push( object );
 

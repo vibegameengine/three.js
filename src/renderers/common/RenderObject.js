@@ -715,6 +715,12 @@ class RenderObject {
 
 		}
 
+		if ( geometry.pulledVertices ) {
+
+			cacheKey += 'pulled-' + geometry.pulledVertices.id + ',';
+
+		}
+
 		return cacheKey;
 
 	}

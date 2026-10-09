@@ -3,7 +3,7 @@ import BufferAttributeNode from './BufferAttributeNode.js';
 import { storage } from './StorageBufferNode.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
 import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
-import { nodeImmutable, nodeObject, float, mat3, mat4, uint, vec4 } from '../tsl/TSLBase.js';
+import { nodeImmutable, nodeObject, float, mat3, mat4, uint, varying, vec4 } from '../tsl/TSLBase.js';
 import { abs, cross, dot } from '../math/MathNode.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout, gpuScenePrimitiveTemplate } from '../../renderers/common/GpuScene.js';
 
@@ -20,6 +20,26 @@ class GpuScenePrimitiveNode extends BufferAttributeNode {
 		super( gpuScenePrimitiveTemplate, 'uint' );
 
 		this.isGpuScenePrimitiveNode = true;
+
+	}
+
+	setup( builder ) {
+
+		const pulled = builder.geometry ? builder.geometry.pulledVertices : undefined;
+
+		if ( pulled === undefined ) return super.setup( builder );
+
+		return varying( pulled.primitive );
+
+	}
+
+	generate( builder ) {
+
+		const pulledOutput = builder.getNodeProperties( this ).outputNode;
+
+		if ( pulledOutput ) return pulledOutput.build( builder, 'uint' );
+
+		return super.generate( builder );
 
 	}
 

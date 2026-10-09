@@ -99,7 +99,23 @@ class AttributeNode extends Node {
 
 	}
 
+	setup( builder ) {
+
+		const pulled = builder.geometry ? builder.geometry.pulledVertices : undefined;
+
+		if ( pulled === undefined ) return null;
+
+		const node = pulled.attribute( this.getAttributeName( builder ), this.getNodeType( builder ) );
+
+		return node === null ? null : varying( node );
+
+	}
+
 	generate( builder ) {
+
+		const pulledOutput = builder.getNodeProperties( this ).outputNode;
+
+		if ( pulledOutput ) return pulledOutput.build( builder, this.getNodeType( builder ) );
 
 		const attributeName = this.getAttributeName( builder );
 		const nodeType = this.getNodeType( builder );

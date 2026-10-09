@@ -30,6 +30,7 @@ class RetainedScenePass {
 	constructor() {
 
 		this.list = new RetainedDrawList();
+		this.rasterBins = null;
 		this.transparents = new RetainedTransparents();
 		this.culling = null;
 		this.bundleGroup = { version: 0, static: true };
@@ -54,7 +55,7 @@ class RetainedScenePass {
 		if ( camera.isArrayCamera === true ) throw new Error( 'RetainedScenePass: an ArrayCamera is not supported; the GPU culls against one frustum.' );
 
 		this._updateLods( camera );
-		if ( this.list.isCurrent( scene, camera ) === false ) this._rebuild( renderer, scene, camera, renderContext );
+		if ( this.list.isCurrent( scene, camera, this.rasterBins ) === false ) this._rebuild( renderer, scene, camera, renderContext );
 		else this._applyVisibility( scene );
 
 		for ( const light of this.list.lights ) if ( shownInWorld( light ) ) renderList.pushLight( light );
@@ -136,9 +137,9 @@ class RetainedScenePass {
 
 	_rebuild( renderer, scene, camera, renderContext ) {
 
-		this.list.build( scene, camera );
+		this.list.build( scene, camera, this.rasterBins );
 		this._updateLods( camera );
-		if ( this.list.isCurrent( scene, camera ) === false ) this.list.build( scene, camera );
+		if ( this.list.isCurrent( scene, camera, this.rasterBins ) === false ) this.list.build( scene, camera, this.rasterBins );
 
 		for ( const item of this.list.items ) item.clippingContext = renderContext.clippingContext;
 
