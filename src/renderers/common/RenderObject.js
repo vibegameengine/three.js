@@ -71,9 +71,11 @@ class RenderObject {
 	 * @param {RenderContext} renderContext - The render context.
 	 * @param {ClippingContext} clippingContext - The clipping context.
 	 */
-	constructor( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext ) {
+	constructor( nodes, geometries, renderer, object, material, scene, camera, lightsNode, renderContext, clippingContext, levelGeometry = null ) {
 
 		this.id = _id ++;
+
+		this.levelGeometry = levelGeometry;
 
 		/**
 		 * Renderer component for managing nodes related logic.
@@ -145,7 +147,7 @@ class RenderObject {
 		 *
 		 * @type {BufferGeometry}
 		 */
-		this.geometry = object.geometry;
+		this.geometry = levelGeometry === null ? object.geometry : levelGeometry;
 
 		/**
 		 * The render object's version.
@@ -492,7 +494,7 @@ class RenderObject {
 	 */
 	getChainArray() {
 
-		return [ this.object, this.material, this.context, this.lightsNode ];
+		return [ this.object, this.material, this.context, this.lightsNode, this.levelGeometry === null ? this.object : this.levelGeometry ];
 
 	}
 
@@ -838,7 +840,7 @@ class RenderObject {
 	 */
 	get needsGeometryUpdate() {
 
-		if ( this.geometry.id !== this.object.geometry.id ) return true;
+		if ( this.geometry.id !== ( this.levelGeometry === null ? this.object.geometry : this.levelGeometry ).id ) return true;
 
 		if ( this.attributes !== null ) {
 

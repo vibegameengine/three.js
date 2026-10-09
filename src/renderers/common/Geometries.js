@@ -2,6 +2,7 @@ import DataMap from './DataMap.js';
 import { AttributeType } from './Constants.js';
 import { arrayNeedsUint32 } from '../../utils.js';
 import { instanceCullingOf } from './InstanceCulling.js';
+import { drawSlotKey } from './ScreenSizeLods.js';
 
 import { Uint16BufferAttribute, Uint32BufferAttribute } from '../../core/BufferAttribute.js';
 
@@ -348,7 +349,7 @@ class Geometries extends DataMap {
 
 		const culling = instanceCullingOf( renderObject );
 
-		if ( culling !== null ) return culling.groupOffsets === undefined ? culling.indirectOffset : culling.groupOffsets.get( renderObject.group );
+		if ( culling !== null ) return culling.groupOffsets === undefined ? culling.indirectOffset : culling.groupOffsets.get( drawSlotKey( renderObject ) );
 
 		return renderObject.group?.indirectOffset ?? renderObject.geometry.indirectOffset;
 

@@ -1,6 +1,8 @@
 import { Fn, If, instanceIndex, length, max, select, storage, uint, uniformArray, vec4 } from '../../nodes/TSL.js';
 import { Vector4 } from '../../math/Vector4.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout } from './GpuScene.js';
+import { FULL_SCREEN_SIZE_BAND } from './ScreenSizeLods.js';
+import { aimLodEye, insideScreenSizeBand, lodEyeUniform } from './ScreenSizeBand.js';
 import IndirectStorageBufferAttribute from './IndirectStorageBufferAttribute.js';
 import StorageBufferAttribute from './StorageBufferAttribute.js';
 
@@ -18,9 +20,11 @@ class RetainedCulling {
 		this.spheres = new StorageBufferAttribute( new Float32Array( Math.max( 1, count ) * 4 ), 4 );
 		this.primitives = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
 		this.instances = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
+		this.bands = new StorageBufferAttribute( new Float32Array( Math.max( 1, count ) * 4 ), 4 );
 		this.drawInstances = new Uint32Array( Math.max( 1, count ) );
 		this.hidden = new Uint8Array( Math.max( 1, count ) );
 		this.planes = uniformArray( Array.from( { length: FRUSTUM_PLANES }, () => new Vector4() ), 'vec4' );
+		this.eye = lodEyeUniform();
 		this.gpuScene = gpuScene;
 		this.drawsKnown = false;
 		this.recordsAttribute = gpuScene.records;
@@ -28,7 +32,7 @@ class RetainedCulling {
 
 	}
 
-	describe( index, { sphere, primitive, alwaysDrawn } ) {
+	describe( index, { sphere, primitive, alwaysDrawn, band } ) {
 
 		const at = index * 4;
 		const spheres = this.spheres.array;
@@ -37,6 +41,8 @@ class RetainedCulling {
 		spheres[ at + 2 ] = sphere.center.z;
 		spheres[ at + 3 ] = alwaysDrawn ? ALWAYS_DRAWN : sphere.radius;
 		this.primitives.array[ index ] = primitive;
+		const drawnBand = band ?? FULL_SCREEN_SIZE_BAND;
+		this.bands.array.set( [ drawnBand.min, drawnBand.max, sphere.radius, 0 ], at );
 
 	}
 
@@ -70,10 +76,11 @@ class RetainedCulling {
 		this.spheres.needsUpdate = true;
 		this.primitives.needsUpdate = true;
 		this.instances.needsUpdate = true;
+		this.bands.needsUpdate = true;
 
 	}
 
-	aim( frustum ) {
+	aim( frustum, camera ) {
 
 		const planes = this.planes.array;
 
@@ -83,6 +90,8 @@ class RetainedCulling {
 			planes[ i ].set( plane.normal.x, plane.normal.y, plane.normal.z, plane.constant );
 
 		}
+
+		aimLodEye( this.eye, camera );
 
 	}
 
@@ -100,7 +109,9 @@ class RetainedCulling {
 		const primitives = storage( this.primitives, 'uint', this.primitives.count ).toReadOnly();
 		const records = storage( this.gpuScene.records, 'vec4', this.gpuScene.records.count ).toReadOnly();
 		const instances = storage( this.instances, 'uint', this.instances.count ).toReadOnly();
+		const bands = storage( this.bands, 'vec4', this.bands.count ).toReadOnly();
 		const planes = this.planes;
+		const eye = this.eye;
 
 		return Fn( () => {
 
@@ -115,7 +126,8 @@ class RetainedCulling {
 				const z = records.element( base.add( uint( 2 ) ) ).xyz;
 				const origin = records.element( base.add( uint( 3 ) ) ).xyz;
 				const center = vec4( x.mul( sphere.x ).add( y.mul( sphere.y ) ).add( z.mul( sphere.z ) ).add( origin ), 1 ).toVar();
-				const radius = sphere.w.mul( max( length( x ), length( y ), length( z ) ) ).toVar();
+				const maxScale = max( length( x ), length( y ), length( z ) ).toVar();
+				const radius = sphere.w.mul( maxScale ).toVar();
 				const inside = sphere.w.lessThan( 0 ).toVar();
 
 				If( inside.not(), () => {
@@ -131,7 +143,10 @@ class RetainedCulling {
 
 				} );
 
-				args.element( draw.mul( uint( ARGS_WORDS ) ).add( uint( 1 ) ) ).assign( select( inside, instances.element( draw ), uint( 0 ) ) );
+				const band = bands.element( draw ).toVar();
+				const inBand = insideScreenSizeBand( { worldCenter: center.xyz, worldRadius: band.z.mul( maxScale ), band, eye } );
+
+				args.element( draw.mul( uint( ARGS_WORDS ) ).add( uint( 1 ) ) ).assign( select( inside.and( inBand ), instances.element( draw ), uint( 0 ) ) );
 
 			} );
 

@@ -1,5 +1,6 @@
 import { Object3D } from '../../core/Object3D.js';
 import { materialsRevision, visibilityChangesSince } from '../../core/DrawListRevision.js';
+import { levelGeometries, screenSizeBand } from './ScreenSizeLods.js';
 
 function retainedDrawOrder( a, b ) {
 
@@ -156,32 +157,49 @@ class RetainedDrawList {
 
 	_collectDrawable( object, groupOrder, shown ) {
 
-		const { geometry, material } = object;
-
 		if ( object.onBeforeRender !== Object3D.prototype.onBeforeRender || object.onAfterRender !== Object3D.prototype.onAfterRender ) this.callbacks.push( object );
+
+		const levels = levelGeometries( object );
+
+		if ( levels === null ) {
+
+			this._collectGeometry( object, object.geometry, null, groupOrder, shown );
+			return;
+
+		}
+
+		const { screenSizes } = object.screenSizeLods;
+
+		levels.forEach( ( geometry, level ) => this._collectGeometry( object, geometry, screenSizeBand( screenSizes, level ), groupOrder, shown ) );
+
+	}
+
+	_collectGeometry( object, geometry, band, groupOrder, shown ) {
+
+		const material = object.material;
 
 		if ( Array.isArray( material ) ) {
 
 			for ( const group of geometry.groups ) {
 
 				const groupMaterial = material[ group.materialIndex ];
-				if ( groupMaterial && groupMaterial.visible ) this._push( object, geometry, groupMaterial, group, groupOrder, shown );
+				if ( groupMaterial && groupMaterial.visible ) this._push( object, { geometry, material: groupMaterial, group, band }, groupOrder, shown );
 
 			}
 
 		} else if ( material.visible ) {
 
-			this._push( object, geometry, material, null, groupOrder, shown );
+			this._push( object, { geometry, material, group: null, band }, groupOrder, shown );
 
 		}
 
 	}
 
-	_push( object, geometry, material, group, groupOrder, shown ) {
+	_push( object, { geometry, material, group, band }, groupOrder, shown ) {
 
 		this.materials.set( material, material.version );
 
-		const item = { object, geometry, material, group, groupOrder, hidden: ! shown };
+		const item = { object, geometry, material, group, band, groupOrder, hidden: ! shown };
 
 		if ( material.transparent === true || material.transmission > 0 ) this._remember( object, item, this.transparent );
 		else if ( this._drawsEveryFrame( object ) ) this._remember( object, item, this.direct );
