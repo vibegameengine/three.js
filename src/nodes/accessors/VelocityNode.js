@@ -107,6 +107,12 @@ class VelocityNode extends TempNode {
 	 *
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 */
+	readsRenderedObject( renderer ) {
+
+		return renderer.gpuScene == null;
+
+	}
+
 	update( { frameId, camera, object, renderer } ) {
 
 		if ( renderer.gpuScene == null ) this.previousModelWorldMatrix.value.copy( getPreviousMatrix( object ) );

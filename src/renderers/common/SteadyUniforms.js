@@ -169,8 +169,25 @@ export class SteadyUniformSources {
 		}
 
 		this.watched = [];
-		this.sourcesChanged = false;
+		this.onChange = null;
+		this._sourcesChanged = false;
 		if ( this.steady ) this.remember();
+
+	}
+
+	get sourcesChanged() {
+
+		return this._sourcesChanged;
+
+	}
+
+	set sourcesChanged( value ) {
+
+		const signalled = value === true && this._sourcesChanged === false;
+
+		this._sourcesChanged = value;
+
+		if ( signalled && this.onChange !== null ) this.onChange( this );
 
 	}
 

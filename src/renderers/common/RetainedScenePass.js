@@ -7,6 +7,7 @@ import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
 import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
 import { SteadyUniformSources } from './SteadyUniforms.js';
+import RetainedViewRefresh from './RetainedViewRefresh.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 
@@ -34,7 +35,7 @@ class RetainedScenePass {
 		this.bundleGroup = { version: 0, static: true };
 		this.encoded = { listVersion: - 1, context: null, contextNode: null, contextNodeVersion: - 1 };
 		this.representatives = [];
-		this.steadySources = new Map();
+		this.viewRefresh = new RetainedViewRefresh();
 		this.calledBack = new Set();
 		this.bindGroups = new Map();
 		this.uploads = new Map();
@@ -115,6 +116,7 @@ class RetainedScenePass {
 	dispose() {
 
 		this._unbind();
+		this.viewRefresh.release();
 		this.stopListening();
 
 	}
@@ -268,8 +270,7 @@ class RetainedScenePass {
 		const backend = renderer.backend;
 		const sharedBindings = new Set();
 
-		for ( const sources of this.steadySources.values() ) if ( sources !== null ) sources.release();
-		this.steadySources.clear();
+		this.viewRefresh.release();
 		this.calledBack.clear();
 		const callbacks = new Set( this.list.callbacks );
 
@@ -305,6 +306,8 @@ class RetainedScenePass {
 			if ( index !== null ) this._rememberUpload( renderer, index, AttributeType.INDEX );
 
 		}
+
+		this.viewRefresh.reset( this.representatives );
 
 	}
 
@@ -356,33 +359,35 @@ class RetainedScenePass {
 
 	_refreshRepresentatives( renderer ) {
 
+		this.viewRefresh.refresh( renderer, this.refreshSteps( renderer ) );
+
+	}
+
+	refreshSteps( renderer ) {
+
+		if ( this._refreshSteps !== undefined && this._refreshSteps.renderer === renderer ) return this._refreshSteps;
+
+		this._refreshSteps = {
+			renderer,
+			full: ( renderObject ) => this._refreshFully( renderer, renderObject ),
+			shared: ( renderObject, sources ) => this._refreshShared( renderer, renderObject, sources ),
+			sources: ( renderObject ) => this._steadySourcesOf( renderObject )
+		};
+
+		return this._refreshSteps;
+
+	}
+
+	_refreshFully( renderer, renderObject ) {
+
 		const nodes = renderer._nodes;
-		const bindings = renderer._bindings;
 
-		for ( const renderObject of this.representatives ) {
+		if ( nodes.needsRefresh( renderObject ) === false || renderer._refreshedWithMaterial( renderObject ) === true ) return;
 
-			const sources = this.steadySources.get( renderObject );
-
-			if ( sources !== undefined && sources !== null && sources.changed() === false ) {
-
-				this._refreshShared( renderer, renderObject, sources );
-				continue;
-
-			}
-
-			if ( nodes.needsRefresh( renderObject ) && renderer._refreshedWithMaterial( renderObject ) === false ) {
-
-				nodes.updateBefore( renderObject );
-				nodes.updateForRender( renderObject );
-				bindings.updateForRender( renderObject );
-				nodes.updateAfter( renderObject );
-
-			}
-
-			if ( sources === undefined ) this._rememberSources( renderer, renderObject );
-			else if ( sources !== null ) sources.remember();
-
-		}
+		nodes.updateBefore( renderObject );
+		nodes.updateForRender( renderObject );
+		renderer._bindings.updateForRender( renderObject );
+		nodes.updateAfter( renderObject );
 
 	}
 
@@ -399,20 +404,15 @@ class RetainedScenePass {
 
 	}
 
-	_rememberSources( renderer, renderObject ) {
+	_steadySourcesOf( renderObject ) {
 
 		const materialBindings = renderObject.getMaterialBindings();
 
-		if ( materialBindings === null || this.calledBack.has( materialBindings ) ) {
-
-			this.steadySources.set( renderObject, null );
-			return;
-
-		}
+		if ( materialBindings === null || this.calledBack.has( materialBindings ) ) return null;
 
 		const sources = new SteadyUniformSources( renderObject );
 
-		this.steadySources.set( renderObject, sources.steady ? sources : null );
+		return sources.steady ? sources : null;
 
 	}
 
