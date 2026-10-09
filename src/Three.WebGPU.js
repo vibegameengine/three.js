@@ -17,6 +17,8 @@ export { default as StorageInstancedBufferAttribute } from './renderers/common/S
 export { default as IndirectStorageBufferAttribute } from './renderers/common/IndirectStorageBufferAttribute.js';
 export { instanceCullingFor } from './renderers/common/InstanceCulling.js';
 export { default as GpuScene } from './renderers/common/GpuScene.js';
+export { FULL_SCREEN_SIZE_BAND, levelGeometries, levelGeometryFor, lodForScreenSize, projectedScreenSize, screenMultiple, screenSizeBand } from './renderers/common/ScreenSizeLods.js';
+export { aimLodEye, insideScreenSizeBand, lodEyeUniform } from './renderers/common/ScreenSizeBand.js';
 export { default as IESSpotLight } from './lights/webgpu/IESSpotLight.js';
 export { default as ProjectorLight } from './lights/webgpu/ProjectorLight.js';
 export { default as NodeLoader } from './loaders/nodes/NodeLoader.js';

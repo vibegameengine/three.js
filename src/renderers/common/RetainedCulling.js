@@ -1,7 +1,8 @@
-import { Fn, If, instanceIndex, length, max, select, storage, uint, uniform, uniformArray, vec4 } from '../../nodes/TSL.js';
+import { Fn, If, instanceIndex, length, max, select, storage, uint, uniformArray, vec4 } from '../../nodes/TSL.js';
 import { Vector4 } from '../../math/Vector4.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout } from './GpuScene.js';
-import { FULL_SCREEN_SIZE_BAND, NEAREST_DISTANCE_METRES, screenMultiple } from './ScreenSizeLods.js';
+import { FULL_SCREEN_SIZE_BAND } from './ScreenSizeLods.js';
+import { aimLodEye, insideScreenSizeBand, lodEyeUniform } from './ScreenSizeBand.js';
 import IndirectStorageBufferAttribute from './IndirectStorageBufferAttribute.js';
 import StorageBufferAttribute from './StorageBufferAttribute.js';
 
@@ -23,7 +24,7 @@ class RetainedCulling {
 		this.drawInstances = new Uint32Array( Math.max( 1, count ) );
 		this.hidden = new Uint8Array( Math.max( 1, count ) );
 		this.planes = uniformArray( Array.from( { length: FRUSTUM_PLANES }, () => new Vector4() ), 'vec4' );
-		this.eye = uniform( new Vector4() );
+		this.eye = lodEyeUniform();
 		this.gpuScene = gpuScene;
 		this.drawsKnown = false;
 		this.recordsAttribute = gpuScene.records;
@@ -90,8 +91,7 @@ class RetainedCulling {
 
 		}
 
-		const position = camera.matrixWorld.elements;
-		this.eye.value.set( position[ 12 ], position[ 13 ], position[ 14 ], screenMultiple( camera.projectionMatrix ) );
+		aimLodEye( this.eye, camera );
 
 	}
 
@@ -143,10 +143,8 @@ class RetainedCulling {
 
 				} );
 
-				const band = bands.element( draw );
-				const distance = max( center.xyz.sub( eye.xyz ).length(), NEAREST_DISTANCE_METRES );
-				const screenSize = eye.w.mul( 2 ).mul( band.z ).mul( maxScale ).div( distance ).toVar();
-				const inBand = screenSize.greaterThanEqual( band.x ).and( screenSize.lessThan( band.y ) );
+				const band = bands.element( draw ).toVar();
+				const inBand = insideScreenSizeBand( { worldCenter: center.xyz, worldRadius: band.z.mul( maxScale ), band, eye } );
 
 				args.element( draw.mul( uint( ARGS_WORDS ) ).add( uint( 1 ) ) ).assign( select( inside.and( inBand ), instances.element( draw ), uint( 0 ) ) );
 
