@@ -1468,9 +1468,15 @@ class Renderer {
 
 		//
 
-		this.backend.updateTimeStampUID( renderContext );
+		const recorded = this._passesRecorded();
 
-		this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), scene, camera, renderTarget );
+		if ( recorded ) {
+
+			this.backend.updateTimeStampUID( renderContext );
+
+			this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), scene, camera, renderTarget );
+
+		}
 
 		//
 
@@ -1615,7 +1621,7 @@ class Renderer {
 
 		//
 
-		this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
+		if ( recorded ) this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
 
 		//
 
@@ -1766,9 +1772,15 @@ class Renderer {
 
 		nodeFrame.renderId = this.info.calls;
 
-		this.backend.updateTimeStampUID( renderContext );
+		const recorded = this._passesRecorded();
 
-		this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), quad, camera, renderTarget );
+		if ( recorded ) {
+
+			this.backend.updateTimeStampUID( renderContext );
+
+			this.inspector.beginRender( this.backend.getTimestampUID( renderContext ), quad, camera, renderTarget );
+
+		}
 
 		if ( camera.coordinateSystem !== this.coordinateSystem ) {
 
@@ -1809,7 +1821,7 @@ class Renderer {
 		this._currentRenderContext = previousRenderContext;
 		this._currentRenderObjectFunction = previousRenderObjectFunction;
 
-		this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
+		if ( recorded ) this.inspector.finishRender( this.backend.getTimestampUID( renderContext ) );
 
 	}
 
@@ -2679,9 +2691,15 @@ class Renderer {
 
 		//
 
-		this.backend.updateTimeStampUID( computeNodes );
+		const recorded = this._passesRecorded();
 
-		this.inspector.beginCompute( this.backend.getTimestampUID( computeNodes ), computeNodes );
+		if ( recorded ) {
+
+			this.backend.updateTimeStampUID( computeNodes );
+
+			this.inspector.beginCompute( this.backend.getTimestampUID( computeNodes ), computeNodes );
+
+		}
 
 		//
 
@@ -2748,7 +2766,13 @@ class Renderer {
 
 		//
 
-		this.inspector.finishCompute( this.backend.getTimestampUID( computeNodes ) );
+		if ( recorded ) this.inspector.finishCompute( this.backend.getTimestampUID( computeNodes ) );
+
+	}
+
+	_passesRecorded() {
+
+		return this.backend.trackTimestamp === true || this.inspector.recordsPasses !== false;
 
 	}
 

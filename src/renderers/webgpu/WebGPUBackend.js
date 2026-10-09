@@ -1432,11 +1432,10 @@ class WebGPUBackend extends Backend {
 
 		//
 
-		const descriptor = {
-			label: 'computeGroup_' + computeGroup.id
-		};
+		const descriptor = groupGPU.computeDescriptor ?? { label: 'computeGroup_' + computeGroup.id };
+		descriptor.timestampWrites = undefined;
 
-		this.initTimestampQuery( TimestampQuery.COMPUTE, this.getTimestampUID( computeGroup ), descriptor );
+		if ( this.trackTimestamp ) this.initTimestampQuery( TimestampQuery.COMPUTE, this.getTimestampUID( computeGroup ), descriptor );
 
 		groupGPU.computeDescriptor = descriptor;
 		groupGPU.cmdEncoderGPU = null;
