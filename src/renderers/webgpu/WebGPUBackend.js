@@ -18,6 +18,7 @@ import WebGPUTimestampQueryPool from './utils/WebGPUTimestampQueryPool.js';
 import WebGPUCommandQueue from './utils/WebGPUCommandQueue.js';
 import { DrawCommand, DrawCommandCache } from './utils/WebGPUDrawCommandCache.js';
 import { warnOnce, error } from '../../utils.js';
+import { wrappedGroupCount } from '../common/WrappedDispatch.js';
 
 /**
  * A backend implementation targeting WebGPU.
@@ -1563,16 +1564,7 @@ class WebGPUBackend extends Backend {
 
 				//
 
-				const maxComputeWorkgroupsPerDimension = this.device.limits.maxComputeWorkgroupsPerDimension;
-
-				dispatchSize = [ dispatchCount, 1, 1 ];
-
-				if ( dispatchCount > maxComputeWorkgroupsPerDimension ) {
-
-					dispatchSize[ 0 ] = Math.min( dispatchCount, maxComputeWorkgroupsPerDimension );
-					dispatchSize[ 1 ] = Math.ceil( dispatchCount / maxComputeWorkgroupsPerDimension );
-
-				}
+				dispatchSize = wrappedGroupCount( dispatchCount, this.device.limits.maxComputeWorkgroupsPerDimension );
 
 				computeNodeData.dispatchSize = dispatchSize;
 

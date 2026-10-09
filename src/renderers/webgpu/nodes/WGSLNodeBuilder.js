@@ -20,6 +20,7 @@ import { FloatType, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping,
 import { warn, error } from '../../../utils.js';
 
 import { GPUShaderStage } from '../utils/WebGPUConstants.js';
+import { WRAPPED_GROUP_STRIDE } from '../../common/WrappedDispatch.js';
 
 const accessNames = {
 	[ NodeAccess.READ_ONLY ]: 'read',
@@ -1458,7 +1459,7 @@ ${ flowData.code }
 			this.getBuiltin( 'global_invocation_id', 'globalId', 'vec3<u32>', 'attribute' );
 			this.getBuiltin( 'workgroup_id', 'workgroupId', 'vec3<u32>', 'attribute' );
 			this.getBuiltin( 'local_invocation_id', 'localId', 'vec3<u32>', 'attribute' );
-			this.getBuiltin( 'num_workgroups', 'numWorkgroups', 'vec3<u32>', 'attribute' );
+			if ( this.wrapsDispatch() === false ) this.getBuiltin( 'num_workgroups', 'numWorkgroups', 'vec3<u32>', 'attribute' );
 
 			if ( this.renderer.hasFeature( 'subgroups' ) ) {
 
@@ -2206,6 +2207,18 @@ fn main( ${shaderData.varyings} ) -> ${shaderData.returnType} {
 	 * @param {string} workgroupSize - The workgroup size.
 	 * @return {string} The vertex shader.
 	 */
+	wrapsDispatch() {
+
+		const computeNode = this.object;
+		const [ , sizeY = 1, sizeZ = 1 ] = computeNode.workgroupSize;
+
+		if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = 'linear';
+		if ( globalThis.__computeReadsNumWorkgroups === true ) return false;
+
+		return sizeY === 1 && sizeZ === 1 && computeNode.dispatchLayout === 'linear';
+
+	}
+
 	_getWGSLComputeCode( shaderData, workgroupSize ) {
 
 		const [ workgroupSizeX, workgroupSizeY, workgroupSizeZ ] = workgroupSize;
@@ -2234,9 +2247,9 @@ ${ shaderData.codes }
 fn main( ${ shaderData.attributes } ) {
 
 	// system
-	instanceIndex = globalId.x
+	${ this.wrapsDispatch() ? `instanceIndex = globalId.x + ( workgroupId.z * ${ WRAPPED_GROUP_STRIDE }u + workgroupId.y ) * ${ WRAPPED_GROUP_STRIDE * workgroupSizeX }u;` : `instanceIndex = globalId.x
 		+ globalId.y * ( ${ workgroupSizeX } * numWorkgroups.x )
-		+ globalId.z * ( ${ workgroupSizeX } * numWorkgroups.x ) * ( ${ workgroupSizeY } * numWorkgroups.y );
+		+ globalId.z * ( ${ workgroupSizeX } * numWorkgroups.x ) * ( ${ workgroupSizeY } * numWorkgroups.y );` }
 
 	// vars
 	${ shaderData.vars }
