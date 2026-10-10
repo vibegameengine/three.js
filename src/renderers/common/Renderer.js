@@ -2733,14 +2733,20 @@ class Renderer {
 
 		}
 
-		backend.beginCompute( computeNodes );
-
 		const dispatchLayout = Array.isArray( dispatchSize ) ? 'grid' : 'linear';
 
 		for ( const computeNode of computeList ) {
 
 			if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = dispatchLayout;
 			else if ( computeNode.dispatchLayout !== dispatchLayout ) throw new Error( `THREE.Renderer: compute node "${ computeNode.name }" was built for a ${ computeNode.dispatchLayout } dispatch and is now dispatched as a ${ dispatchLayout }; its instanceIndex would be wrong.` );
+
+			nodes.updateBeforeForCompute( computeNode );
+
+		}
+
+		backend.beginCompute( computeNodes );
+
+		for ( const computeNode of computeList ) {
 
 			// onInit
 

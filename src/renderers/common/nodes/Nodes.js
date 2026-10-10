@@ -921,6 +921,18 @@ class Nodes extends DataMap {
 
 	}
 
+	updateBeforeForCompute( computeNode ) {
+
+		const updateBeforeNodes = this.getForCompute( computeNode ).updateBeforeNodes;
+
+		if ( updateBeforeNodes.length === 0 ) return;
+
+		const nodeFrame = this.getNodeFrame();
+
+		for ( const node of updateBeforeNodes ) if ( node.isComputeNode !== true ) nodeFrame.updateBeforeNode( node );
+
+	}
+
 	/**
 	 * Triggers the call of `update()` methods
 	 * for all nodes of the given compute node.
