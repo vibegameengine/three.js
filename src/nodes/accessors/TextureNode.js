@@ -414,7 +414,7 @@ class TextureNode extends UniformNode {
 	 */
 	generateUV( builder, uvNode ) {
 
-		return uvNode.build( builder, this.sampler === true ? 'vec2' : 'ivec2' );
+		return uvNode.build( builder, this.sampler === true && this.isStorageTextureNode !== true ? 'vec2' : 'ivec2' );
 
 	}
 
@@ -462,6 +462,10 @@ class TextureNode extends UniformNode {
 		} else if ( compareSnippet ) {
 
 			snippet = builder.generateTextureCompare( texture, textureProperty, uvSnippet, compareSnippet, depthSnippet, offsetSnippet );
+
+		} else if ( this.isStorageTextureNode === true && builder.generateStorageTextureLoad !== undefined ) {
+
+			snippet = builder.generateStorageTextureLoad( textureProperty, uvSnippet, depthSnippet );
 
 		} else if ( this.sampler === false ) {
 
