@@ -409,8 +409,8 @@ class RenderObject {
 
 			const nodeBuilderState = this.getNodeBuilderState();
 
-			this.materialBindings = this._drawsItsOwnMaterial() ? nodeBuilderState.shareBindings( this.material ) : null;
-			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings();
+			this.materialBindings = this._drawsItsOwnMaterial() ? nodeBuilderState.shareBindings( this.material, this.camera ) : null;
+			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings( this.camera );
 
 		}
 
