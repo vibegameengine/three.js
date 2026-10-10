@@ -2,7 +2,7 @@ import { Vector4 } from '../../math/Vector4.js';
 import { DynamicDrawUsage } from '../../constants.js';
 import { listenForDirtyBuffers, takeDirtyBuffers } from '../../core/DrawListRevision.js';
 import { AttributeType } from './Constants.js';
-import RetainedDrawList from './RetainedDrawList.js';
+import RetainedDrawList, { rememberPipelineOrder } from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
 import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
@@ -10,6 +10,7 @@ import { SteadyUniformSources } from './SteadyUniforms.js';
 import RetainedViewRefresh, { refreshFully, refreshShared } from './RetainedViewRefresh.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
+const _pipelineOrderOff = new URLSearchParams( globalThis.location?.search ?? '' ).get( 'pipelineOrder' ) === '0';
 
 function bufferOf( attribute ) {
 
@@ -45,6 +46,8 @@ class RetainedScenePass {
 		this.bindings = [];
 		this.dirty = [];
 		this.reencode = true;
+		this.sortByPipeline = false;
+		this.pipelinesLearnedFor = - 1;
 		this.stopListening = listenForDirtyBuffers();
 
 	}
@@ -55,8 +58,12 @@ class RetainedScenePass {
 		if ( camera.isArrayCamera === true ) throw new Error( 'RetainedScenePass: an ArrayCamera is not supported; the GPU culls against one frustum.' );
 
 		this._updateLods( camera );
-		if ( this.list.isCurrent( scene, camera, this.rasterBins ) === false ) this._rebuild( renderer, scene, camera, renderContext );
-		else this._applyVisibility( scene );
+		if ( this.sortByPipeline === true || this.list.isCurrent( scene, camera, this.rasterBins ) === false ) {
+
+			this.sortByPipeline = false;
+			this._rebuild( renderer, scene, camera, renderContext );
+
+		} else this._applyVisibility( scene );
 
 		for ( const light of this.list.lights ) if ( shownInWorld( light ) ) renderList.pushLight( light );
 
@@ -250,6 +257,7 @@ class RetainedScenePass {
 		const renderObjects = renderer.backend.get( this.renderBundle ).renderObjects;
 		if ( renderObjects.length !== this.list.items.length ) throw new Error( `RetainedScenePass: encoded ${ renderObjects.length } draws for ${ this.list.items.length } retained items.` );
 
+		this._learnPipelineOrder( renderObjects );
 		renderObjects.forEach( ( renderObject, index ) => this.culling.writeDraw( index, renderObject.getDrawParameters() ) );
 		this.culling.drawsKnown = true;
 		this.culling.upload();
@@ -264,6 +272,17 @@ class RetainedScenePass {
 		encoded.contextNode = renderer.contextNode;
 		encoded.contextNodeVersion = renderer.contextNode.version;
 		this.reencode = false;
+
+	}
+
+	_learnPipelineOrder( renderObjects ) {
+
+		if ( _pipelineOrderOff || this.list.waitsForPipelines === false || this.pipelinesLearnedFor === this.list.version ) return;
+
+		for ( const renderObject of renderObjects ) if ( renderObject.pipeline !== null ) rememberPipelineOrder( renderObject.material, renderObject.pipeline );
+
+		this.pipelinesLearnedFor = this.list.version + 1;
+		this.sortByPipeline = true;
 
 	}
 

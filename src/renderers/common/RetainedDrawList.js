@@ -2,9 +2,43 @@ import { Object3D } from '../../core/Object3D.js';
 import { materialsRevision, visibilityChangesSince } from '../../core/DrawListRevision.js';
 import { levelGeometries, screenSizeBand } from './ScreenSizeLods.js';
 
+const _pipelineRanks = new WeakMap();
+const _materialRanks = new WeakMap();
+let _nextPipelineRank = 0;
+
+/**
+ * Remembers which pipeline a material was drawn with, so the next retained draw list puts every
+ * draw of that pipeline next to the others and the encoded bundle changes pipeline once per
+ * pipeline instead of once per material, as mesh draw commands are sorted by their state.
+ *
+ * @param {Material} material - The material a retained draw was encoded with.
+ * @param {Object} pipeline - The pipeline its render object was given.
+ */
+export function rememberPipelineOrder( material, pipeline ) {
+
+	let rank = _pipelineRanks.get( pipeline );
+	if ( rank === undefined ) _pipelineRanks.set( pipeline, rank = _nextPipelineRank ++ );
+	_materialRanks.set( material, rank );
+
+}
+
+function pipelineRankOf( material ) {
+
+	const rank = _materialRanks.get( material );
+	return rank === undefined ? Infinity : rank;
+
+}
+
+function byPipeline( a, b ) {
+
+	const rankA = pipelineRankOf( a.material ), rankB = pipelineRankOf( b.material );
+	return rankA === rankB ? 0 : ( rankA < rankB ? - 1 : 1 );
+
+}
+
 function retainedDrawOrder( a, b ) {
 
-	return ( a.groupOrder - b.groupOrder ) || ( a.object.renderOrder - b.object.renderOrder ) || ( a.material.id - b.material.id ) || ( a.geometry.id - b.geometry.id );
+	return ( a.groupOrder - b.groupOrder ) || ( a.object.renderOrder - b.object.renderOrder ) || byPipeline( a, b ) || ( a.material.id - b.material.id ) || ( a.geometry.id - b.geometry.id );
 
 }
 
@@ -38,6 +72,7 @@ class RetainedDrawList {
 		this.cameraMask = - 1;
 		this.materialsRevision = - 1;
 		this.version = 0;
+		this.waitsForPipelines = false;
 
 	}
 
@@ -76,6 +111,7 @@ class RetainedDrawList {
 		this._collect( scene, camera, 0, true );
 		if ( rasterBins !== null ) this._collect( rasterBins, camera, 0, true );
 		this.items.sort( retainedDrawOrder );
+		this.waitsForPipelines = this.items.some( ( item ) => _materialRanks.has( item.material ) === false );
 
 		this.scene = scene;
 		this.rasterBins = rasterBins;
