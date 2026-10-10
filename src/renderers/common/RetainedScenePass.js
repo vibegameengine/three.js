@@ -279,7 +279,15 @@ class RetainedScenePass {
 		if ( _pipelineOrderOff ) return;
 
 		let learnt = false;
-		for ( const renderObject of renderObjects ) learnt = this.list.pipelines.remember( renderObject.material, renderObject.pipeline ) || learnt;
+		const seen = new Set();
+
+		for ( const renderObject of renderObjects ) {
+
+			if ( renderObject.pipeline === null || seen.has( renderObject.material ) ) continue;
+			seen.add( renderObject.material );
+			learnt = this.list.pipelines.remember( renderObject.material, renderObject.pipeline ) || learnt;
+
+		}
 
 		if ( learnt ) this.sortByPipeline = true;
 
