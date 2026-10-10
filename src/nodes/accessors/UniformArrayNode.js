@@ -126,6 +126,14 @@ class UniformArrayNode extends BufferNode {
 		 */
 		this.isArrayBufferNode = true;
 
+		/**
+		 * Counts the updates that changed at least one element of the value, so a binding uploads
+		 * the buffer only when its contents changed.
+		 *
+		 * @type {number}
+		 */
+		this.valueVersion = 0;
+
 	}
 
 	/**
@@ -193,6 +201,30 @@ class UniformArrayNode extends BufferNode {
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 */
 	update( /*frame*/ ) {
+
+		const value = this.value;
+
+		if ( this._previousValue === undefined || this._previousValue.length !== value.length ) this._previousValue = new value.constructor( value.length );
+
+		const previous = this._previousValue;
+		previous.set( value );
+
+		this._writeArray();
+
+		for ( let i = 0, l = value.length; i < l; i ++ ) {
+
+			if ( value[ i ] !== previous[ i ] ) {
+
+				this.valueVersion ++;
+				return;
+
+			}
+
+		}
+
+	}
+
+	_writeArray() {
 
 		const { array, value } = this;
 
