@@ -2,43 +2,60 @@ import { Object3D } from '../../core/Object3D.js';
 import { materialsRevision, visibilityChangesSince } from '../../core/DrawListRevision.js';
 import { levelGeometries, screenSizeBand } from './ScreenSizeLods.js';
 
-const _pipelineRanks = new WeakMap();
-const _materialRanks = new WeakMap();
-let _nextPipelineRank = 0;
-
 /**
- * Remembers which pipeline a material was drawn with, so the next retained draw list puts every
- * draw of that pipeline next to the others and the encoded bundle changes pipeline once per
- * pipeline instead of once per material, as mesh draw commands are sorted by their state.
+ * The pipeline each material of one retained pass was last encoded with, so the pass's next draw
+ * list puts the draws of one pipeline next to each other and its bundle changes pipeline once per
+ * pipeline instead of once per material, as mesh draw commands are sorted by their state. Each pass
+ * keeps its own: a pass with other target formats gets other pipelines for the same material.
  *
- * @param {Material} material - The material a retained draw was encoded with.
- * @param {Object} pipeline - The pipeline its render object was given.
+ * @private
  */
-export function rememberPipelineOrder( material, pipeline ) {
+class PipelineOrder {
 
-	let rank = _pipelineRanks.get( pipeline );
-	if ( rank === undefined ) _pipelineRanks.set( pipeline, rank = _nextPipelineRank ++ );
-	_materialRanks.set( material, rank );
+	constructor() {
+
+		this.pipelineOf = new WeakMap();
+		this.ranks = new WeakMap();
+		this.nextRank = 0;
+
+	}
+
+	/**
+	 * Remembers the pipeline a material was drawn with.
+	 *
+	 * @param {Material} material - The material a retained draw was encoded with.
+	 * @param {?Object} pipeline - The pipeline its render object was given, null while not ready.
+	 * @return {boolean} Whether this changed what the pass knows.
+	 */
+	remember( material, pipeline ) {
+
+		if ( pipeline === null || this.pipelineOf.get( material ) === pipeline ) return false;
+
+		this.pipelineOf.set( material, pipeline );
+		if ( this.ranks.has( pipeline ) === false ) this.ranks.set( pipeline, this.nextRank ++ );
+		return true;
+
+	}
+
+	rankOf( material ) {
+
+		const pipeline = this.pipelineOf.get( material );
+		return pipeline === undefined ? Infinity : this.ranks.get( pipeline );
+
+	}
+
+	compare( a, b ) {
+
+		const rankA = this.rankOf( a.material ), rankB = this.rankOf( b.material );
+		return rankA === rankB ? 0 : ( rankA < rankB ? - 1 : 1 );
+
+	}
 
 }
 
-function pipelineRankOf( material ) {
+function retainedDrawOrder( a, b, pipelines ) {
 
-	const rank = _materialRanks.get( material );
-	return rank === undefined ? Infinity : rank;
-
-}
-
-function byPipeline( a, b ) {
-
-	const rankA = pipelineRankOf( a.material ), rankB = pipelineRankOf( b.material );
-	return rankA === rankB ? 0 : ( rankA < rankB ? - 1 : 1 );
-
-}
-
-function retainedDrawOrder( a, b ) {
-
-	return ( a.groupOrder - b.groupOrder ) || ( a.object.renderOrder - b.object.renderOrder ) || byPipeline( a, b ) || ( a.material.id - b.material.id ) || ( a.geometry.id - b.geometry.id );
+	return ( a.groupOrder - b.groupOrder ) || ( a.object.renderOrder - b.object.renderOrder ) || pipelines.compare( a, b ) || ( a.material.id - b.material.id ) || ( a.geometry.id - b.geometry.id );
 
 }
 
@@ -72,7 +89,7 @@ class RetainedDrawList {
 		this.cameraMask = - 1;
 		this.materialsRevision = - 1;
 		this.version = 0;
-		this.waitsForPipelines = false;
+		this.pipelines = new PipelineOrder();
 
 	}
 
@@ -110,8 +127,7 @@ class RetainedDrawList {
 		this.binned = rasterBins !== null;
 		this._collect( scene, camera, 0, true );
 		if ( rasterBins !== null ) this._collect( rasterBins, camera, 0, true );
-		this.items.sort( retainedDrawOrder );
-		this.waitsForPipelines = this.items.some( ( item ) => _materialRanks.has( item.material ) === false );
+		this.items.sort( ( a, b ) => retainedDrawOrder( a, b, this.pipelines ) );
 
 		this.scene = scene;
 		this.rasterBins = rasterBins;

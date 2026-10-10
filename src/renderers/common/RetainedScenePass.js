@@ -2,7 +2,7 @@ import { Vector4 } from '../../math/Vector4.js';
 import { DynamicDrawUsage } from '../../constants.js';
 import { listenForDirtyBuffers, takeDirtyBuffers } from '../../core/DrawListRevision.js';
 import { AttributeType } from './Constants.js';
-import RetainedDrawList, { rememberPipelineOrder } from './RetainedDrawList.js';
+import RetainedDrawList from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
 import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
@@ -47,7 +47,6 @@ class RetainedScenePass {
 		this.dirty = [];
 		this.reencode = true;
 		this.sortByPipeline = false;
-		this.pipelinesLearnedFor = - 1;
 		this.stopListening = listenForDirtyBuffers();
 
 	}
@@ -277,12 +276,12 @@ class RetainedScenePass {
 
 	_learnPipelineOrder( renderObjects ) {
 
-		if ( _pipelineOrderOff || this.list.waitsForPipelines === false || this.pipelinesLearnedFor === this.list.version ) return;
+		if ( _pipelineOrderOff ) return;
 
-		for ( const renderObject of renderObjects ) if ( renderObject.pipeline !== null ) rememberPipelineOrder( renderObject.material, renderObject.pipeline );
+		let learnt = false;
+		for ( const renderObject of renderObjects ) learnt = this.list.pipelines.remember( renderObject.material, renderObject.pipeline ) || learnt;
 
-		this.pipelinesLearnedFor = this.list.version + 1;
-		this.sortByPipeline = true;
+		if ( learnt ) this.sortByPipeline = true;
 
 	}
 
