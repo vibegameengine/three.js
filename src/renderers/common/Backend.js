@@ -172,6 +172,20 @@ class Backend {
 	 */
 	compute( /*computeGroup, computeNode, computeBindings, computePipeline*/ ) { }
 
+	/**
+	 * Executes a compute command from a compute node's plan.
+	 *
+	 * @param {Node|Array<Node>} computeGroup - The group of compute nodes of a compute call.
+	 * @param {Node} computeNode - The compute node.
+	 * @param {ComputeCallPlan} plan - The node's plan.
+	 * @param {number|Array<number>|IndirectStorageBufferAttribute} [dispatchSize=null] - The dispatch size.
+	 */
+	computeByPlan( computeGroup, computeNode, plan, dispatchSize = null ) {
+
+		this.compute( computeGroup, computeNode, plan.bindGroups, plan.pipeline, dispatchSize );
+
+	}
+
 	// program
 
 	/**

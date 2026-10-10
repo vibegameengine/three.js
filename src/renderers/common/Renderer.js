@@ -40,6 +40,7 @@ import { reference } from '../../nodes/accessors/ReferenceNode.js';
 import { highpModelNormalViewMatrix, highpModelViewMatrix } from '../../nodes/accessors/ModelNode.js';
 import { context } from '../../nodes/core/ContextNode.js';
 import GpuSceneScatter from './GpuSceneScatter.js';
+import ComputeCallPlan from './ComputeCallPlan.js';
 import { levelGeometryFor } from './ScreenSizeLods.js';
 import { error, warn, warnOnce } from '../../utils.js';
 
@@ -362,6 +363,14 @@ class Renderer {
 		 * @default null
 		 */
 		this._pipelines = null;
+
+		/**
+		 * The plan of each compute node already dispatched once.
+		 *
+		 * @private
+		 * @type {WeakMap<Node, ComputeCallPlan>}
+		 */
+		this._computePlans = new WeakMap();
 
 		/**
 		 * A reference to a renderer module for managing render bundles.
@@ -2742,6 +2751,7 @@ class Renderer {
 					computeNode.removeEventListener( 'dispose', dispose );
 
 					pipelines.delete( computeNode );
+					this._computePlans.delete( computeNode );
 					bindings.deleteForCompute( computeNode );
 					nodes.delete( computeNode );
 
@@ -2761,11 +2771,24 @@ class Renderer {
 
 			}
 
+			let plan = this._computePlans.get( computeNode );
+
+			if ( plan !== undefined && plan.version === computeNode.version && globalThis.__computePlansOff !== true ) {
+
+				plan.refresh( nodes.nodeFrame, bindings );
+				backend.computeByPlan( computeNodes, computeNode, plan, dispatchSize );
+				continue;
+
+			}
+
 			nodes.updateForCompute( computeNode );
 			bindings.updateForCompute( computeNode );
 
 			const computeBindings = bindings.getForCompute( computeNode );
 			const computePipeline = pipelines.getForCompute( computeNode, computeBindings );
+
+			plan = new ComputeCallPlan( this, computeNode, computeBindings, computePipeline );
+			this._computePlans.set( computeNode, plan );
 
 			backend.compute( computeNodes, computeNode, computeBindings, computePipeline, dispatchSize );
 
