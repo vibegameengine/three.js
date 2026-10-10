@@ -14,6 +14,11 @@ import { error } from '../../../utils.js';
 
 const _outputNodeMap = new WeakMap();
 const _chainKeys = [];
+
+const GROUP_OBJECT = 0;
+const GROUP_RENDER = 1;
+const GROUP_FRAME = 2;
+const GROUP_VERSIONED = 3;
 const _cacheKeyValues = [];
 
 /**
@@ -96,6 +101,74 @@ class Nodes extends DataMap {
 	 * @param {NodeUniformsGroup} nodeUniformsGroup - The node uniforms group.
 	 * @return {boolean} Whether the node uniforms group requires an update or not.
 	 */
+	/**
+	 * The state {@link Nodes#updateGroup} keeps for the given uniforms group, looked up once so a
+	 * caller that refreshes the group on every call can test it with {@link Nodes#updateGroupState}.
+	 *
+	 * @param {NodeUniformsGroup} nodeUniformsGroup - The uniforms group.
+	 * @return {Object} The group's update state.
+	 */
+	groupUpdateState( nodeUniformsGroup ) {
+
+		const groupNode = nodeUniformsGroup.groupNode;
+		const name = groupNode.name;
+
+		if ( name === objectGroup.name ) return { kind: GROUP_OBJECT, data: null, groupNode };
+		if ( name === renderGroup.name ) return { kind: GROUP_RENDER, data: this.get( nodeUniformsGroup ), groupNode };
+		if ( name === frameGroup.name ) return { kind: GROUP_FRAME, data: this.get( nodeUniformsGroup ), groupNode };
+
+		_chainKeys[ 0 ] = groupNode;
+		_chainKeys[ 1 ] = nodeUniformsGroup;
+
+		let groupData = this.groupsData.get( _chainKeys );
+		if ( groupData === undefined ) this.groupsData.set( _chainKeys, groupData = {} );
+
+		_chainKeys.length = 0;
+
+		return { kind: GROUP_VERSIONED, data: groupData, groupNode };
+
+	}
+
+	/**
+	 * Whether a uniforms group needs its update now, from the state {@link Nodes#groupUpdateState}
+	 * returned for it; the same rules as {@link Nodes#updateGroup}.
+	 *
+	 * @param {Object} state - The group's update state.
+	 * @return {boolean} Whether the group needs an update.
+	 */
+	updateGroupState( state ) {
+
+		const kind = state.kind;
+
+		if ( kind === GROUP_OBJECT ) return true;
+
+		const data = state.data;
+
+		if ( kind === GROUP_RENDER ) {
+
+			const renderId = this.nodeFrame.renderId;
+			if ( data.renderId === renderId ) return false;
+			data.renderId = renderId;
+			return true;
+
+		}
+
+		if ( kind === GROUP_FRAME ) {
+
+			const frameId = this.nodeFrame.frameId;
+			if ( data.frameId === frameId ) return false;
+			data.frameId = frameId;
+			return true;
+
+		}
+
+		const version = state.groupNode.version;
+		if ( data.version === version ) return false;
+		data.version = version;
+		return true;
+
+	}
+
 	updateGroup( nodeUniformsGroup ) {
 
 		const groupNode = nodeUniformsGroup.groupNode;
