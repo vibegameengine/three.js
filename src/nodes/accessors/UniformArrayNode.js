@@ -132,7 +132,7 @@ class UniformArrayNode extends BufferNode {
 		 *
 		 * @type {number}
 		 */
-		this.valueVersion = 0;
+		this.elementsVersion = 0;
 
 	}
 
@@ -215,7 +215,7 @@ class UniformArrayNode extends BufferNode {
 
 			if ( value[ i ] !== previous[ i ] ) {
 
-				this.valueVersion ++;
+				this.elementsVersion ++;
 				return;
 
 			}

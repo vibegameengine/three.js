@@ -102,7 +102,7 @@ class NodeUniformBuffer extends UniformBuffer {
 
 	update() {
 
-		const version = this.nodeUniform.valueVersion;
+		const version = this.nodeUniform.elementsVersion;
 
 		if ( version === undefined ) return true;
 		if ( this._uploadedVersion === version ) return false;
