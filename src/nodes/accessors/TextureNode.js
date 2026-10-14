@@ -201,14 +201,15 @@ class TextureNode extends UniformNode {
 	}
 
 	/**
-	 * Overwritten since the uniform hash is defined by the texture's UUID.
+	 * Overwritten since the uniform hash is defined by the texture's UUID. Reads without a
+	 * sampler get a binding of their own, so a texture only ever loaded binds no sampler.
 	 *
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {string} The uniform hash.
 	 */
 	getUniformHash( /*builder*/ ) {
 
-		return this.value.uuid;
+		return this.sampler === false ? this.value.uuid + ':load' : this.value.uuid;
 
 	}
 
