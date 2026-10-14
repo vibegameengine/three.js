@@ -1,6 +1,8 @@
 import Node from '../core/Node.js';
 import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { nodeObject } from '../tsl/TSLBase.js';
+import { getCurrentStack } from '../tsl/TSLCore.js';
+import { assign } from '../core/AssignNode.js';
 import { attribute } from '../core/AttributeNode.js';
 import { reference, referenceBuffer } from './ReferenceNode.js';
 import { add } from '../math/OperatorNode.js';
@@ -11,7 +13,7 @@ import { uniform } from '../core/UniformNode.js';
 import { buffer } from './BufferNode.js';
 import { storage } from './StorageBufferNode.js';
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
-import { instanceIndex } from '../core/IndexNode.js';
+import { instanceIndex, vertexIndex } from '../core/IndexNode.js';
 
 const _frameId = new WeakMap();
 
@@ -200,7 +202,47 @@ class SkinningNode extends Node {
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {Node<vec3>} The transformed vertex position.
 	 */
+	setupFromSkinCache( builder, skinCache ) {
+
+		const deformed = ( attribute ) => storage( attribute, 'vec4', attribute.count ).toReadOnly().element( vertexIndex ).xyz;
+
+		const stack = getCurrentStack();
+
+		const assignInPlace = ( target, value ) => stack.addToStackBefore( assign( target, value ) );
+
+		if ( builder.needsPreviousData() ) {
+
+			assignInPlace( positionPrevious, deformed( skinCache.previousPositions ) );
+
+		}
+
+		const skinPosition = deformed( skinCache.positions );
+
+		if ( this.toPositionNode ) assignInPlace( this.toPositionNode, skinPosition );
+
+		if ( builder.hasGeometryAttribute( 'normal' ) ) {
+
+			const skinNormal = deformed( skinCache.normals );
+
+			assignInPlace( normalLocal, skinNormal );
+
+			if ( builder.hasGeometryAttribute( 'tangent' ) ) {
+
+				assignInPlace( tangentLocal, skinNormal );
+
+			}
+
+		}
+
+		return skinPosition;
+
+	}
+
 	setup( builder ) {
+
+		const skinCache = builder.object.skinCache;
+
+		if ( skinCache !== undefined ) return this.setupFromSkinCache( builder, skinCache );
 
 		while ( builder.hasGeometryAttribute( `skinIndex${ this.influenceSetCount }` ) ) this.influenceSetCount ++;
 
@@ -258,7 +300,11 @@ class SkinningNode extends Node {
 	 */
 	update( frame ) {
 
-		const skeleton = frame.object && frame.object.skeleton ? frame.object.skeleton : this.skinnedMesh.skeleton;
+		const object = frame.object && frame.object.skeleton ? frame.object : this.skinnedMesh;
+
+		if ( object.skinCache !== undefined ) return;
+
+		const skeleton = object.skeleton;
 
 		if ( _frameId.get( skeleton ) === frame.frameId ) return;
 

@@ -806,6 +806,12 @@ class RenderObject {
 
 		}
 
+		if ( object.skinCache !== undefined ) {
+
+			cacheKey += 'skinCache' + object.skinCache.positions.id + ',';
+
+		}
+
 		if ( object.isBatchedMesh ) {
 
 			cacheKey += object._matricesTexture.uuid + ',';

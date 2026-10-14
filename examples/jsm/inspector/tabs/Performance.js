@@ -88,28 +88,14 @@ class Performance extends Tab {
 
 			item = new Item( createValueSpan(), createValueSpan(), createValueSpan(), createValueSpan() );
 
-			if ( stats.name ) {
-
-				if ( stats.isComputeStats === true ) {
-
-					stats.name = `${ stats.name } [ Compute ]`;
-
-				}
-
-			} else {
-
-				stats.name = `Unnamed ${ stats.cid }`;
-
-			}
-
-			item.userData.name = stats.name;
+			item.userData.name = stats.name || `Unnamed ${ stats.cid }`;
 
 			this.currentItem.add( item );
 			data.item = item;
 
 		} else {
 
-			item.userData.name = stats.name;
+			item.userData.name = stats.name || `Unnamed ${ stats.cid }`;
 
 			if ( this.notInUse.has( stats.cid ) ) {
 
