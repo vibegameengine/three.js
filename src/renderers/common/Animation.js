@@ -61,6 +61,42 @@ class Animation {
 		 */
 		this._requestId = null;
 
+		/**
+		 * When the last frame admitted under `renderer.maxFrameRate` was due.
+		 *
+		 * @type {number}
+		 * @default -Infinity
+		 */
+		this._lastFrameDue = - Infinity;
+
+	}
+
+	/**
+	 * Whether a display tick at `time` is due under `renderer.maxFrameRate`. The
+	 * schedule advances by whole intervals so a 144 Hz display capped at 60 averages
+	 * 60, and it restarts after a stall instead of bursting to catch up.
+	 *
+	 * @private
+	 * @param {number|undefined} time - The `requestAnimationFrame()` timestamp.
+	 * @return {boolean} Whether this tick runs a frame.
+	 */
+	_frameDue( time ) {
+
+		const maxFrameRate = this.renderer.maxFrameRate;
+
+		if ( ! ( maxFrameRate > 0 ) || time === undefined ) return true;
+
+		const interval = 1000 / maxFrameRate;
+		const displayJitter = 1;
+
+		if ( time - this._lastFrameDue < interval - displayJitter ) return false;
+
+		this._lastFrameDue += interval;
+
+		if ( time - this._lastFrameDue > interval || ! Number.isFinite( this._lastFrameDue ) ) this._lastFrameDue = time;
+
+		return true;
+
 	}
 
 	/**
@@ -71,6 +107,8 @@ class Animation {
 		const update = ( time, xrFrame ) => {
 
 			this._requestId = this._context.requestAnimationFrame( update );
+
+			if ( ! this._frameDue( time ) ) return;
 
 			if ( this.info.autoReset === true ) this.info.reset();
 

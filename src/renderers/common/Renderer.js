@@ -338,6 +338,16 @@ class Renderer {
 		this._animation = null;
 
 		/**
+		 * The highest frame rate the animation loop runs at. Ticks of the display that
+		 * come sooner are skipped whole: no node frame, no info reset, no inspector
+		 * frame, no callback. `0` follows the display.
+		 *
+		 * @type {number}
+		 * @default 0
+		 */
+		this.maxFrameRate = 0;
+
+		/**
 		 * A reference to a renderer module for managing shader program bindings.
 		 *
 		 * @private
