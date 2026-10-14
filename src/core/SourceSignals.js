@@ -1,6 +1,16 @@
+import { touchMaterials } from './DrawListRevision.js';
+
 const _watchers = new WeakMap();
+const _materialVersions = new WeakMap();
 
 export function signalSource( source ) {
+
+	if ( source.isMaterial === true && _materialVersions.get( source ) !== source.version ) {
+
+		_materialVersions.set( source, source.version );
+		touchMaterials();
+
+	}
 
 	const watchers = _watchers.get( source );
 
