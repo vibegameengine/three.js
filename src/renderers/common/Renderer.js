@@ -348,6 +348,17 @@ class Renderer {
 		this.maxFrameRate = 0;
 
 		/**
+		 * Chooses the mip bias of a texture sampled in a fragment shader that names
+		 * neither a level nor a bias: return a float node, or `null` to sample as is.
+		 * An upscaler sets it so material textures are filtered for the output
+		 * resolution rather than the lower one the scene renders at.
+		 *
+		 * @type {?function(Texture): ?Node<float>}
+		 * @default null
+		 */
+		this.textureMipBias = null;
+
+		/**
 		 * A reference to a renderer module for managing shader program bindings.
 		 *
 		 * @private

@@ -395,9 +395,17 @@ class TextureNode extends UniformNode {
 
 		//
 
+		let biasNode = this.biasNode;
+
+		if ( biasNode === null && levelNode === null && builder.shaderStage === 'fragment' && typeof builder.renderer.textureMipBias === 'function' ) {
+
+			biasNode = builder.renderer.textureMipBias( this.value ) || null;
+
+		}
+
 		properties.uvNode = uvNode;
 		properties.levelNode = levelNode;
-		properties.biasNode = this.biasNode;
+		properties.biasNode = biasNode;
 		properties.compareNode = this.compareNode;
 		properties.gradNode = this.gradNode;
 		properties.depthNode = this.depthNode;
