@@ -24,6 +24,12 @@ matrix. This is known as <code>applying</code> the matrix to the vector.</p>
 <a href="https://en.wikipedia.org/wiki/Row-_and_column-major_order#Column-major_order" target="_blank" rel="noopener">row-major</a>
 order, while internally they are stored in the <a href="Matrix3.html#elements">Matrix3#elements</a> array in column-major order.
 This means that calling:</p>
+<pre><code class="language-js">const m = new THREE.Matrix4();
+m.set( 11, 12, 13, 14,
+       21, 22, 23, 24,
+       31, 32, 33, 34,
+       41, 42, 43, 44 );
+</code></pre>
 <p>will result in the elements array containing:</p>
 <pre><code class="language-js">m.elements = [ 11, 21, 31, 41,
                12, 22, 32, 42,
@@ -36,13 +42,6 @@ most people are used to thinking about matrices in row-major order, the
 three.js documentation shows matrices in row-major order. Just bear in
 mind that if you are reading the source code, you'll have to take the
 transpose of any matrices outlined here to make sense of the calculations.</p></div>
-				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const m = new THREE.Matrix4();
-m.set( 11, 12, 13, 14,
-       21, 22, 23, 24,
-       31, 32, 33, 34,
-       41, 42, 43, 44 );
-</code></pre></div>
 			</header>
 			<article>
 				<div class="container-overview">
@@ -58,7 +57,7 @@ initializes the matrix as an identity matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>n11</strong>
+										<strong translate="no">n11</strong>
 									</td>
 									<td class="description last">
 										<p>1-1 matrix element.</p>
@@ -66,7 +65,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n12</strong>
+										<strong translate="no">n12</strong>
 									</td>
 									<td class="description last">
 										<p>1-2 matrix element.</p>
@@ -74,7 +73,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n13</strong>
+										<strong translate="no">n13</strong>
 									</td>
 									<td class="description last">
 										<p>1-3 matrix element.</p>
@@ -82,7 +81,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n14</strong>
+										<strong translate="no">n14</strong>
 									</td>
 									<td class="description last">
 										<p>1-4 matrix element.</p>
@@ -90,7 +89,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n21</strong>
+										<strong translate="no">n21</strong>
 									</td>
 									<td class="description last">
 										<p>2-1 matrix element.</p>
@@ -98,7 +97,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n22</strong>
+										<strong translate="no">n22</strong>
 									</td>
 									<td class="description last">
 										<p>2-2 matrix element.</p>
@@ -106,7 +105,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n23</strong>
+										<strong translate="no">n23</strong>
 									</td>
 									<td class="description last">
 										<p>2-3 matrix element.</p>
@@ -114,7 +113,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n24</strong>
+										<strong translate="no">n24</strong>
 									</td>
 									<td class="description last">
 										<p>2-4 matrix element.</p>
@@ -122,7 +121,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n31</strong>
+										<strong translate="no">n31</strong>
 									</td>
 									<td class="description last">
 										<p>3-1 matrix element.</p>
@@ -130,7 +129,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n32</strong>
+										<strong translate="no">n32</strong>
 									</td>
 									<td class="description last">
 										<p>3-2 matrix element.</p>
@@ -138,7 +137,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n33</strong>
+										<strong translate="no">n33</strong>
 									</td>
 									<td class="description last">
 										<p>3-3 matrix element.</p>
@@ -146,7 +145,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n34</strong>
+										<strong translate="no">n34</strong>
 									</td>
 									<td class="description last">
 										<p>3-4 matrix element.</p>
@@ -154,7 +153,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n41</strong>
+										<strong translate="no">n41</strong>
 									</td>
 									<td class="description last">
 										<p>4-1 matrix element.</p>
@@ -162,7 +161,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n42</strong>
+										<strong translate="no">n42</strong>
 									</td>
 									<td class="description last">
 										<p>4-2 matrix element.</p>
@@ -170,7 +169,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n43</strong>
+										<strong translate="no">n43</strong>
 									</td>
 									<td class="description last">
 										<p>4-3 matrix element.</p>
@@ -178,7 +177,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n44</strong>
+										<strong translate="no">n44</strong>
 									</td>
 									<td class="description last">
 										<p>4-4 matrix element.</p>
@@ -193,13 +192,6 @@ initializes the matrix as an identity matrix.</p>
 					<h3 class="name" id="elements" translate="no">.<a href="#elements">elements</a><span class="type-signature"> : Array.&lt;number></span> </h3>
 					<div class="description">
 						<p>A column-major list of matrix values.</p>
-					</div>
-				</div>
-				<div class="member">
-					<h3 class="name" id="isMatrix4" translate="no">.<a href="#isMatrix4">isMatrix4</a><span class="type-signature"> : boolean</span> <span class="type-signature">(readonly) </span></h3>
-					<div class="description">
-						<p>This flag can be used for type testing.</p>
-						<p>Default is <code>true</code>.</p>
 					</div>
 				</div>
 				<h2 class="subsection-title">Methods</h2>
@@ -222,7 +214,7 @@ rotation (Quaternion) and scale.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>position</strong>
+										<strong translate="no">position</strong>
 									</td>
 									<td class="description last">
 										<p>The position vector.</p>
@@ -230,7 +222,7 @@ rotation (Quaternion) and scale.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>quaternion</strong>
+										<strong translate="no">quaternion</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation as a Quaternion.</p>
@@ -238,7 +230,7 @@ rotation (Quaternion) and scale.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>scale</strong>
+										<strong translate="no">scale</strong>
 									</td>
 									<td class="description last">
 										<p>The scale vector.</p>
@@ -259,7 +251,7 @@ rotation (Quaternion) and scale.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix to copy.</p>
@@ -281,7 +273,7 @@ into this matrix's translation component.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix to copy the translation component.</p>
@@ -306,7 +298,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>position</strong>
+										<strong translate="no">position</strong>
 									</td>
 									<td class="description last">
 										<p>The position vector.</p>
@@ -314,7 +306,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>quaternion</strong>
+										<strong translate="no">quaternion</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation as a Quaternion.</p>
@@ -322,7 +314,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>scale</strong>
+										<strong translate="no">scale</strong>
 									</td>
 									<td class="description last">
 										<p>The scale vector.</p>
@@ -338,10 +330,22 @@ may not be decomposable, and this method may not be appropriate.</p>
 					<div class="method">
 						<div class="description">
 							<p>Computes and returns the determinant of this matrix.</p>
-<p>Based on the method outlined <a href="http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.html" target="_blank" rel="noopener">here</a>.</p>
 						</div>
 						<dl class="details">
 							<dt class="tag-returns"><strong>Returns:</strong> The determinant.</dt>
+						</dl>
+					</div>
+					<h3 class="name name-method" id="determinantAffine" translate="no">.<a href="#determinantAffine">determinantAffine</a><span class="signature">()</span><span class="type-signature"> : number</span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Computes and returns the determinant of the 4x4 matrix, but assumes the
+matrix is affine, saving some computations.</p>
+<p>For affine matrices (like an object's world matrix), this value equals the
+full 4x4 <a href="Matrix4.html#determinant">Matrix4#determinant</a> but is cheaper to compute.</p>
+<p>Assumes the bottom row is [0, 0, 0, 1].</p>
+						</div>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> The determinant of the matrix.</dt>
 						</dl>
 					</div>
 					<h3 class="name name-method" id="equals" translate="no">.<a href="#equals">equals</a><span class="signature">( matrix : <span class="param-type"><a href="Matrix4.html">Matrix4</a></span> )</span><span class="type-signature"> : boolean</span> </h3>
@@ -353,7 +357,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>matrix</strong>
+										<strong translate="no">matrix</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix to test for equality.</p>
@@ -368,13 +372,13 @@ may not be decomposable, and this method may not be appropriate.</p>
 					<h3 class="name name-method" id="extractBasis" translate="no">.<a href="#extractBasis">extractBasis</a><span class="signature">( xAxis : <span class="param-type"><a href="Vector3.html">Vector3</a></span>, yAxis : <span class="param-type"><a href="Vector3.html">Vector3</a></span>, zAxis : <span class="param-type"><a href="Vector3.html">Vector3</a></span> )</span><span class="type-signature"> : <a href="Matrix4.html">Matrix4</a></span> </h3>
 					<div class="method">
 						<div class="description">
-							<p>Extracts the basis of this matrix into the three axis vectors provided.</p>
+							<p>Extracts the basis vectors of this matrix into the three vectors provided.</p>
 						</div>
 						<table class="params">
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>xAxis</strong>
+										<strong translate="no">xAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's x axis.</p>
@@ -382,7 +386,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>yAxis</strong>
+										<strong translate="no">yAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's y axis.</p>
@@ -390,7 +394,7 @@ may not be decomposable, and this method may not be appropriate.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>zAxis</strong>
+										<strong translate="no">zAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's z axis.</p>
@@ -413,7 +417,7 @@ into this matrix's rotation component.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix.</p>
@@ -434,7 +438,7 @@ into this matrix's rotation component.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>array</strong>
+										<strong translate="no">array</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix elements in column-major order.</p>
@@ -442,7 +446,7 @@ into this matrix's rotation component.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>offset</strong>
+										<strong translate="no">offset</strong>
 									</td>
 									<td class="description last">
 										<p>Index of the first element in the array.</p>
@@ -494,7 +498,7 @@ a zero matrix instead.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>eye</strong>
+										<strong translate="no">eye</strong>
 									</td>
 									<td class="description last">
 										<p>The eye vector.</p>
@@ -502,7 +506,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The target vector.</p>
@@ -510,7 +514,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>up</strong>
+										<strong translate="no">up</strong>
 									</td>
 									<td class="description last">
 										<p>The up vector.</p>
@@ -531,7 +535,7 @@ a zero matrix instead.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>xAxis</strong>
+										<strong translate="no">xAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's x axis.</p>
@@ -539,7 +543,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>yAxis</strong>
+										<strong translate="no">yAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's y axis.</p>
@@ -547,7 +551,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>zAxis</strong>
+										<strong translate="no">zAxis</strong>
 									</td>
 									<td class="description last">
 										<p>The basis's z axis.</p>
@@ -569,7 +573,7 @@ a zero matrix instead.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>left</strong>
+										<strong translate="no">left</strong>
 									</td>
 									<td class="description last">
 										<p>Left boundary of the viewing frustum at the near plane.</p>
@@ -577,7 +581,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>right</strong>
+										<strong translate="no">right</strong>
 									</td>
 									<td class="description last">
 										<p>Right boundary of the viewing frustum at the near plane.</p>
@@ -585,7 +589,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>top</strong>
+										<strong translate="no">top</strong>
 									</td>
 									<td class="description last">
 										<p>Top boundary of the viewing frustum at the near plane.</p>
@@ -593,7 +597,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>bottom</strong>
+										<strong translate="no">bottom</strong>
 									</td>
 									<td class="description last">
 										<p>Bottom boundary of the viewing frustum at the near plane.</p>
@@ -601,7 +605,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>near</strong>
+										<strong translate="no">near</strong>
 									</td>
 									<td class="description last">
 										<p>The distance from the camera to the near plane.</p>
@@ -609,7 +613,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>far</strong>
+										<strong translate="no">far</strong>
 									</td>
 									<td class="description last">
 										<p>The distance from the camera to the far plane.</p>
@@ -617,7 +621,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>coordinateSystem</strong>
+										<strong translate="no">coordinateSystem</strong>
 									</td>
 									<td class="description last">
 										<p>The coordinate system.</p>
@@ -626,7 +630,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>reversedDepth</strong>
+										<strong translate="no">reversedDepth</strong>
 									</td>
 									<td class="description last">
 										<p>Whether to use a reversed depth.</p>
@@ -649,7 +653,7 @@ a zero matrix instead.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>left</strong>
+										<strong translate="no">left</strong>
 									</td>
 									<td class="description last">
 										<p>Left boundary of the viewing frustum at the near plane.</p>
@@ -657,7 +661,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>right</strong>
+										<strong translate="no">right</strong>
 									</td>
 									<td class="description last">
 										<p>Right boundary of the viewing frustum at the near plane.</p>
@@ -665,7 +669,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>top</strong>
+										<strong translate="no">top</strong>
 									</td>
 									<td class="description last">
 										<p>Top boundary of the viewing frustum at the near plane.</p>
@@ -673,7 +677,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>bottom</strong>
+										<strong translate="no">bottom</strong>
 									</td>
 									<td class="description last">
 										<p>Bottom boundary of the viewing frustum at the near plane.</p>
@@ -681,7 +685,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>near</strong>
+										<strong translate="no">near</strong>
 									</td>
 									<td class="description last">
 										<p>The distance from the camera to the near plane.</p>
@@ -689,7 +693,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>far</strong>
+										<strong translate="no">far</strong>
 									</td>
 									<td class="description last">
 										<p>The distance from the camera to the far plane.</p>
@@ -697,7 +701,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>coordinateSystem</strong>
+										<strong translate="no">coordinateSystem</strong>
 									</td>
 									<td class="description last">
 										<p>The coordinate system.</p>
@@ -706,7 +710,7 @@ a zero matrix instead.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>reversedDepth</strong>
+										<strong translate="no">reversedDepth</strong>
 									</td>
 									<td class="description last">
 										<p>Whether to use a reversed depth.</p>
@@ -724,14 +728,12 @@ a zero matrix instead.</p>
 						<div class="description">
 							<p>Sets this matrix as a rotational transformation around the given axis by
 the given angle.</p>
-<p>This is a somewhat controversial but mathematically sound alternative to
-rotating via Quaternions. See the discussion <a href="https://www.gamedev.net/articles/programming/math-and-physics/do-we-really-need-quaternions-r1199" target="_blank" rel="noopener">here</a>.</p>
 						</div>
 						<table class="params">
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>axis</strong>
+										<strong translate="no">axis</strong>
 									</td>
 									<td class="description last">
 										<p>The normalized rotation axis.</p>
@@ -739,7 +741,7 @@ rotating via Quaternions. See the discussion <a href="https://www.gamedev.net/ar
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>angle</strong>
+										<strong translate="no">angle</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation in radians.</p>
@@ -764,7 +766,7 @@ for a complete list.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>euler</strong>
+										<strong translate="no">euler</strong>
 									</td>
 									<td class="description last">
 										<p>The Euler angles.</p>
@@ -787,7 +789,7 @@ The rest of the matrix is set to the identity.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>q</strong>
+										<strong translate="no">q</strong>
 									</td>
 									<td class="description last">
 										<p>The Quaternion.</p>
@@ -809,7 +811,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>theta</strong>
+										<strong translate="no">theta</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation in radians.</p>
@@ -831,7 +833,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>theta</strong>
+										<strong translate="no">theta</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation in radians.</p>
@@ -853,7 +855,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>theta</strong>
+										<strong translate="no">theta</strong>
 									</td>
 									<td class="description last">
 										<p>The rotation in radians.</p>
@@ -874,7 +876,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>x</strong>
+										<strong translate="no">x</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to scale in the X axis.</p>
@@ -882,7 +884,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>y</strong>
+										<strong translate="no">y</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to scale in the Y axis.</p>
@@ -890,7 +892,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>z</strong>
+										<strong translate="no">z</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to scale in the Z axis.</p>
@@ -911,7 +913,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>xy</strong>
+										<strong translate="no">xy</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear X by Y.</p>
@@ -919,7 +921,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>xz</strong>
+										<strong translate="no">xz</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear X by Z.</p>
@@ -927,7 +929,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>yx</strong>
+										<strong translate="no">yx</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear Y by X.</p>
@@ -935,7 +937,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>yz</strong>
+										<strong translate="no">yz</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear Y by Z.</p>
@@ -943,7 +945,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>zx</strong>
+										<strong translate="no">zx</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear Z by X.</p>
@@ -951,7 +953,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>zy</strong>
+										<strong translate="no">zy</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to shear Z by Y.</p>
@@ -972,7 +974,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>x</strong>
+										<strong translate="no">x</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to translate in the X axis or alternatively a translation vector.</p>
@@ -980,7 +982,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>y</strong>
+										<strong translate="no">y</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to translate in the Y axis.</p>
@@ -988,7 +990,7 @@ the given angle.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>z</strong>
+										<strong translate="no">z</strong>
 									</td>
 									<td class="description last">
 										<p>The amount to translate in the z axis.</p>
@@ -1009,7 +1011,7 @@ the given angle.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix to multiply with.</p>
@@ -1031,7 +1033,7 @@ in this matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>a</strong>
+										<strong translate="no">a</strong>
 									</td>
 									<td class="description last">
 										<p>The first matrix.</p>
@@ -1039,7 +1041,7 @@ in this matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>b</strong>
+										<strong translate="no">b</strong>
 									</td>
 									<td class="description last">
 										<p>The second matrix.</p>
@@ -1060,7 +1062,7 @@ in this matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>s</strong>
+										<strong translate="no">s</strong>
 									</td>
 									<td class="description last">
 										<p>The scalar.</p>
@@ -1081,7 +1083,7 @@ in this matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix to multiply with.</p>
@@ -1096,13 +1098,13 @@ in this matrix.</p>
 					<h3 class="name name-method" id="scale" translate="no">.<a href="#scale">scale</a><span class="signature">( v : <span class="param-type"><a href="Vector3.html">Vector3</a></span> )</span><span class="type-signature"> : <a href="Matrix4.html">Matrix4</a></span> </h3>
 					<div class="method">
 						<div class="description">
-							<p>Multiplies the columns of this matrix by the given vector.</p>
+							<p>Scales each of the first three columns of this matrix by the corresponding component of the given vector.</p>
 						</div>
 						<table class="params">
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>v</strong>
+										<strong translate="no">v</strong>
 									</td>
 									<td class="description last">
 										<p>The scale vector.</p>
@@ -1124,7 +1126,7 @@ in row-major order.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>n11</strong>
+										<strong translate="no">n11</strong>
 									</td>
 									<td class="description last">
 										<p>1-1 matrix element.</p>
@@ -1132,7 +1134,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n12</strong>
+										<strong translate="no">n12</strong>
 									</td>
 									<td class="description last">
 										<p>1-2 matrix element.</p>
@@ -1140,7 +1142,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n13</strong>
+										<strong translate="no">n13</strong>
 									</td>
 									<td class="description last">
 										<p>1-3 matrix element.</p>
@@ -1148,7 +1150,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n14</strong>
+										<strong translate="no">n14</strong>
 									</td>
 									<td class="description last">
 										<p>1-4 matrix element.</p>
@@ -1156,7 +1158,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n21</strong>
+										<strong translate="no">n21</strong>
 									</td>
 									<td class="description last">
 										<p>2-1 matrix element.</p>
@@ -1164,7 +1166,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n22</strong>
+										<strong translate="no">n22</strong>
 									</td>
 									<td class="description last">
 										<p>2-2 matrix element.</p>
@@ -1172,7 +1174,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n23</strong>
+										<strong translate="no">n23</strong>
 									</td>
 									<td class="description last">
 										<p>2-3 matrix element.</p>
@@ -1180,7 +1182,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n24</strong>
+										<strong translate="no">n24</strong>
 									</td>
 									<td class="description last">
 										<p>2-4 matrix element.</p>
@@ -1188,7 +1190,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n31</strong>
+										<strong translate="no">n31</strong>
 									</td>
 									<td class="description last">
 										<p>3-1 matrix element.</p>
@@ -1196,7 +1198,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n32</strong>
+										<strong translate="no">n32</strong>
 									</td>
 									<td class="description last">
 										<p>3-2 matrix element.</p>
@@ -1204,7 +1206,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n33</strong>
+										<strong translate="no">n33</strong>
 									</td>
 									<td class="description last">
 										<p>3-3 matrix element.</p>
@@ -1212,7 +1214,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n34</strong>
+										<strong translate="no">n34</strong>
 									</td>
 									<td class="description last">
 										<p>3-4 matrix element.</p>
@@ -1220,7 +1222,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n41</strong>
+										<strong translate="no">n41</strong>
 									</td>
 									<td class="description last">
 										<p>4-1 matrix element.</p>
@@ -1228,7 +1230,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n42</strong>
+										<strong translate="no">n42</strong>
 									</td>
 									<td class="description last">
 										<p>4-2 matrix element.</p>
@@ -1236,7 +1238,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n43</strong>
+										<strong translate="no">n43</strong>
 									</td>
 									<td class="description last">
 										<p>4-3 matrix element.</p>
@@ -1244,7 +1246,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n44</strong>
+										<strong translate="no">n44</strong>
 									</td>
 									<td class="description last">
 										<p>4-4 matrix element.</p>
@@ -1265,7 +1267,7 @@ in row-major order.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The 3x3 matrix.</p>
@@ -1287,7 +1289,7 @@ without affecting the rest of the matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>x</strong>
+										<strong translate="no">x</strong>
 									</td>
 									<td class="description last">
 										<p>The x component of the vector or alternatively the vector object.</p>
@@ -1295,7 +1297,7 @@ without affecting the rest of the matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>y</strong>
+										<strong translate="no">y</strong>
 									</td>
 									<td class="description last">
 										<p>The y component of the vector.</p>
@@ -1303,7 +1305,7 @@ without affecting the rest of the matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>z</strong>
+										<strong translate="no">z</strong>
 									</td>
 									<td class="description last">
 										<p>The z component of the vector.</p>
@@ -1325,7 +1327,7 @@ the method returns a new instance.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>array</strong>
+										<strong translate="no">array</strong>
 									</td>
 									<td class="description last">
 										<p>The target array holding the matrix elements in column-major order.</p>
@@ -1334,7 +1336,7 @@ the method returns a new instance.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>offset</strong>
+										<strong translate="no">offset</strong>
 									</td>
 									<td class="description last">
 										<p>Index of the first element in the array.</p>

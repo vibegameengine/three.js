@@ -3,6 +3,10 @@
 	<head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+		<meta property="og:title" content="three.js webgpu - HDR Draw">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_hdr.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_hdr.jpg">
 	<title>three.js webgpu - HDR Draw</title>
 	<link type="text/css" rel="stylesheet" href="example.css">
 	<style>
@@ -123,11 +127,11 @@
 			brushMat.depthWrite = false;
 			brushMat.blending = THREE.AdditiveBlending; // additive to build HDR energy
 
-			const postProcessing = new THREE.PostProcessing( renderer );
+			const renderPipeline = new THREE.RenderPipeline( renderer );
 			const brushPass = pass( brushScene, camera, { type: THREE.HalfFloatType } );
 			brushPass.renderTarget.texture.colorSpace = ExtendedSRGBColorSpace;
 
-			postProcessing.outputNode = afterImage( brushPass, params.afterImageDecay );
+			renderPipeline.outputNode = afterImage( brushPass, params.afterImageDecay );
 
 			// HDR brush uniforms
 			const uColor = params.intensity;
@@ -193,7 +197,7 @@
 			// Main loop
 			renderer.setAnimationLoop( async () => {
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			} );
 

@@ -14,6 +14,9 @@ const _color2 = /*@__PURE__*/ new Color();
  * Creates a visual aid consisting of a spherical mesh for a
  * given {@link HemisphereLight}.
  *
+ * When the hemisphere light is transformed or its light properties are changed,
+ * it's necessary to call the `update()` method of the respective helper.
+ *
  * ```js
  * const light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
  * const helper = new THREE.HemisphereLightHelper( light, 5 );
@@ -79,6 +82,8 @@ class HemisphereLightHelper extends Object3D {
 	 */
 	dispose() {
 
+		super.dispose();
+
 		this.children[ 0 ].geometry.dispose();
 		this.children[ 0 ].material.dispose();
 
@@ -114,6 +119,8 @@ class HemisphereLightHelper extends Object3D {
 			colors.needsUpdate = true;
 
 		}
+
+		this.matrixWorldNeedsUpdate = true;
 
 		this.light.updateWorldMatrix( true, false );
 

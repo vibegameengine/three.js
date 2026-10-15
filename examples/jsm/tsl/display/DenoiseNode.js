@@ -57,11 +57,19 @@ class DenoiseNode extends TempNode {
 		this.normalNode = normalNode;
 
 		/**
+		 * The internal noise texture.
+		 *
+		 * @private
+		 * @type {DataTexture}
+		 */
+		this._noiseTexture = generateDefaultNoise();
+
+		/**
 		 * The node represents the internal noise texture.
 		 *
 		 * @type {TextureNode}
 		 */
-		this.noiseNode = texture( generateDefaultNoise() );
+		this.noiseNode = texture( this._noiseTexture );
 
 		/**
 		 * The luma Phi value.
@@ -252,6 +260,18 @@ class DenoiseNode extends TempNode {
 
 	}
 
+	/**
+	 * Frees internal resources. This method should be called
+	 * when the effect is no longer required.
+	 */
+	dispose() {
+
+		super.dispose();
+
+		this._noiseTexture.dispose();
+
+	}
+
 }
 
 export default DenoiseNode;
@@ -331,4 +351,4 @@ function generateDefaultNoise( size = 64 ) {
  * @param {Camera} camera - The camera the scene is rendered with.
  * @returns {DenoiseNode}
  */
-export const denoise = ( node, depthNode, normalNode, camera ) => nodeObject( new DenoiseNode( convertToTexture( node ), nodeObject( depthNode ), nodeObject( normalNode ), camera ) );
+export const denoise = ( node, depthNode, normalNode, camera ) => new DenoiseNode( convertToTexture( node ), nodeObject( depthNode ), nodeObject( normalNode ), camera );

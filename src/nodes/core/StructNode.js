@@ -1,5 +1,7 @@
 import Node from './Node.js';
 import StructTypeNode from './StructTypeNode.js';
+import { nodeObject, nodeProxyConstructor } from '../tsl/TSLCore.js';
+import { isArrayAsParameter } from './NodeUtils.js';
 
 /**
  * StructNode allows to create custom structures with multiple members.
@@ -40,7 +42,7 @@ class StructNode extends Node {
 
 	}
 
-	getNodeType( builder ) {
+	generateNodeType( builder ) {
 
 		return this.structTypeNode.getNodeType( builder );
 
@@ -49,6 +51,21 @@ class StructNode extends Node {
 	getMemberType( builder, name ) {
 
 		return this.structTypeNode.getMemberType( builder, name );
+
+	}
+
+	_getChildren() {
+
+		// Ensure struct type is the last child for correct code generation order
+
+		const children = super._getChildren();
+
+		const structTypeProperty = children.find( child => child.childNode === this.structTypeNode );
+
+		children.splice( children.indexOf( structTypeProperty ), 1 );
+		children.push( structTypeProperty );
+
+		return children;
 
 	}
 
@@ -79,7 +96,7 @@ export default StructNode;
  */
 export const struct = ( membersLayout, name = null ) => {
 
-	const structLayout = new StructTypeNode( membersLayout, name );
+	const structType = new StructTypeNode( membersLayout, name );
 
 	const struct = ( ...params ) => {
 
@@ -87,7 +104,7 @@ export const struct = ( membersLayout, name = null ) => {
 
 		if ( params.length > 0 ) {
 
-			if ( params[ 0 ].isNode ) {
+			if ( isArrayAsParameter( params ) ) {
 
 				values = {};
 
@@ -95,7 +112,7 @@ export const struct = ( membersLayout, name = null ) => {
 
 				for ( let i = 0; i < params.length; i ++ ) {
 
-					values[ names[ i ] ] = params[ i ];
+					values[ names[ i ] ] = nodeObject( params[ i ] );
 
 				}
 
@@ -107,13 +124,10 @@ export const struct = ( membersLayout, name = null ) => {
 
 		}
 
-		return new StructNode( structLayout, values );
+		return new StructNode( structType, values );
 
 	};
 
-	struct.layout = structLayout;
-	struct.isStruct = true;
-
-	return struct;
+	return nodeProxyConstructor( struct, structType );
 
 };

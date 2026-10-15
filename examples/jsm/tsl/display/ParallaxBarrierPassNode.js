@@ -1,5 +1,5 @@
 import { NodeMaterial } from 'three/webgpu';
-import { nodeObject, Fn, vec4, uv, If, mod, screenCoordinate } from 'three/tsl';
+import { Fn, vec4, uv, If, mod, screenCoordinate, context } from 'three/tsl';
 import StereoCompositePassNode from './StereoCompositePassNode.js';
 
 /**
@@ -66,7 +66,8 @@ class ParallaxBarrierPassNode extends StereoCompositePassNode {
 		} );
 
 		const material = this._material || ( this._material = new NodeMaterial() );
-		material.fragmentNode = parallaxBarrier().context( builder.getSharedContext() );
+		material.contextNode = context( builder.getSharedContext() );
+		material.fragmentNode = parallaxBarrier();
 		material.needsUpdate = true;
 
 		return super.setup( builder );
@@ -86,4 +87,4 @@ export default ParallaxBarrierPassNode;
  * @param {Camera} camera - The camera to render the scene with.
  * @returns {ParallaxBarrierPassNode}
  */
-export const parallaxBarrierPass = ( scene, camera ) => nodeObject( new ParallaxBarrierPassNode( scene, camera ) );
+export const parallaxBarrierPass = ( scene, camera ) => new ParallaxBarrierPassNode( scene, camera );

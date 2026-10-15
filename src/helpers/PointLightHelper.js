@@ -57,30 +57,6 @@ class PointLightHelper extends Mesh {
 
 		this.update();
 
-
-		/*
-	// TODO: delete this comment?
-	const distanceGeometry = new THREE.IcosahedronGeometry( 1, 2 );
-	const distanceMaterial = new THREE.MeshBasicMaterial( { color: hexColor, fog: false, wireframe: true, opacity: 0.1, transparent: true } );
-
-	this.lightSphere = new THREE.Mesh( bulbGeometry, bulbMaterial );
-	this.lightDistance = new THREE.Mesh( distanceGeometry, distanceMaterial );
-
-	const d = light.distance;
-
-	if ( d === 0.0 ) {
-
-		this.lightDistance.visible = false;
-
-	} else {
-
-		this.lightDistance.scale.set( d, d, d );
-
-	}
-
-	this.add( this.lightDistance );
-	*/
-
 	}
 
 	/**
@@ -88,6 +64,8 @@ class PointLightHelper extends Mesh {
 	 * method whenever this instance is no longer used in your app.
 	 */
 	dispose() {
+
+		super.dispose();
 
 		this.geometry.dispose();
 		this.material.dispose();
@@ -99,6 +77,8 @@ class PointLightHelper extends Mesh {
 	 * light being visualized.
 	 */
 	update() {
+
+		this.matrixWorldNeedsUpdate = true;
 
 		this.light.updateWorldMatrix( true, false );
 

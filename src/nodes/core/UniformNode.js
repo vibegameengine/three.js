@@ -1,4 +1,5 @@
 import InputNode from './InputNode.js';
+import StackTrace from '../core/StackTrace.js';
 import { objectGroup } from './UniformGroupNode.js';
 import { getConstNodeType } from '../tsl/TSLCore.js';
 import { getValueFromType } from './NodeUtils.js';
@@ -107,7 +108,7 @@ class UniformNode extends InputNode {
 	 */
 	label( name ) {
 
-		warn( 'TSL: "label()" has been deprecated. Use "setName()" instead.' ); // @deprecated r179
+		warn( 'TSL: "label()" has been deprecated. Use "setName()" instead.', new StackTrace() ); // @deprecated r179
 
 		return this.setName( name );
 
@@ -151,6 +152,31 @@ class UniformNode extends InputNode {
 
 	}
 
+	/**
+	 * Uniform nodes with the same hash share a single uniform. This method returns the node
+	 * the shared uniform refers to which is the first node registered for the hash.
+	 *
+	 * @param {NodeBuilder} builder - The current node builder.
+	 * @return {UniformNode} The node the shared uniform refers to.
+	 */
+	getSharedNode( builder ) {
+
+		const hash = this.getUniformHash( builder );
+
+		let sharedNode = builder.getNodeFromHash( hash );
+
+		if ( sharedNode === undefined ) {
+
+			builder.setHashNode( this, hash );
+
+			sharedNode = this;
+
+		}
+
+		return sharedNode;
+
+	}
+
 	onUpdate( callback, updateType ) {
 
 		callback = callback.bind( this );
@@ -187,18 +213,7 @@ class UniformNode extends InputNode {
 
 		const type = this.getNodeType( builder );
 
-		const hash = this.getUniformHash( builder );
-
-		let sharedNode = builder.getNodeFromHash( hash );
-
-		if ( sharedNode === undefined ) {
-
-			builder.setHashNode( this, hash );
-
-			sharedNode = this;
-
-		}
-
+		const sharedNode = this.getSharedNode( builder );
 		const sharedNodeType = sharedNode.getInputType( builder );
 
 		const nodeUniform = builder.getUniformFromNode( sharedNode, sharedNodeType, builder.shaderStage, this.name || builder.context.nodeName );

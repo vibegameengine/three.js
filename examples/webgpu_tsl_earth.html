@@ -4,6 +4,10 @@
 		<title>three.js webgpu - earth</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - earth">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_tsl_earth.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_tsl_earth.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -42,18 +46,20 @@
 
 			import { Inspector } from 'three/addons/inspector/Inspector.js';
 
-			let camera, scene, renderer, controls, globe, clock;
+			let camera, scene, renderer, controls, globe, timer;
 
 			init();
 
 			function init() {
 
-				clock = new THREE.Clock();
+				timer = new THREE.Timer();
+				timer.connect( document );
 
 				camera = new THREE.PerspectiveCamera( 25, window.innerWidth / window.innerHeight, 0.1, 100 );
 				camera.position.set( 4.5, 2, 3 );
 
 				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x000000 );
 
 				// sun
 
@@ -200,7 +206,9 @@
 
 			async function animate() {
 
-				const delta = clock.getDelta();
+				timer.update();
+
+				const delta = timer.getDelta();
 				globe.rotation.y += delta * 0.025;
 			
 				controls.update();

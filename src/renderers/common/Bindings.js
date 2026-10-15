@@ -14,7 +14,7 @@ class Bindings extends DataMap {
 	 * Constructs a new bindings management component.
 	 *
 	 * @param {Backend} backend - The renderer's backend.
-	 * @param {Nodes} nodes - Renderer component for managing nodes related logic.
+	 * @param {NodeManager} nodes - Renderer component for managing nodes related logic.
 	 * @param {Textures} textures - Renderer component for managing textures.
 	 * @param {Attributes} attributes - Renderer component for managing attributes.
 	 * @param {Pipelines} pipelines - Renderer component for managing pipelines.
@@ -55,7 +55,7 @@ class Bindings extends DataMap {
 		/**
 		 * Renderer component for managing nodes related logic.
 		 *
-		 * @type {Nodes}
+		 * @type {NodeManager}
 		 */
 		this.nodes = nodes;
 
@@ -80,21 +80,15 @@ class Bindings extends DataMap {
 
 		const bindings = renderObject.getBindings();
 
-		for ( const bindGroup of bindings ) {
+		const renderObjectData = this.get( renderObject );
 
-			const groupData = this.get( bindGroup );
+		if ( renderObjectData.initialized !== true ) {
 
-			if ( groupData.bindGroup === undefined ) {
+			// bind groups are created once per object
 
-				// each object defines an array of bindings (ubos, textures, samplers etc.)
+			this._createBindings( bindings );
 
-				this._init( bindGroup );
-
-				this.backend.createBindings( bindGroup, bindings, 0 );
-
-				groupData.bindGroup = bindGroup;
-
-			}
+			renderObjectData.initialized = true;
 
 		}
 
@@ -111,20 +105,22 @@ class Bindings extends DataMap {
 	getForCompute( computeNode ) {
 
 		const bindings = this.nodes.getForCompute( computeNode ).bindings;
+		const computeNodeData = this.get( computeNode );
 
-		for ( const bindGroup of bindings ) {
+		if ( computeNodeData.initialized !== true || computeNodeData.bindings !== bindings ) {
 
-			const groupData = this.get( bindGroup );
+			// bind groups are created once per compute node version
 
-			if ( groupData.bindGroup === undefined ) {
+			if ( computeNodeData.bindings !== undefined ) {
 
-				this._init( bindGroup );
-
-				this.backend.createBindings( bindGroup, bindings, 0 );
-
-				groupData.bindGroup = bindGroup;
+				this._destroyBindings( computeNodeData.bindings );
 
 			}
+
+			this._createBindings( bindings );
+
+			computeNodeData.initialized = true;
+			computeNodeData.bindings = bindings;
 
 		}
 
@@ -154,7 +150,7 @@ class Bindings extends DataMap {
 
 	}
 
-	updateSharedForRender( renderObject ) {
+	updateViewGroupsForRender( renderObject ) {
 
 		const bindings = this.getForRender( renderObject );
 
@@ -167,20 +163,55 @@ class Bindings extends DataMap {
 	}
 
 	/**
+	 * Updates only the shared uniform buffers of the given render object.
+	 *
+	 * @param {RenderObject} renderObject - The render object.
+	 */
+	updateSharedForRender( renderObject ) {
+
+		const bindings = this.getForRender( renderObject );
+
+		for ( const bindGroup of bindings ) {
+
+			for ( const binding of bindGroup.bindings ) {
+
+				if ( ( binding.isNodeUniformsGroup === true || binding.isNodeUniformBuffer === true ) && binding.groupNode.shared === true ) {
+
+					const updatedGroup = this.nodes.updateGroup( binding );
+
+					if ( updatedGroup === false ) continue;
+
+					const updated = binding.update();
+
+					if ( updated ) {
+
+						this.backend.updateBinding( binding );
+
+					}
+
+					if ( binding.updateRanges.length > 0 ) binding.clearUpdateRanges();
+
+				}
+
+			}
+
+		}
+
+	}
+
+	/**
 	 * Deletes the bindings for the given compute node.
 	 *
 	 * @param {Node} computeNode - The compute node.
 	 */
 	deleteForCompute( computeNode ) {
 
-		const bindings = this.nodes.getForCompute( computeNode ).bindings;
+		const computeNodeData = this.get( computeNode );
+		const bindings = computeNodeData.bindings || this.nodes.getForCompute( computeNode ).bindings;
 
-		for ( const bindGroup of bindings ) {
+		this._destroyBindings( bindings );
 
-			this.backend.deleteBindGroupData( bindGroup );
-			this.delete( bindGroup );
-
-		}
+		this.delete( computeNode );
 
 	}
 
@@ -194,14 +225,129 @@ class Bindings extends DataMap {
 		const bindings = renderObject.getBindings();
 		const shared = renderObject.materialBindings;
 
-		if ( shared !== null && renderObject.getNodeBuilderState().releaseBindings( renderObject.material, shared ) === false ) return;
+		if ( shared !== null ) renderObject.getNodeBuilderState().releaseBindings( renderObject.material, shared );
+
+		this._destroyBindings( bindings );
+
+		this.delete( renderObject );
+
+	}
+
+	/**
+	 * Creates the bindings for the given array of bindings.
+	 *
+	 * @param {Array<BindGroup>} bindings - The bind groups.
+	 */
+	_createBindings( bindings ) {
 
 		for ( const bindGroup of bindings ) {
 
-			if ( bindGroup.sharedAcrossStates === true || ( shared !== null && bindGroup.bindings[ 0 ].groupNode.shared === true ) ) continue;
+			// binding group
 
-			this.backend.deleteBindGroupData( bindGroup );
-			this.delete( bindGroup );
+			const groupData = this.get( bindGroup );
+
+			if ( groupData.bindGroup === undefined ) {
+
+				// initialize
+
+				for ( const binding of bindGroup.bindings ) {
+
+					if ( binding.isUniformBuffer ) {
+
+						this.backend.createUniformBuffer( binding );
+						this.info.createUniformBuffer( binding );
+
+					} else if ( binding.isSampledTexture ) {
+
+						this.textures.updateTexture( binding.texture );
+
+						const texturesTextureData = this.textures.get( binding.texture );
+
+						binding.generation = texturesTextureData.generation;
+						binding.creation = texturesTextureData.creation;
+
+					} else if ( binding.isSampler ) {
+
+						this.textures.updateSampler( binding );
+
+					} else if ( binding.isStorageBuffer ) {
+
+						const attribute = binding.attribute;
+						const attributeType = attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE;
+
+						this.attributes.update( attribute, attributeType );
+
+					}
+
+				}
+
+				// each object defines an array of bindings (ubos, textures, samplers etc.)
+
+				this.backend.createBindings( bindGroup, bindings, '' );
+
+				groupData.bindGroup = bindGroup;
+				groupData.usedTimes = 1;
+
+			} else {
+
+				groupData.usedTimes ++;
+
+			}
+
+		}
+
+	}
+
+	/**
+	 * Deletes the given array of bindings.
+	 *
+	 * @param {Array<BindGroup>} bindings - The bind groups.
+	 */
+	_destroyBindings( bindings ) {
+
+		for ( const bindGroup of bindings ) {
+
+			const groupData = this.get( bindGroup );
+			groupData.usedTimes --;
+
+			if ( groupData.usedTimes === 0 ) {
+
+				for ( const binding of bindGroup.bindings ) {
+
+					if ( binding.isUniformBuffer ) {
+
+						this.backend.destroyUniformBuffer( binding );
+						this.info.destroyUniformBuffer( binding );
+
+						// release arrays
+
+						binding.release();
+
+					} else if ( binding.isSampler ) {
+
+						if ( binding.isSampledTexture !== true ) {
+
+							this.backend.destroySampler( binding );
+
+						} else if ( binding.texture !== null ) {
+
+							// untrack destroyed bind group from its texture
+
+							const textureData = this.textures.get( binding.texture );
+							if ( textureData.bindGroups !== undefined ) textureData.bindGroups.delete( bindGroup );
+
+						}
+
+						binding.release();
+
+					}
+
+				}
+
+				this.backend.deleteBindGroupData( bindGroup );
+				this.delete( bindGroup );
+
+			}
 
 		}
 
@@ -217,41 +363,6 @@ class Bindings extends DataMap {
 		for ( const bindGroup of bindings ) {
 
 			this._update( bindGroup, bindings );
-
-		}
-
-	}
-
-	/**
-	 * Initializes the given bind group.
-	 *
-	 * @param {BindGroup} bindGroup - The bind group to initialize.
-	 */
-	_init( bindGroup ) {
-
-		for ( const binding of bindGroup.bindings ) {
-
-			if ( binding.isSampledTexture ) {
-
-				this.textures.updateTexture( binding.texture );
-
-				const texturesTextureData = this.textures.get( binding.texture );
-
-				binding.generation = texturesTextureData.generation;
-				binding.creation = texturesTextureData.creation;
-
-			} else if ( binding.isSampler ) {
-
-				this.textures.updateSampler( binding.texture );
-
-			} else if ( binding.isStorageBuffer ) {
-
-				const attribute = binding.attribute;
-				const attributeType = attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE;
-
-				this.attributes.update( attribute, attributeType );
-
-			}
 
 		}
 
@@ -284,18 +395,20 @@ class Bindings extends DataMap {
 
 			if ( binding.isStorageBuffer ) {
 
-				if ( binding.nodeUniform && binding.nodeUniform.value !== binding.attribute ) {
-
-					binding.attribute = binding.nodeUniform.value;
-					needsBindingsUpdate = true;
-
-				}
-
 				const attribute = binding.attribute;
 				const attributeType = attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE;
 
+				const bindingData = backend.get( binding );
+
 				this.attributes.update( attribute, attributeType );
 
+				if ( bindingData.attribute !== attribute ) {
+
+					bindingData.attribute = attribute;
+
+					needsBindingsUpdate = true;
+
+				}
 
 			}
 
@@ -323,6 +436,10 @@ class Bindings extends DataMap {
 					// version: update the texture data or create a new one
 
 					this.textures.updateTexture( texture );
+
+					// keep track which bind groups refer to the current texture (this is needed for dispose)
+
+					texturesTextureData.bindGroups.add( bindGroup );
 
 				}
 
@@ -361,7 +478,7 @@ class Bindings extends DataMap {
 
 				if ( updated ) {
 
-					const samplerKey = this.textures.updateSampler( binding.texture );
+					const samplerKey = this.textures.updateSampler( binding );
 
 					if ( binding.samplerKey !== samplerKey ) {
 
@@ -375,29 +492,17 @@ class Bindings extends DataMap {
 
 			}
 
+			if ( binding.isBuffer && binding.updateRanges.length > 0 ) {
+
+				binding.clearUpdateRanges();
+
+			}
+
 		}
 
 		if ( needsBindingsUpdate === true ) {
 
-			this._recreateDestroyedSamplers( bindGroup );
-
 			this.backend.updateBindings( bindGroup, bindings, this._cacheKey( bindGroup ) );
-
-		}
-
-	}
-
-	_recreateDestroyedSamplers( bindGroup ) {
-
-		for ( const binding of bindGroup.bindings ) {
-
-			if ( binding.isSampler !== true || binding.isSampledTexture === true ) continue;
-
-			if ( this.backend.get( binding.texture ).sampler === undefined ) {
-
-				binding.samplerKey = this.textures.updateSampler( binding.texture );
-
-			}
 
 		}
 

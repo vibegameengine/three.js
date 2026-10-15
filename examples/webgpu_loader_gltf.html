@@ -4,6 +4,10 @@
 		<title>three.js webgpu - gltf loader</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - gltf loader">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_loader_gltf.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_loader_gltf.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -103,7 +107,7 @@
 
 					} );
 
-				renderer = new THREE.WebGPURenderer( { antialias: true/*, compatibilityMode: true*/ } );
+				renderer = new THREE.WebGPURenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.setAnimationLoop( render );
@@ -131,6 +135,27 @@
 				const url = `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${ modelInfo.name }/${ variant.endsWith( '.glb' ) ? 'glTF-Binary' : 'glTF' }/${ variant }`;
 
 				if ( currentModel ) {
+
+					currentModel.traverse( ( model ) => {
+
+						if ( model.isMesh ) {
+
+							model.geometry.dispose();
+							model.material.dispose();
+
+							for ( const value of Object.values( model.material ) ) {
+
+								if ( value && value.isTexture ) {
+
+									value.dispose();
+
+								}
+
+							}
+
+						}
+
+					} );
 
 					scene.remove( currentModel );
 					currentModel = null;

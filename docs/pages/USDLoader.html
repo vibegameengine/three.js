@@ -13,17 +13,18 @@
 	<h1 translate="no">USDLoader</h1>
 		<section>
 			<header>
-				<div class="class-description"><p>A loader for the USDZ format.</p>
-<p>USDZ files that use USDC internally are not yet supported, only USDA.</p></div>
+				<div class="class-description"><p>A loader for the USD format (USD, USDA, USDC, USDZ).</p>
+<p>Supports both ASCII (USDA) and binary (USDC) USD files, as well as
+USDZ archives containing either format.</p></div>
 				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const loader = new USDZLoader();
-const model = await loader.loadAsync( 'saeukkang.usdz' );
+				<div translate="no"><pre><code class="language-js">const loader = new USDLoader();
+const model = await loader.loadAsync( 'model.usdz' );
 scene.add( model );
 </code></pre></div>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">USDLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">USDLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { USDLoader } from 'three/addons/loaders/USDLoader.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -36,7 +37,7 @@ scene.add( model );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>manager</strong>
+										<strong translate="no">manager</strong>
 									</td>
 									<td class="description last">
 										<p>The loading manager.</p>
@@ -57,7 +58,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>url</strong>
+										<strong translate="no">url</strong>
 									</td>
 									<td class="description last">
 										<p>The path/URL of the file to be loaded. This can also be a data URI.</p>
@@ -65,7 +66,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onLoad</strong>
+										<strong translate="no">onLoad</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when the loading process has been finished.</p>
@@ -73,7 +74,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onProgress</strong>
+										<strong translate="no">onProgress</strong>
 									</td>
 									<td class="description last">
 										<p>Executed while the loading is in progress.</p>
@@ -81,7 +82,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onError</strong>
+										<strong translate="no">onError</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when errors occur.</p>
@@ -93,19 +94,47 @@ to the <code>onLoad()</code> callback.</p>
 							<dt class="tag-overrides"><strong>Overrides:</strong> <a href="Loader.html#load">Loader#load</a></dt>
 						</dl>
 					</div>
-					<h3 class="name name-method" id="parse" translate="no">.<a href="#parse">parse</a><span class="signature">( buffer : <span class="param-type">ArrayBuffer | string</span> )</span><span class="type-signature"> : <a href="Group.html">Group</a></span> </h3>
+					<h3 class="name name-method" id="parse" translate="no">.<a href="#parse">parse</a><span class="signature">( buffer : <span class="param-type">ArrayBuffer | string</span>, path : <span class="param-type">string</span>, onLoad : <span class="param-type">function</span>, onError : <span class="param-type"><a href="global.html#onErrorCallback">onErrorCallback</a></span> )</span><span class="type-signature"> : <a href="Group.html">Group</a></span> </h3>
 					<div class="method">
 						<div class="description">
 							<p>Parses the given USDZ data and returns the resulting group.</p>
+<p>The returned group is created synchronously, but any referenced textures
+are loaded asynchronously. Provide <code>onLoad</code> to be notified once all
+textures have finished loading.</p>
 						</div>
 						<table class="params">
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>buffer</strong>
+										<strong translate="no">buffer</strong>
 									</td>
 									<td class="description last">
 										<p>The raw USDZ data as an array buffer.</p>
+									</td>
+								</tr>
+								<tr>
+									<td class="name">
+										<strong translate="no">path</strong>
+									</td>
+									<td class="description last">
+										<p>The URL base path.</p>
+										<p>Default is <code>''</code>.</p>
+									</td>
+								</tr>
+								<tr>
+									<td class="name">
+										<strong translate="no">onLoad</strong>
+									</td>
+									<td class="description last">
+										<p>Executed once the group and all of its textures are ready.</p>
+									</td>
+								</tr>
+								<tr>
+									<td class="name">
+										<strong translate="no">onError</strong>
+									</td>
+									<td class="description last">
+										<p>Executed when errors occur.</p>
 									</td>
 								</tr>
 							</tbody>

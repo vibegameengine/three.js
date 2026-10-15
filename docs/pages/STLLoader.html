@@ -21,6 +21,10 @@
 <li>There is perhaps some question as to how valid it is to always assume little-endian-ness.</li>
 <li>ASCII decoding assumes file is UTF-8.</li>
 </ul>
+<pre><code class="language-js">const loader = new STLLoader();
+const geometry = await loader.loadAsync( './models/stl/slotted_disk.stl' )
+scene.add( new THREE.Mesh( geometry ) );
+</code></pre>
 <p>For binary STLs geometry might contain colors for vertices. To use it:</p>
 <pre><code class="language-js">// use the same code to load STL as above
 if ( geometry.hasColors ) {
@@ -39,15 +43,10 @@ for ( let i = 0; i &lt; nGeometryGroups; i ++ ) {
 }
 const mesh = new THREE.Mesh(geometry, materials);
 </code></pre></div>
-				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const loader = new STLLoader();
-const geometry = await loader.loadAsync( './models/stl/slotted_disk.stl' )
-scene.add( new THREE.Mesh( geometry ) );
-</code></pre></div>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">STLLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">STLLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { STLLoader } from 'three/addons/loaders/STLLoader.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -60,7 +59,7 @@ scene.add( new THREE.Mesh( geometry ) );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>manager</strong>
+										<strong translate="no">manager</strong>
 									</td>
 									<td class="description last">
 										<p>The loading manager.</p>
@@ -81,7 +80,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>url</strong>
+										<strong translate="no">url</strong>
 									</td>
 									<td class="description last">
 										<p>The path/URL of the file to be loaded. This can also be a data URI.</p>
@@ -89,7 +88,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onLoad</strong>
+										<strong translate="no">onLoad</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when the loading process has been finished.</p>
@@ -97,7 +96,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onProgress</strong>
+										<strong translate="no">onProgress</strong>
 									</td>
 									<td class="description last">
 										<p>Executed while the loading is in progress.</p>
@@ -105,7 +104,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onError</strong>
+										<strong translate="no">onError</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when errors occur.</p>
@@ -126,7 +125,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>data</strong>
+										<strong translate="no">data</strong>
 									</td>
 									<td class="description last">
 										<p>The raw STL data as an array buffer.</p>

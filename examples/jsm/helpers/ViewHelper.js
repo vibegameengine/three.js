@@ -50,6 +50,14 @@ class ViewHelper extends Object3D {
 		this.isViewHelper = true;
 
 		/**
+		 * The camera whose transformation is visualized. It can be reassigned at
+		 * any time to rebind the helper to a different camera.
+		 *
+		 * @type {Camera}
+		 */
+		this.camera = camera;
+
+		/**
 		 * Whether the helper is currently animating or not.
 		 *
 		 * @type {boolean}
@@ -65,12 +73,28 @@ class ViewHelper extends Object3D {
 		 */
 		this.center = new Vector3();
 
+		/**
+		 * Controls the position of the helper in the viewport.
+		 * Use `top`/`bottom` for vertical positioning and `left`/`right` for horizontal.
+		 * If `left` is `null`, `right` is used. If `top` is `null`, `bottom` is used.
+		 *
+		 * @type {{top: number|null, right: number, bottom: number, left: number|null}}
+		 */
+		this.location = {
+			top: null,
+			right: 0,
+			bottom: 0,
+			left: null
+		};
+
 		const color1 = new Color( '#ff4466' );
 		const color2 = new Color( '#88ff44' );
 		const color3 = new Color( '#4488ff' );
 		const color4 = new Color( '#000000' );
 
 		const options = {};
+
+		const scope = this;
 
 		const interactiveObjects = [];
 		const raycaster = new Raycaster();
@@ -142,23 +166,46 @@ class ViewHelper extends Object3D {
 		const turnRate = 2 * Math.PI; // turn rate in angles per second
 
 		/**
-		 * Renders the helper in a separate view in the bottom-right corner
-		 * of the viewport.
+		 * Renders the helper in a separate view in the viewport.
+		 * Position is controlled by the `location` property.
 		 *
 		 * @param {WebGLRenderer|WebGPURenderer} renderer - The renderer.
 		 */
 		this.render = function ( renderer ) {
 
-			this.quaternion.copy( camera.quaternion ).invert();
+			this.quaternion.copy( this.camera.quaternion ).invert();
 			this.updateMatrixWorld();
 
 			point.set( 0, 0, 1 );
-			point.applyQuaternion( camera.quaternion );
+			point.applyQuaternion( this.camera.quaternion );
 
 			//
 
-			const x = domElement.offsetWidth - dim;
-			const y = renderer.isWebGPURenderer ? domElement.offsetHeight - dim : 0;
+			const location = this.location;
+
+			let x, y;
+
+			if ( location.left !== null ) {
+
+				x = location.left;
+
+			} else {
+
+				x = domElement.offsetWidth - dim - location.right;
+
+			}
+
+			if ( location.top !== null ) {
+
+				// Position from top
+				y = renderer.isWebGPURenderer ? location.top : domElement.offsetHeight - dim - location.top;
+
+			} else {
+
+				// Position from bottom
+				y = renderer.isWebGPURenderer ? domElement.offsetHeight - dim - location.bottom : location.bottom;
+
+			}
 
 			renderer.clearDepth();
 
@@ -191,10 +238,32 @@ class ViewHelper extends Object3D {
 			if ( this.animating === true ) return false;
 
 			const rect = domElement.getBoundingClientRect();
-			const offsetX = rect.left + ( domElement.offsetWidth - dim );
-			const offsetY = rect.top + ( domElement.offsetHeight - dim );
-			mouse.x = ( ( event.clientX - offsetX ) / ( rect.right - offsetX ) ) * 2 - 1;
-			mouse.y = - ( ( event.clientY - offsetY ) / ( rect.bottom - offsetY ) ) * 2 + 1;
+			const location = this.location;
+
+			let offsetX, offsetY;
+
+			if ( location.left !== null ) {
+
+				offsetX = rect.left + location.left;
+
+			} else {
+
+				offsetX = rect.left + domElement.offsetWidth - dim - location.right;
+
+			}
+
+			if ( location.top !== null ) {
+
+				offsetY = rect.top + location.top;
+
+			} else {
+
+				offsetY = rect.top + domElement.offsetHeight - dim - location.bottom;
+
+			}
+
+			mouse.x = ( ( event.clientX - offsetX ) / dim ) * 2 - 1;
+			mouse.y = - ( ( event.clientY - offsetY ) / dim ) * 2 + 1;
 
 			raycaster.setFromCamera( mouse, orthoCamera );
 
@@ -266,11 +335,11 @@ class ViewHelper extends Object3D {
 			// animate position by doing a slerp and then scaling the position on the unit sphere
 
 			q1.rotateTowards( q2, step );
-			camera.position.set( 0, 0, 1 ).applyQuaternion( q1 ).multiplyScalar( radius ).add( this.center );
+			this.camera.position.set( 0, 0, 1 ).applyQuaternion( q1 ).multiplyScalar( radius ).add( this.center );
 
 			// animate orientation
 
-			camera.quaternion.rotateTowards( targetQuaternion, step );
+			this.camera.quaternion.rotateTowards( targetQuaternion, step );
 
 			if ( q1.angleTo( q2 ) === 0 ) {
 
@@ -349,12 +418,12 @@ class ViewHelper extends Object3D {
 
 			//
 
-			radius = camera.position.distanceTo( focusPoint );
+			radius = scope.camera.position.distanceTo( focusPoint );
 			targetPosition.multiplyScalar( radius ).add( focusPoint );
 
 			dummy.position.copy( focusPoint );
 
-			dummy.lookAt( camera.position );
+			dummy.lookAt( scope.camera.position );
 			q1.copy( dummy.quaternion );
 
 			dummy.lookAt( targetPosition );

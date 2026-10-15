@@ -21,7 +21,7 @@ graphic settings).</p>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">DenoiseNode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">DenoiseNode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -34,7 +34,7 @@ graphic settings).</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>textureNode</strong>
+										<strong translate="no">textureNode</strong>
 									</td>
 									<td class="description last">
 										<p>The texture node that represents the input of the effect (e.g. AO).</p>
@@ -42,7 +42,7 @@ graphic settings).</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>depthNode</strong>
+										<strong translate="no">depthNode</strong>
 									</td>
 									<td class="description last">
 										<p>A node that represents the scene's depth.</p>
@@ -50,7 +50,7 @@ graphic settings).</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>normalNode</strong>
+										<strong translate="no">normalNode</strong>
 									</td>
 									<td class="description last">
 										<p>A node that represents the scene's normals.</p>
@@ -58,7 +58,7 @@ graphic settings).</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>camera</strong>
+										<strong translate="no">camera</strong>
 									</td>
 									<td class="description last">
 										<p>The camera the scene is rendered with.</p>
@@ -137,6 +137,16 @@ its internal uniforms once per frame in <code>updateBefore()</code>.</p>
 						</dl>
 				</div>
 				<h2 class="subsection-title">Methods</h2>
+					<h3 class="name name-method" id="dispose" translate="no">.<a href="#dispose">dispose</a><span class="signature">()</span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Frees internal resources. This method should be called
+when the effect is no longer required.</p>
+						</div>
+						<dl class="details">
+							<dt class="tag-overrides"><strong>Overrides:</strong> <a href="TempNode.html#dispose">TempNode#dispose</a></dt>
+						</dl>
+					</div>
 					<h3 class="name name-method" id="setup" translate="no">.<a href="#setup">setup</a><span class="signature">( builder : <span class="param-type"><a href="NodeBuilder.html">NodeBuilder</a></span> )</span><span class="type-signature"> : ShaderCallNodeInternal</span> </h3>
 					<div class="method">
 						<div class="description">
@@ -146,7 +156,7 @@ its internal uniforms once per frame in <code>updateBefore()</code>.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>builder</strong>
+										<strong translate="no">builder</strong>
 									</td>
 									<td class="description last">
 										<p>The current node builder.</p>
@@ -167,7 +177,7 @@ its internal uniforms once per frame in <code>updateBefore()</code>.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>frame</strong>
+										<strong translate="no">frame</strong>
 									</td>
 									<td class="description last">
 										<p>The current node frame.</p>

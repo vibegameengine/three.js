@@ -4,6 +4,10 @@
 		<title>three.js webgpu - postprocessing pixel</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - postprocessing pixel">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_postprocessing_pixel.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_postprocessing_pixel.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 
@@ -35,13 +39,15 @@
 
 		import * as THREE from 'three/webgpu';
 
+		import { SunLight } from 'three/addons/lights/SunLight.js';
+		import { SunLightNode } from 'three/addons/lights/SunLightNode.js';
 		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 		import { Inspector } from 'three/addons/inspector/Inspector.js';
 
 		import { uniform } from 'three/tsl';
 		import { pixelationPass } from 'three/addons/tsl/display/PixelationPassNode.js';
 
-		let camera, scene, renderer, postProcessing, crystalMesh, clock;
+		let camera, scene, renderer, renderPipeline, crystalMesh, timer;
 		let effectController;
 
 		init();
@@ -57,7 +63,8 @@
 			scene = new THREE.Scene();
 			scene.background = new THREE.Color( 0x151729 );
 
-			clock = new THREE.Clock();
+			timer = new THREE.Timer();
+			timer.connect( document );
 
 			// textures
 
@@ -115,12 +122,12 @@
 
 			scene.add( new THREE.AmbientLight( 0x757f8e, 3 ) );
 
-			const directionalLight = new THREE.DirectionalLight( 0xfffecd, 1.5 );
-			directionalLight.position.set( 100, 100, 100 );
-			directionalLight.castShadow = true;
-			directionalLight.shadow.mapSize.set( 2048, 2048 );
-			directionalLight.shadow.bias = - 0.0001;
-			scene.add( directionalLight );
+			const sunLight = new SunLight( 0xfffecd, 1.5 );
+			sunLight.position.set( 100, 100, 100 );
+			sunLight.castShadow = true;
+			sunLight.shadow.camera.far = 10;
+			sunLight.shadow.mapSize.set( 2048, 2048 );
+			scene.add( sunLight );
 
 			const spotLight = new THREE.SpotLight( 0xffc100, 10, 10, Math.PI / 16, .02, 2 );
 			spotLight.position.set( 2, 2, 0 );
@@ -128,10 +135,10 @@
 			scene.add( target );
 			target.position.set( 0, 0, 0 );
 			spotLight.castShadow = true;
-			spotLight.shadow.bias = - 0.001;
 			scene.add( spotLight );
 
 			renderer = new THREE.WebGPURenderer();
+			renderer.library.addLight( SunLightNode, SunLight );
 			renderer.setSize( window.innerWidth, window.innerHeight );
 			renderer.setAnimationLoop( animate );
 			renderer.inspector = new Inspector();
@@ -146,9 +153,9 @@
 				pixelAlignedPanning: true
 			};
 
-			postProcessing = new THREE.PostProcessing( renderer );
+			renderPipeline = new THREE.RenderPipeline( renderer );
 			const scenePass = pixelationPass( scene, camera, effectController.pixelSize, effectController.normalEdgeStrength, effectController.depthEdgeStrength );
-			postProcessing.outputNode = scenePass;
+			renderPipeline.outputNode = scenePass;
 
 			window.addEventListener( 'resize', onWindowResize );
 
@@ -178,7 +185,9 @@
 
 		function animate() {
 
-			const t = clock.getElapsedTime();
+			timer.update();
+
+			const t = timer.getElapsed();
 
 			crystalMesh.material.emissiveIntensity = Math.sin( t * 3 ) * .5 + .5;
 			crystalMesh.position.y = .7 + Math.sin( t * 2 ) * .05;
@@ -205,7 +214,7 @@
 
 			}
 
-			postProcessing.render();
+			renderPipeline.render();
 
 		}
 

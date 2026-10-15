@@ -21,7 +21,7 @@ so it looks along the selected axis.</p></div>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">ViewHelper</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">ViewHelper</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { ViewHelper } from 'three/addons/helpers/ViewHelper.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -34,7 +34,7 @@ so it looks along the selected axis.</p></div>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>camera</strong>
+										<strong translate="no">camera</strong>
 									</td>
 									<td class="description last">
 										<p>The camera whose transformation should be visualized.</p>
@@ -42,7 +42,7 @@ so it looks along the selected axis.</p></div>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>domElement</strong>
+										<strong translate="no">domElement</strong>
 									</td>
 									<td class="description last">
 										<p>The DOM element that is used to render the view.</p>
@@ -61,6 +61,13 @@ so it looks along the selected axis.</p></div>
 					</div>
 				</div>
 				<div class="member">
+					<h3 class="name" id="camera" translate="no">.<a href="#camera">camera</a><span class="type-signature"> : <a href="Camera.html">Camera</a></span> </h3>
+					<div class="description">
+						<p>The camera whose transformation is visualized. It can be reassigned at
+any time to rebind the helper to a different camera.</p>
+					</div>
+				</div>
+				<div class="member">
 					<h3 class="name" id="center" translate="no">.<a href="#center">center</a><span class="type-signature"> : <a href="Vector3.html">Vector3</a></span> </h3>
 					<div class="description">
 						<p>The helper's center point.</p>
@@ -73,6 +80,14 @@ so it looks along the selected axis.</p></div>
 						<p>Default is <code>true</code>.</p>
 					</div>
 				</div>
+				<div class="member">
+					<h3 class="name" id="location" translate="no">.<a href="#location">location</a><span class="type-signature"> : Object</span> </h3>
+					<div class="description">
+						<p>Controls the position of the helper in the viewport.
+Use <code>top</code>/<code>bottom</code> for vertical positioning and <code>left</code>/<code>right</code> for horizontal.
+If <code>left</code> is <code>null</code>, <code>right</code> is used. If <code>top</code> is <code>null</code>, <code>bottom</code> is used.</p>
+					</div>
+				</div>
 				<h2 class="subsection-title">Methods</h2>
 					<h3 class="name name-method" id="dispose" translate="no">.<a href="#dispose">dispose</a><span class="signature">()</span> </h3>
 					<div class="method">
@@ -80,6 +95,9 @@ so it looks along the selected axis.</p></div>
 							<p>Frees the GPU-related resources allocated by this instance. Call this
 method whenever this instance is no longer used in your app.</p>
 						</div>
+						<dl class="details">
+							<dt class="tag-overrides"><strong>Overrides:</strong> <a href="Object3D.html#dispose">Object3D#dispose</a></dt>
+						</dl>
 					</div>
 					<h3 class="name name-method" id="handleClick" translate="no">.<a href="#handleClick">handleClick</a><span class="signature">( event : <span class="param-type">PointerEvent</span> )</span><span class="type-signature"> : boolean</span> </h3>
 					<div class="method">
@@ -91,7 +109,7 @@ has happened in the app.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>event</strong>
+										<strong translate="no">event</strong>
 									</td>
 									<td class="description last">
 										<p>The event to process.</p>
@@ -106,14 +124,14 @@ has happened in the app.</p>
 					<h3 class="name name-method" id="render" translate="no">.<a href="#render">render</a><span class="signature">( renderer : <span class="param-type"><a href="WebGLRenderer.html">WebGLRenderer</a> | <a href="WebGPURenderer.html">WebGPURenderer</a></span> )</span> </h3>
 					<div class="method">
 						<div class="description">
-							<p>Renders the helper in a separate view in the bottom-right corner
-of the viewport.</p>
+							<p>Renders the helper in a separate view in the viewport.
+Position is controlled by the <code>location</code> property.</p>
 						</div>
 						<table class="params">
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>renderer</strong>
+										<strong translate="no">renderer</strong>
 									</td>
 									<td class="description last">
 										<p>The renderer.</p>
@@ -131,7 +149,7 @@ of the viewport.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>font</strong>
+										<strong translate="no">font</strong>
 									</td>
 									<td class="description last">
 										<p>The label font.</p>
@@ -140,7 +158,7 @@ of the viewport.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The label color.</p>
@@ -149,7 +167,7 @@ of the viewport.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>radius</strong>
+										<strong translate="no">radius</strong>
 									</td>
 									<td class="description last">
 										<p>The label radius.</p>
@@ -168,7 +186,7 @@ of the viewport.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>labelX</strong>
+										<strong translate="no">labelX</strong>
 									</td>
 									<td class="description last">
 										<p>The label for the x-axis.</p>
@@ -176,7 +194,7 @@ of the viewport.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>labelY</strong>
+										<strong translate="no">labelY</strong>
 									</td>
 									<td class="description last">
 										<p>The label for the y-axis.</p>
@@ -184,7 +202,7 @@ of the viewport.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>labelZ</strong>
+										<strong translate="no">labelZ</strong>
 									</td>
 									<td class="description last">
 										<p>The label for the z-axis.</p>
@@ -203,7 +221,7 @@ loop.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>delta</strong>
+										<strong translate="no">delta</strong>
 									</td>
 									<td class="description last">
 										<p>The delta time in seconds.</p>

@@ -4,6 +4,10 @@
 		<title>three.js webgpu - angular slicing</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - angular slicing">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_tsl_angular_slicing.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_tsl_angular_slicing.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -35,6 +39,9 @@
 
 			import * as THREE from 'three/webgpu';
 			import { If, TWO_PI, atan, color, frontFacing, output, positionLocal, Fn, uniform, vec4 } from 'three/tsl';
+
+			import { SunLight } from 'three/addons/lights/SunLight.js';
+			import { SunLightNode } from 'three/addons/lights/SunLightNode.js';
 
 			import { Inspector } from 'three/addons/inspector/Inspector.js';
 
@@ -68,18 +75,13 @@
 
 				// lights
 
-				const directionalLight = new THREE.DirectionalLight( '#ffffff', 4 );
-				directionalLight.position.set( 6.25, 3, 4 );
-				directionalLight.castShadow = true;
-				directionalLight.shadow.mapSize.set( 2048, 2048 );
-				directionalLight.shadow.camera.near = 0.1;
-				directionalLight.shadow.camera.far = 30;
-				directionalLight.shadow.camera.top = 8;
-				directionalLight.shadow.camera.right = 8;
-				directionalLight.shadow.camera.bottom = - 8;
-				directionalLight.shadow.camera.left = - 8;
-				directionalLight.shadow.normalBias = 0.05;
-				scene.add( directionalLight );
+				const sunLight = new SunLight( '#ffffff', 4 );
+				sunLight.position.set( 6.25, 3, 4 );
+				sunLight.castShadow = true;
+				sunLight.shadow.mapSize.set( 4096, 4096 );
+				sunLight.shadow.camera.far = 20;
+				sunLight.shadow.normalBias = 0.05;
+				scene.add( sunLight );
 
 				// TSL functions
 			
@@ -113,13 +115,16 @@
 				const sliceArc = uniform( 1.25 );
 				const sliceColor = uniform( color( '#b62f58' ) );
 
+				// mask
+
+				const mask = inAngle( positionLocal.xy, sliceStart, sliceArc ).not();
+
+				slicedMaterial.maskNode = mask;
+				//slicedMaterial.maskShadowNode = mask; // optional: custom mask shadows
+
 				// output
 
 				slicedMaterial.outputNode = Fn( () => {
-
-					// discard
-
-					inAngle( positionLocal.xy, sliceStart, sliceArc ).discard();
 
 					// backface color
 
@@ -134,22 +139,9 @@
 			
 				} )();
 
-				// shadow
-
-				slicedMaterial.castShadowNode = Fn( () => {
-
-					// discard
-
-					inAngle( positionLocal.xy, sliceStart, sliceArc ).discard();
-
-					return vec4( 0, 0, 0, 1 );
-			
-				} )();
-
 				// model
 
 				const dracoLoader = new DRACOLoader();
-				dracoLoader.setDecoderPath( 'jsm/libs/draco/' );
 
 				const gltfLoader = new GLTFLoader();
 				gltfLoader.setDRACOLoader( dracoLoader );
@@ -192,6 +184,7 @@
 				// renderer
 
 				renderer = new THREE.WebGPURenderer( { antialias: true } );
+				renderer.library.addLight( SunLightNode, SunLight );
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
 				renderer.toneMappingExposure = 1;
 				renderer.shadowMap.enabled = true;

@@ -7,7 +7,8 @@ import SetNode from '../utils/SetNode.js';
 import FlipNode from '../utils/FlipNode.js';
 import ConstNode from '../core/ConstNode.js';
 import MemberNode from '../utils/MemberNode.js';
-import { getValueFromType, getValueType } from '../core/NodeUtils.js';
+import StackTrace from '../core/StackTrace.js';
+import { getValueFromType, getValueType, isArrayAsParameter } from '../core/NodeUtils.js';
 import { warn, error } from '../../utils.js';
 
 let currentStack = null;
@@ -17,6 +18,8 @@ const NodeElements = new Map();
 // Extend Node Class for TSL using prototype
 
 export function addMethodChaining( name, nodeElement ) {
+
+	// No require StackTrace because this is internal API
 
 	if ( NodeElements.has( name ) ) {
 
@@ -66,7 +69,7 @@ Node.prototype.assign = function ( ...params ) {
 
 		} else {
 
-			error( 'TSL: No stack defined for assign operation. Make sure the assign is inside a Fn().' );
+			error( 'TSL: No stack defined for assign operation. Make sure the assign is inside a Fn().', new StackTrace() );
 
 		}
 
@@ -288,8 +291,6 @@ Object.defineProperties( Node.prototype, proto );
 
 // --- FINISH ---
 
-const nodeBuilderFunctionsCacheMap = new WeakMap();
-
 const ShaderNodeObject = function ( obj, altType = null ) {
 
 	const type = getValueType( obj );
@@ -374,13 +375,13 @@ const ShaderNodeProxy = function ( NodeClass, scope = null, factor = null, setti
 
 		if ( minParams !== undefined && params.length < minParams ) {
 
-			error( `TSL: "${ tslName }" parameter length is less than minimum required.` );
+			error( `TSL: "${ tslName }" parameter length is less than minimum required.`, new StackTrace() );
 
 			return params.concat( new Array( minParams - params.length ).fill( 0 ) );
 
 		} else if ( maxParams !== undefined && params.length > maxParams ) {
 
-			error( `TSL: "${ tslName }" parameter length exceeds limit.` );
+			error( `TSL: "${ tslName }" parameter length exceeds limit.`, new StackTrace() );
 
 			return params.slice( 0, maxParams );
 
@@ -458,7 +459,7 @@ class ShaderCallNodeInternal extends Node {
 
 	}
 
-	getNodeType( builder ) {
+	generateNodeType( builder ) {
 
 		return this.shaderNode.nodeType || this.getOutputNode( builder ).getNodeType( builder );
 
@@ -503,25 +504,51 @@ class ShaderCallNodeInternal extends Node {
 
 		if ( shaderNode.layout ) {
 
-			let functionNodesCacheMap = nodeBuilderFunctionsCacheMap.get( builder.constructor );
+			// build inputs first
 
-			if ( functionNodesCacheMap === undefined ) {
+			if ( rawInputs ) {
 
-				functionNodesCacheMap = new WeakMap();
+				// use layout inputs to ensure that no extra parameters are built
 
-				nodeBuilderFunctionsCacheMap.set( builder.constructor, functionNodesCacheMap );
+				const inputs = shaderNode.layout.inputs;
+
+				if ( isArrayAsParameter( rawInputs ) ) {
+
+					const rawArrayParameters = rawInputs;
+
+					for ( let i = 0; i < inputs.length; i ++ ) {
+
+						const rawParameter = rawArrayParameters[ i ];
+
+						if ( rawParameter && rawParameter.isNode ) {
+
+							rawParameter.build( builder );
+
+						}
+
+					}
+
+				} else {
+
+					const rawObjectParameters = rawInputs[ 0 ];
+
+					for ( const param of inputs ) {
+
+						const rawParameter = rawObjectParameters[ param.name ];
+
+						if ( rawParameter && rawParameter.isNode ) {
+
+							rawParameter.build( builder );
+
+						}
+
+					}
+
+				}
 
 			}
 
-			let functionNode = functionNodesCacheMap.get( shaderNode );
-
-			if ( functionNode === undefined ) {
-
-				functionNode = nodeObject( builder.buildFunctionNode( shaderNode ) );
-
-				functionNodesCacheMap.set( shaderNode, functionNode );
-
-			}
+			const functionNode = builder.buildFunctionNode( shaderNode );
 
 			builder.addInclude( functionNode );
 
@@ -529,7 +556,7 @@ class ShaderCallNodeInternal extends Node {
 
 			const inputs = rawInputs ? getLayoutParameters( rawInputs ) : null;
 
-			result = nodeObject( functionNode.call( inputs ) );
+			result = functionNode.call( inputs );
 
 		} else {
 
@@ -682,9 +709,7 @@ function getLayoutParameters( params ) {
 
 	nodeObjects( params );
 
-	const isArrayAsParameter = params[ 0 ] && ( params[ 0 ].isNode || Object.getPrototypeOf( params[ 0 ] ) !== Object.prototype );
-
-	if ( isArrayAsParameter ) {
+	if ( isArrayAsParameter( params ) ) {
 
 		output = [ ...params ];
 
@@ -871,7 +896,7 @@ const ConvertType = function ( type, cacheMap = null ) {
 
 			if ( param === undefined ) {
 
-				error( `TSL: Invalid parameter for the type "${ type }".` );
+				error( `TSL: Invalid parameter for the type "${ type }".`, new StackTrace() );
 
 				return new ConstNode( 0, type );
 
@@ -914,7 +939,25 @@ const ConvertType = function ( type, cacheMap = null ) {
 
 // exports
 
-export const defined = ( v ) => typeof v === 'object' && v !== null ? v.value : v; // TODO: remove boolean conversion and defined function
+export function defined( value ) {
+
+	if ( value && value.isNode ) {
+
+		value.traverse( ( node ) => {
+
+			if ( node.isConstNode ) {
+
+				value = node.value;
+
+			}
+
+		} );
+
+	}
+
+	return Boolean( value );
+
+}
 
 // utils
 
@@ -935,6 +978,26 @@ export const nodeArray = ( val, altType = null ) => new ShaderNodeArray( val, al
 export const nodeProxy = ( NodeClass, scope = null, factor = null, settings = null ) => new ShaderNodeProxy( NodeClass, scope, factor, settings );
 export const nodeImmutable = ( NodeClass, ...params ) => new ShaderNodeImmutable( NodeClass, ...params );
 export const nodeProxyIntent = ( NodeClass, scope = null, factor = null, settings = {} ) => new ShaderNodeProxy( NodeClass, scope, factor, { ...settings, intent: true } );
+
+export const nodeProxyConstructor = ( constructorFunction, nodeInstance ) => {
+
+	return new Proxy( constructorFunction, {
+
+		get( target, prop, receiver ) {
+
+			return Reflect.get( nodeInstance, prop, receiver );
+
+		},
+
+		set( target, prop, value ) {
+
+			return Reflect.set( nodeInstance, prop, value );
+
+		}
+
+	} );
+
+};
 
 let fnId = 0;
 
@@ -960,7 +1023,7 @@ class FnNode extends Node {
 
 				} else {
 
-					error( 'TSL: Invalid layout type.' );
+					error( 'TSL: Invalid layout type.', new StackTrace() );
 
 				}
 
@@ -1015,7 +1078,7 @@ class FnNode extends Node {
 
 	}
 
-	getNodeType( builder ) {
+	generateNodeType( builder ) {
 
 		return this.shaderNode.getNodeType( builder ) || 'float';
 
@@ -1044,7 +1107,7 @@ class FnNode extends Node {
 
 		const type = this.getNodeType( builder );
 
-		error( 'TSL: "Fn()" was declared but not invoked. Try calling it like "Fn()( ...params )".' );
+		error( 'TSL: "Fn()" was declared but not invoked. Try calling it like "Fn()( ...params )".', this.stackTrace );
 
 		return builder.generateConst( type );
 
@@ -1171,9 +1234,6 @@ export const mat2 = new ConvertType( 'mat2' );
 export const mat3 = new ConvertType( 'mat3' );
 export const mat4 = new ConvertType( 'mat4' );
 
-export const string = ( value = '' ) => new ConstNode( value, 'string' );
-export const arrayBuffer = ( value ) => new ConstNode( value, 'ArrayBuffer' );
-
 addMethodChaining( 'toColor', color );
 addMethodChaining( 'toFloat', float );
 addMethodChaining( 'toInt', int );
@@ -1198,32 +1258,8 @@ addMethodChaining( 'toMat4', mat4 );
 // basic nodes
 
 export const element = /*@__PURE__*/ nodeProxy( ArrayElementNode ).setParameterLength( 2 );
-export const convert = ( node, types ) => nodeObject( new ConvertNode( nodeObject( node ), types ) );
-export const split = ( node, channels ) => nodeObject( new SplitNode( nodeObject( node ), channels ) );
+export const convert = ( node, types ) => new ConvertNode( nodeObject( node ), types );
+export const split = ( node, channels ) => new SplitNode( nodeObject( node ), channels );
 
 addMethodChaining( 'element', element );
 addMethodChaining( 'convert', convert );
-
-// deprecated
-
-/**
- * @tsl
- * @function
- * @deprecated since r176. Use {@link Stack} instead.
- *
- * @param {Node} node - The node to add.
- * @returns {Function}
- */
-export const append = ( node ) => { // @deprecated, r176
-
-	warn( 'TSL: append() has been renamed to Stack().' );
-	return Stack( node );
-
-};
-
-addMethodChaining( 'append', ( node ) => { // @deprecated, r176
-
-	warn( 'TSL: .append() has been renamed to .toStack().' );
-	return Stack( node );
-
-} );

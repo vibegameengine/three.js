@@ -51,6 +51,13 @@ class Textures extends DataMap {
 		 */
 		this.info = info;
 
+		/**
+		 * A set of HTMLTextures that need paint updates.
+		 *
+		 * @type {Set<HTMLTexture>}
+		 */
+		this._htmlTextures = new Set();
+
 	}
 
 	/**
@@ -79,6 +86,9 @@ class Textures extends DataMap {
 
 		let textureNeedsUpdate = false;
 
+		const hasArrayDepthTexture = depthTexture !== undefined && depthTexture.image !== undefined && depthTexture.image.depth > 1;
+		const useArrayDepth = size.depth > 1 && ( renderTarget.useArrayDepthTexture || renderTarget.multiview || hasArrayDepthTexture );
+
 		if ( depthTexture === undefined && useDepthTexture ) {
 
 			depthTexture = new DepthTexture();
@@ -89,9 +99,14 @@ class Textures extends DataMap {
 			depthTexture.image.height = mipHeight;
 			depthTexture.image.depth = size.depth;
 			depthTexture.renderTarget = renderTarget;
-			depthTexture.isArrayTexture = renderTarget.multiview === true && size.depth > 1;
 
 			depthTextureMips[ activeMipmapLevel ] = depthTexture;
+
+		}
+
+		if ( depthTexture ) {
+
+			depthTexture.isArrayTexture = useArrayDepth;
 
 		}
 
@@ -99,12 +114,12 @@ class Textures extends DataMap {
 
 			textureNeedsUpdate = true;
 
-			if ( depthTexture ) {
+			if ( depthTexture && depthTexture.renderTarget === renderTarget ) {
 
 				depthTexture.needsUpdate = true;
 				depthTexture.image.width = mipWidth;
 				depthTexture.image.height = mipHeight;
-				depthTexture.image.depth = depthTexture.isArrayTexture ? depthTexture.image.depth : 1;
+				depthTexture.image.depth = useArrayDepth ? size.depth : 1;
 
 			}
 
@@ -122,7 +137,7 @@ class Textures extends DataMap {
 
 			textureNeedsUpdate = true;
 
-			if ( depthTexture ) {
+			if ( depthTexture && depthTexture.renderTarget === renderTarget ) {
 
 				depthTexture.needsUpdate = true;
 
@@ -164,6 +179,8 @@ class Textures extends DataMap {
 		if ( renderTargetData.initialized !== true ) {
 
 			renderTargetData.initialized = true;
+
+			this.info.memory.renderTargets ++;
 
 			// dispose
 
@@ -216,6 +233,56 @@ class Textures extends DataMap {
 			} else {
 
 				texture.type = UnsignedByteType;
+
+			}
+
+		}
+
+		// Ensure HTMLTexture elements are in the canvas before measuring size.
+
+		if ( texture.isHTMLTexture && texture.image ) {
+
+			const canvas = this.renderer.domElement;
+
+			if ( 'requestPaint' in canvas ) {
+
+				if ( ! canvas.hasAttribute( 'layoutsubtree' ) ) {
+
+					canvas.setAttribute( 'layoutsubtree', 'true' );
+
+				}
+
+				if ( texture.image.parentNode !== canvas ) {
+
+					canvas.appendChild( texture.image );
+
+				}
+
+				// Set up shared paint callback for all HTMLTextures.
+
+				if ( this._htmlTextures.size === 0 ) {
+
+					const htmlTextures = this._htmlTextures;
+
+					canvas.onpaint = ( event ) => {
+
+						const changed = event && event.changedElements;
+
+						for ( const t of htmlTextures ) {
+
+							if ( ! changed || changed.includes( t.image ) ) {
+
+								t.needsUpdate = true;
+
+							}
+
+						}
+
+					};
+
+				}
+
+				this._htmlTextures.add( texture );
 
 			}
 
@@ -326,10 +393,11 @@ class Textures extends DataMap {
 
 			textureData.initialized = true;
 			textureData.generation = texture.version;
+			textureData.bindGroups = new Set();
 
 			//
 
-			this.info.memory.textures ++;
+			this.info.createTexture( texture );
 
 			//
 
@@ -366,12 +434,12 @@ class Textures extends DataMap {
 	 * In WebGPU, samplers are objects like textures and it's possible to share
 	 * them when the texture parameters match.
 	 *
-	 * @param {Texture} texture - The texture to update the sampler for.
+	 * @param {Sampler} binding - The sampler binding to update.
 	 * @return {string} The current sampler key.
 	 */
-	updateSampler( texture ) {
+	updateSampler( binding ) {
 
-		return this.backend.updateSampler( texture );
+		return this.backend.updateSampler( binding );
 
 	}
 
@@ -395,7 +463,13 @@ class Textures extends DataMap {
 
 			if ( image.image !== undefined ) image = image.image;
 
-			if ( ( typeof HTMLVideoElement !== 'undefined' ) && ( image instanceof HTMLVideoElement ) ) {
+			if ( texture.isHTMLTexture ) {
+
+				target.width = image.offsetWidth || 1;
+				target.height = image.offsetHeight || 1;
+				target.depth = 1;
+
+			} else if ( ( typeof HTMLVideoElement !== 'undefined' ) && ( image instanceof HTMLVideoElement ) ) {
 
 				target.width = image.videoWidth || 1;
 				target.height = image.videoHeight || 1;
@@ -502,7 +576,7 @@ class Textures extends DataMap {
 
 			}
 
-			if ( depthTexture ) {
+			if ( depthTexture && depthTexture.renderTarget === renderTarget ) {
 
 				this._destroyTexture( depthTexture );
 
@@ -510,6 +584,8 @@ class Textures extends DataMap {
 
 			this.delete( renderTarget );
 			this.backend.delete( renderTarget );
+
+			this.info.memory.renderTargets --;
 
 		}
 
@@ -539,9 +615,45 @@ class Textures extends DataMap {
 			const isDefaultTexture = textureData.isDefaultTexture;
 			this.backend.destroyTexture( texture, isDefaultTexture );
 
+			// delete cached bind groups so they don't point to destroyed textures
+
+			if ( textureData.bindGroups ) {
+
+				for ( const bindGroup of textureData.bindGroups ) {
+
+					const bindingsData = this.backend.get( bindGroup );
+
+					bindingsData.groups = undefined;
+					bindingsData.versions = undefined;
+
+					// go through all bindings and if one points to the destroyed texture, trigger dispose as well
+
+					for ( const binding of bindGroup.bindings ) {
+
+						if ( binding.isSampler && binding.texture === texture ) {
+
+							if ( binding.isSampledTexture !== true ) {
+
+								this.backend.destroySampler( binding );
+
+							}
+
+							binding.reset();
+							binding.release();
+
+						}
+
+					}
+
+				}
+
+			}
+
+			this._htmlTextures.delete( texture );
+
 			this.delete( texture );
 
-			this.info.memory.textures --;
+			this.info.destroyTexture( texture );
 
 		}
 

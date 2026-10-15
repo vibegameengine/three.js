@@ -1,16 +1,11 @@
-import { float, vec2, vec4, If, Fn } from '../tsl/TSLBase.js';
+import { float, vec2, If, Fn } from '../tsl/TSLBase.js';
 import { reference } from '../accessors/ReferenceNode.js';
 import { texture } from '../accessors/TextureNode.js';
-import { mix, fract, step, max, clamp } from '../math/MathNode.js';
+import { step, max, clamp } from '../math/MathNode.js';
 import { add, sub } from '../math/OperatorNode.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
-import NodeMaterial from '../../materials/nodes/NodeMaterial.js';
-import { objectPosition } from '../accessors/Object3DNode.js';
-import { positionWorld } from '../accessors/Position.js';
 import { screenCoordinate } from '../display/ScreenNode.js';
 import { interleavedGradientNoise, vogelDiskSample } from '../utils/PostProcessingUtils.js';
-
-const shadowMaterialLib = /*@__PURE__*/ new WeakMap();
 
 /**
  * A shadow filtering function performing basic filtering. This is in fact an unfiltered version of the shadow map
@@ -87,85 +82,6 @@ export const PCFShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoord, 
 } );
 
 /**
- * A shadow filtering function performing PCF soft filtering.
- *
- * @method
- * @param {Object} inputs - The input parameter object.
- * @param {DepthTexture} inputs.depthTexture - A reference to the shadow map's texture data.
- * @param {Node<vec3>} inputs.shadowCoord - The shadow coordinates.
- * @param {LightShadow} inputs.shadow - The light shadow.
- * @return {Node<float>} The filtering result.
- */
-export const PCFSoftShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoord, shadow, depthLayer } ) => {
-
-	const depthCompare = ( uv, compare ) => {
-
-		let depth = texture( depthTexture, uv );
-
-		if ( depthTexture.isArrayTexture ) {
-
-			depth = depth.depth( depthLayer );
-
-		}
-
-		return depth.compare( compare );
-
-	};
-
-
-	const mapSize = reference( 'mapSize', 'vec2', shadow ).setGroup( renderGroup );
-
-	const texelSize = vec2( 1 ).div( mapSize );
-	const dx = texelSize.x;
-	const dy = texelSize.y;
-
-	const uv = shadowCoord.xy;
-	const f = fract( uv.mul( mapSize ).add( 0.5 ) );
-	uv.subAssign( f.mul( texelSize ) );
-
-	return add(
-		depthCompare( uv, shadowCoord.z ),
-		depthCompare( uv.add( vec2( dx, 0 ) ), shadowCoord.z ),
-		depthCompare( uv.add( vec2( 0, dy ) ), shadowCoord.z ),
-		depthCompare( uv.add( texelSize ), shadowCoord.z ),
-		mix(
-			depthCompare( uv.add( vec2( dx.negate(), 0 ) ), shadowCoord.z ),
-			depthCompare( uv.add( vec2( dx.mul( 2 ), 0 ) ), shadowCoord.z ),
-			f.x
-		),
-		mix(
-			depthCompare( uv.add( vec2( dx.negate(), dy ) ), shadowCoord.z ),
-			depthCompare( uv.add( vec2( dx.mul( 2 ), dy ) ), shadowCoord.z ),
-			f.x
-		),
-		mix(
-			depthCompare( uv.add( vec2( 0, dy.negate() ) ), shadowCoord.z ),
-			depthCompare( uv.add( vec2( 0, dy.mul( 2 ) ) ), shadowCoord.z ),
-			f.y
-		),
-		mix(
-			depthCompare( uv.add( vec2( dx, dy.negate() ) ), shadowCoord.z ),
-			depthCompare( uv.add( vec2( dx, dy.mul( 2 ) ) ), shadowCoord.z ),
-			f.y
-		),
-		mix(
-			mix(
-				depthCompare( uv.add( vec2( dx.negate(), dy.negate() ) ), shadowCoord.z ),
-				depthCompare( uv.add( vec2( dx.mul( 2 ), dy.negate() ) ), shadowCoord.z ),
-				f.x
-			),
-			mix(
-				depthCompare( uv.add( vec2( dx.negate(), dy.mul( 2 ) ) ), shadowCoord.z ),
-				depthCompare( uv.add( vec2( dx.mul( 2 ), dy.mul( 2 ) ) ), shadowCoord.z ),
-				f.x
-			),
-			f.y
-		)
-	).mul( 1 / 9 );
-
-} );
-
-/**
  * A shadow filtering function performing VSM filtering.
  *
  * @method
@@ -174,7 +90,7 @@ export const PCFSoftShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoo
  * @param {Node<vec3>} inputs.shadowCoord - The shadow coordinates.
  * @return {Node<float>} The filtering result.
  */
-export const VSMShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoord, depthLayer } ) => {
+export const VSMShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoord, depthLayer }, builder ) => {
 
 	let distribution = texture( depthTexture ).sample( shadowCoord.xy );
 
@@ -189,104 +105,25 @@ export const VSMShadowFilter = /*@__PURE__*/ Fn( ( { depthTexture, shadowCoord, 
 	const mean = distribution.x;
 	const variance = max( 0.0000001, distribution.y.mul( distribution.y ) );
 
-	const hardShadow = step( shadowCoord.z, mean );
+	const hardShadow = ( builder.renderer.reversedDepthBuffer ) ? step( mean, shadowCoord.z ) : step( shadowCoord.z, mean );
 
-	// Early return if fully lit
-	If( hardShadow.equal( 1.0 ), () => {
+	const output = float( 1 ).toVar(); // default, fully lit
 
-		return float( 1.0 );
+	If( hardShadow.notEqual( 1.0 ), () => {
+
+		// Distance from mean
+		const d = shadowCoord.z.sub( mean );
+
+		// Chebyshev's inequality for upper bound on probability
+		let p_max = variance.div( variance.add( d.mul( d ) ) );
+
+		// Reduce light bleeding by remapping [amount, 1] to [0, 1]
+		p_max = clamp( sub( p_max, 0.3 ).div( 0.65 ) );
+
+		output.assign( max( hardShadow, p_max ) );
 
 	} );
-
-	// Distance from mean
-	const d = shadowCoord.z.sub( mean );
-
-	// Chebyshev's inequality for upper bound on probability
-	let p_max = variance.div( variance.add( d.mul( d ) ) );
-
-	// Reduce light bleeding by remapping [amount, 1] to [0, 1]
-	p_max = clamp( sub( p_max, 0.3 ).div( 0.65 ) );
-
-	return max( hardShadow, p_max );
+	return output;
 
 } );
 
-//
-
-const linearDistance = /*@__PURE__*/ Fn( ( [ position, cameraNear, cameraFar ] ) => {
-
-	let dist = positionWorld.sub( position ).length();
-	dist = dist.sub( cameraNear ).div( cameraFar.sub( cameraNear ) );
-	dist = dist.saturate(); // clamp to [ 0, 1 ]
-
-	return dist;
-
-} );
-
-const linearShadowDistance = ( light ) => {
-
-	const camera = light.shadow.camera;
-
-	const nearDistance = reference( 'near', 'float', camera ).setGroup( renderGroup );
-	const farDistance = reference( 'far', 'float', camera ).setGroup( renderGroup );
-
-	const referencePosition = objectPosition( light );
-
-	return linearDistance( referencePosition, nearDistance, farDistance );
-
-};
-
-/**
- * Retrieves or creates a shadow material for the given light source.
- *
- * This function checks if a shadow material already exists for the provided light.
- * If not, it creates a new `NodeMaterial` configured for shadow rendering and stores it
- * in the `shadowMaterialLib` for future use.
- *
- * @tsl
- * @function
- * @param {Light} light - The light source for which the shadow material is needed.
- *                         If the light is a point light, a depth node is calculated
- *                         using the linear shadow distance.
- * @returns {NodeMaterial} The shadow material associated with the given light.
- */
-export const getShadowMaterial = ( light ) => {
-
-	let material = shadowMaterialLib.get( light );
-
-	if ( material === undefined ) {
-
-		const depthNode = light.isPointLight ? linearShadowDistance( light ) : null;
-
-		material = new NodeMaterial();
-		material.colorNode = vec4( 0, 0, 0, 1 );
-		material.depthNode = depthNode;
-		material.isShadowPassMaterial = true; // Use to avoid other overrideMaterial override material.colorNode unintentionally when using material.shadowNode
-		material.name = 'ShadowMaterial';
-		material.fog = false;
-
-		shadowMaterialLib.set( light, material );
-
-	}
-
-	return material;
-
-};
-
-/**
- * Disposes the shadow material for the given light source.
- *
- * @param {Light} light - The light source.
- */
-export const disposeShadowMaterial = ( light ) => {
-
-	const material = shadowMaterialLib.get( light );
-
-	if ( material !== undefined ) {
-
-		material.dispose();
-		shadowMaterialLib.delete( light );
-
-	}
-
-};

@@ -16,7 +16,7 @@
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">CSMFrustum</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">CSMFrustum</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { CSMFrustum } from 'three/addons/csm/CSMFrustum.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -29,7 +29,7 @@
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>data</strong>
+										<strong translate="no">data</strong>
 									</td>
 									<td class="description last">
 										<p>The CSM data.</p>
@@ -45,6 +45,12 @@
 					<div class="description">
 						<p>An object representing the vertices of the near and
 far plane in view space.</p>
+					</div>
+				</div>
+				<div class="member">
+					<h3 class="name" id="zFar" translate="no">.<a href="#zFar">zFar</a><span class="type-signature"> : number</span> </h3>
+					<div class="description">
+						<p>The zFar value.</p>
 					</div>
 				</div>
 				<div class="member">
@@ -65,7 +71,7 @@ conventions for their projection matrices.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>projectionMatrix</strong>
+										<strong translate="no">projectionMatrix</strong>
 									</td>
 									<td class="description last">
 										<p>The projection matrix, usually of the scene's camera.</p>
@@ -73,7 +79,7 @@ conventions for their projection matrices.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>maxFar</strong>
+										<strong translate="no">maxFar</strong>
 									</td>
 									<td class="description last">
 										<p>The maximum far value.</p>
@@ -95,7 +101,7 @@ target array.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>breaks</strong>
+										<strong translate="no">breaks</strong>
 									</td>
 									<td class="description last">
 										<p>An array of numbers in the range <code>[0,1]</code> the defines how the
@@ -104,7 +110,7 @@ CSM frustum should be split up.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The target array that holds the new CSM frustums.</p>
@@ -123,7 +129,7 @@ given camera matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>cameraMatrix</strong>
+										<strong translate="no">cameraMatrix</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix that defines the new coordinate system.</p>
@@ -131,7 +137,7 @@ given camera matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The CSM to convert.</p>
@@ -156,6 +162,16 @@ given camera matrix.</p>
 				</td>
 			<td class="description last">
 				<p>Whether this CSM frustum is used with WebGL or WebGPU.</p>
+			</td>
+		</tr>
+		<tr>
+				<td class="name">
+					<strong>reversedDepth</strong>
+						<br>
+<span class="param-type">boolean</span>
+				</td>
+			<td class="description last">
+				<p>Whether reversed depth buffer is enabled.</p>
 			</td>
 		</tr>
 		<tr>

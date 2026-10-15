@@ -131,11 +131,28 @@ function SidebarScene( editor ) {
 
 	const outliner = new UIOutliner( editor );
 	outliner.setId( 'outliner' );
-	outliner.onChange( function () {
+	outliner.onChange( function ( event ) {
+
+		const id = parseInt( outliner.getValue() );
+
+		if ( event.shiftKey === true && editor.selector.selection.length > 0 && editor.selected !== editor.scene && editor.selected !== editor.camera ) {
+
+			const object = ( id === editor.camera.id ) ? editor.camera : editor.scene.getObjectById( id );
+
+			// scene and main camera can't be part of a group selection
+
+			if ( object !== editor.scene && object !== editor.camera ) {
+
+				editor.selector.toggle( object );
+				return;
+
+			}
+
+		}
 
 		ignoreObjectSelectedSignal = true;
 
-		editor.selectById( parseInt( outliner.getValue() ) );
+		editor.selectById( id );
 
 		ignoreObjectSelectedSignal = false;
 
@@ -154,12 +171,13 @@ function SidebarScene( editor ) {
 
 	const backgroundType = new UISelect().setOptions( {
 
-		'None': '',
+		'Default': 'Default',
 		'Color': 'Color',
 		'Texture': 'Texture',
 		'Equirectangular': 'Equirect'
 
 	} ).setWidth( '150px' );
+	backgroundType.setValue( 'Default' );
 	backgroundType.onChange( function () {
 
 		onBackgroundChanged();
@@ -233,7 +251,7 @@ function SidebarScene( editor ) {
 
 		const type = backgroundType.getValue();
 
-		backgroundType.setWidth( type === 'None' ? '150px' : '110px' );
+		backgroundType.setWidth( type === 'Default' ? '150px' : '110px' );
 		backgroundColor.setDisplay( type === 'Color' ? '' : 'none' );
 		backgroundTexture.setDisplay( type === 'Texture' ? '' : 'none' );
 		backgroundEquirectangularTexture.setDisplay( type === 'Equirectangular' ? '' : 'none' );
@@ -257,13 +275,12 @@ function SidebarScene( editor ) {
 
 	const environmentType = new UISelect().setOptions( {
 
-		'None': '',
-		'Background': 'Background',
+		'Default': 'Default',
 		'Equirectangular': 'Equirect',
-		'Room': 'Room'
+		'None': 'None'
 
 	} ).setWidth( '150px' );
-	environmentType.setValue( 'None' );
+	environmentType.setValue( 'Default' );
 	environmentType.onChange( function () {
 
 		onEnvironmentChanged();
@@ -327,7 +344,7 @@ function SidebarScene( editor ) {
 	const fogTypeRow = new UIRow();
 	const fogType = new UISelect().setOptions( {
 
-		'None': '',
+		'None': 'None',
 		'Fog': 'Linear',
 		'FogExp2': 'Exponential'
 
@@ -414,64 +431,55 @@ function SidebarScene( editor ) {
 
 			outliner.setValue( editor.selected.id );
 
+		} else {
+
+			const selection = editor.selector.selection;
+
+			if ( selection.length > 1 ) {
+
+				// restore highlights of a group selection (e.g. after a graph change)
+
+				outliner.setValues( selection.map( ( object ) => object.id ) );
+
+			}
+
 		}
 
-		if ( scene.background ) {
+		backgroundType.setValue( editor.backgroundType );
 
-			if ( scene.background.isColor ) {
+		switch ( editor.backgroundType ) {
 
-				backgroundType.setValue( 'Color' );
+			case 'Color':
 				backgroundColor.setHexValue( scene.background.getHex() );
+				break;
 
-			} else if ( scene.background.isTexture ) {
-
-				if ( scene.background.mapping === THREE.EquirectangularReflectionMapping ) {
-
-					backgroundType.setValue( 'Equirectangular' );
-					backgroundEquirectangularTexture.setValue( scene.background );
-					backgroundBlurriness.setValue( scene.backgroundBlurriness );
-					backgroundIntensity.setValue( scene.backgroundIntensity );
-
-				} else {
-
-					backgroundType.setValue( 'Texture' );
-					backgroundTexture.setValue( scene.background );
-
-				}
-
+			case 'Texture':
+				backgroundTexture.setValue( scene.background );
 				backgroundColorSpace.setValue( scene.background.colorSpace );
+				break;
 
-			}
+			case 'Equirectangular':
+				backgroundEquirectangularTexture.setValue( scene.background );
+				backgroundBlurriness.setValue( scene.backgroundBlurriness );
+				backgroundIntensity.setValue( scene.backgroundIntensity );
+				backgroundColorSpace.setValue( scene.background.colorSpace );
+				break;
 
-		} else {
-
-			backgroundType.setValue( 'None' );
-			backgroundTexture.setValue( null );
-			backgroundEquirectangularTexture.setValue( null );
-			backgroundColorSpace.setValue( THREE.NoColorSpace );
+			default:
+				backgroundTexture.setValue( null );
+				backgroundEquirectangularTexture.setValue( null );
+				backgroundColorSpace.setValue( THREE.NoColorSpace );
 
 		}
 
-		if ( scene.environment ) {
+		environmentType.setValue( editor.environmentType );
 
-			if ( scene.background && scene.background.isTexture && scene.background.uuid === scene.environment.uuid ) {
+		if ( editor.environmentType === 'Equirectangular' ) {
 
-				environmentType.setValue( 'Background' );
-
-			} else if ( scene.environment.mapping === THREE.EquirectangularReflectionMapping ) {
-
-				environmentType.setValue( 'Equirectangular' );
-				environmentEquirectangularTexture.setValue( scene.environment );
-
-			} else if ( scene.environment.isRenderTargetTexture === true ) {
-
-				environmentType.setValue( 'Room' );
-
-			}
+			environmentEquirectangularTexture.setValue( scene.environment );
 
 		} else {
 
-			environmentType.setValue( 'None' );
 			environmentEquirectangularTexture.setValue( null );
 
 		}
@@ -524,7 +532,7 @@ function SidebarScene( editor ) {
 
 	signals.sceneGraphChanged.add( refreshUI );
 
-	signals.refreshSidebarEnvironment.add( refreshUI );
+	signals.cameraResetted.add( refreshUI );
 
 	signals.objectChanged.add( function ( object ) {
 
@@ -538,9 +546,9 @@ function SidebarScene( editor ) {
 
 				const openerElement = option.querySelector( ':scope > .opener' );
 
-				const openerHTML = openerElement ? openerElement.outerHTML : '';
+				option.innerHTML = buildHTML( object );
 
-				option.innerHTML = openerHTML + buildHTML( object );
+				if ( openerElement !== null ) option.insertBefore( openerElement, option.firstChild );
 
 				return;
 
@@ -563,29 +571,56 @@ function SidebarScene( editor ) {
 	} );
 
 
+	function expandAncestors( object ) {
+
+		let needsRefresh = false;
+		let parent = object.parent;
+
+		while ( parent !== editor.scene ) {
+
+			if ( nodeStates.get( parent ) !== true ) {
+
+				nodeStates.set( parent, true );
+				needsRefresh = true;
+
+			}
+
+			parent = parent.parent;
+
+		}
+
+		return needsRefresh;
+
+	}
+
 	signals.objectSelected.add( function ( object ) {
 
 		if ( ignoreObjectSelectedSignal === true ) return;
 
-		if ( object !== null && object.parent !== null ) {
+		const selection = editor.selector.selection;
+
+		if ( selection.length > 1 ) {
+
+			// highlight all members of a group selection
 
 			let needsRefresh = false;
-			let parent = object.parent;
 
-			while ( parent !== editor.scene ) {
+			const values = [];
 
-				if ( nodeStates.get( parent ) !== true ) {
+			for ( let i = 0; i < selection.length; i ++ ) {
 
-					nodeStates.set( parent, true );
-					needsRefresh = true;
-
-				}
-
-				parent = parent.parent;
+				values.push( selection[ i ].id );
+				needsRefresh = expandAncestors( selection[ i ] ) || needsRefresh;
 
 			}
 
 			if ( needsRefresh ) refreshUI();
+
+			outliner.setValues( values );
+
+		} else if ( object !== null && object.parent !== null ) {
+
+			if ( expandAncestors( object ) ) refreshUI();
 
 			outliner.setValue( object.id );
 

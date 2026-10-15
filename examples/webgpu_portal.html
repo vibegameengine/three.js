@@ -4,6 +4,10 @@
 		<title>three.js webgpu - portal</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - portal">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_portal.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_portal.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -43,7 +47,7 @@
 			import { Inspector } from 'three/addons/inspector/Inspector.js';
 
 			let camera, sceneMain, scenePortal, renderer;
-			let clock;
+			let timer;
 
 			const mixers = [];
 
@@ -68,7 +72,8 @@
 				camera.position.multiplyScalar( .8 );
 				camera.lookAt( 0, 1, 0 );
 
-				clock = new THREE.Clock();
+				timer = new THREE.Timer();
+				timer.connect( document );
 
 				// lights
 
@@ -182,7 +187,9 @@
 
 			function animate() {
 
-				const delta = clock.getDelta();
+				timer.update();
+
+				const delta = timer.getDelta();
 
 				for ( const mixer of mixers ) {
 

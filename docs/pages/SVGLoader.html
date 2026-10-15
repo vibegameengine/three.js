@@ -41,7 +41,7 @@ scene.add( group );
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">SVGLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">SVGLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -54,7 +54,7 @@ scene.add( group );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>manager</strong>
+										<strong translate="no">manager</strong>
 									</td>
 									<td class="description last">
 										<p>The loading manager.</p>
@@ -90,7 +90,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>url</strong>
+										<strong translate="no">url</strong>
 									</td>
 									<td class="description last">
 										<p>The path/URL of the file to be loaded. This can also be a data URI.</p>
@@ -98,7 +98,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onLoad</strong>
+										<strong translate="no">onLoad</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when the loading process has been finished.</p>
@@ -106,7 +106,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onProgress</strong>
+										<strong translate="no">onProgress</strong>
 									</td>
 									<td class="description last">
 										<p>Executed while the loading is in progress.</p>
@@ -114,7 +114,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onError</strong>
+										<strong translate="no">onError</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when errors occur.</p>
@@ -135,7 +135,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>text</strong>
+										<strong translate="no">text</strong>
 									</td>
 									<td class="description last">
 										<p>The raw SVG data as a string.</p>
@@ -152,6 +152,27 @@ SVG XML document.</dt>
 						</dl>
 					</div>
 				<h2 class="subsection-title">Static Methods</h2>
+					<h3 class="name name-method" id=".createFillMaterial" translate="no">.<a href="#.createFillMaterial">createFillMaterial</a><span class="signature">( shapePath : <span class="param-type"><a href="ShapePath.html">ShapePath</a></span> )</span><span class="type-signature"> : <a href="MeshBasicMaterial.html">MeshBasicMaterial</a></span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Creates a material for rendering the fill of the given path.</p>
+						</div>
+						<table class="params">
+							<tbody>
+								<tr>
+									<td class="name">
+										<strong translate="no">shapePath</strong>
+									</td>
+									<td class="description last">
+										<p>The shape path.</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> The fill material. <code>null</code> if the path has no fill.</dt>
+						</dl>
+					</div>
 					<h3 class="name name-method" id=".createShapes" translate="no">.<a href="#.createShapes">createShapes</a><span class="signature">( shapePath : <span class="param-type"><a href="ShapePath.html">ShapePath</a></span> )</span><span class="type-signature"> : Array.&lt;<a href="Shape.html">Shape</a>></span> </h3>
 					<div class="method">
 						<div class="description">
@@ -161,7 +182,7 @@ SVG XML document.</dt>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>shapePath</strong>
+										<strong translate="no">shapePath</strong>
 									</td>
 									<td class="description last">
 										<p>The shape path.</p>
@@ -170,7 +191,31 @@ SVG XML document.</dt>
 							</tbody>
 						</table>
 						<dl class="details">
+							<dt class="important tag-deprecated"><strong>Deprecated:</strong> since 185.</dt>
+						</dl>
+						<dl class="details">
 							<dt class="tag-returns"><strong>Returns:</strong> An array of shapes.</dt>
+						</dl>
+					</div>
+					<h3 class="name name-method" id=".createStrokeMaterial" translate="no">.<a href="#.createStrokeMaterial">createStrokeMaterial</a><span class="signature">( shapePath : <span class="param-type"><a href="ShapePath.html">ShapePath</a></span> )</span><span class="type-signature"> : <a href="MeshBasicMaterial.html">MeshBasicMaterial</a></span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Creates a material for rendering the stroke of the given path.</p>
+						</div>
+						<table class="params">
+							<tbody>
+								<tr>
+									<td class="name">
+										<strong translate="no">shapePath</strong>
+									</td>
+									<td class="description last">
+										<p>The shape path.</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> The stroke material. <code>null</code> if the path has no stroke.</dt>
 						</dl>
 					</div>
 					<h3 class="name name-method" id=".getStrokeStyle" translate="no">.<a href="#.getStrokeStyle">getStrokeStyle</a><span class="signature">( width : <span class="param-type">number</span>, color : <span class="param-type">string</span>, lineJoin : <span class="param-type">'round' | 'bevel' | 'miter' | 'miter-limit'</span>, lineCap : <span class="param-type">'round' | 'square' | 'butt'</span>, miterLimit : <span class="param-type">number</span> )</span><span class="type-signature"> : Object</span> </h3>
@@ -182,7 +227,7 @@ SVG XML document.</dt>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>width</strong>
+										<strong translate="no">width</strong>
 									</td>
 									<td class="description last">
 										<p>The stroke width.</p>
@@ -191,7 +236,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The stroke color, as  returned by <a href="Color.html#getStyle">Color#getStyle</a>.</p>
@@ -200,7 +245,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>lineJoin</strong>
+										<strong translate="no">lineJoin</strong>
 									</td>
 									<td class="description last">
 										<p>The line join style.</p>
@@ -209,7 +254,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>lineCap</strong>
+										<strong translate="no">lineCap</strong>
 									</td>
 									<td class="description last">
 										<p>The line cap style.</p>
@@ -218,7 +263,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>miterLimit</strong>
+										<strong translate="no">miterLimit</strong>
 									</td>
 									<td class="description last">
 										<p>Maximum join length, in multiples of the <code>width</code> parameter (join is truncated if it exceeds that distance).</p>
@@ -240,7 +285,7 @@ SVG XML document.</dt>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>points</strong>
+										<strong translate="no">points</strong>
 									</td>
 									<td class="description last">
 										<p>The points in 2D space. Minimum 2 points. The path can be open or closed (last point equals to first point).</p>
@@ -248,7 +293,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>style</strong>
+										<strong translate="no">style</strong>
 									</td>
 									<td class="description last">
 										<p>Object with SVG properties as returned by <code>SVGLoader.getStrokeStyle()</code>, or <code>SVGLoader.parse()</code> in the <code>path.userData.style</code> object.</p>
@@ -256,7 +301,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>arcDivisions</strong>
+										<strong translate="no">arcDivisions</strong>
 									</td>
 									<td class="description last">
 										<p>Arc divisions for round joins and endcaps.</p>
@@ -265,7 +310,7 @@ SVG XML document.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>minDistance</strong>
+										<strong translate="no">minDistance</strong>
 									</td>
 									<td class="description last">
 										<p>Points closer to this distance will be merged.</p>
@@ -288,7 +333,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>points</strong>
+										<strong translate="no">points</strong>
 									</td>
 									<td class="description last">
 										<p>The points in 2D space. Minimum 2 points.</p>
@@ -296,7 +341,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>style</strong>
+										<strong translate="no">style</strong>
 									</td>
 									<td class="description last">
 										<p>Object with SVG properties as returned by <code>SVGLoader.getStrokeStyle()</code>, or <code>SVGLoader.parse()</code> in the <code>path.userData.style</code> object.</p>
@@ -304,7 +349,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>arcDivisions</strong>
+										<strong translate="no">arcDivisions</strong>
 									</td>
 									<td class="description last">
 										<p>Arc divisions for round joins and endcaps.</p>
@@ -313,7 +358,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>minDistance</strong>
+										<strong translate="no">minDistance</strong>
 									</td>
 									<td class="description last">
 										<p>Points closer to this distance will be merged.</p>
@@ -322,7 +367,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>vertices</strong>
+										<strong translate="no">vertices</strong>
 									</td>
 									<td class="description last">
 										<p>An array holding vertices.</p>
@@ -330,7 +375,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>normals</strong>
+										<strong translate="no">normals</strong>
 									</td>
 									<td class="description last">
 										<p>An array holding normals.</p>
@@ -338,7 +383,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>uvs</strong>
+										<strong translate="no">uvs</strong>
 									</td>
 									<td class="description last">
 										<p>An array holding uvs.</p>
@@ -346,7 +391,7 @@ Returns <code>null</code> if not geometry was generated.</dt>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>vertexOffset</strong>
+										<strong translate="no">vertexOffset</strong>
 									</td>
 									<td class="description last">
 										<p>The vertex offset.</p>

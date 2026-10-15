@@ -16,6 +16,9 @@
 color space</i>, which defaults to <code>LinearSRGBColorSpace</code>. Inputs
 conventionally using <code>SRGBColorSpace</code> (such as hexadecimals and CSS
 strings) are converted to the working color space automatically.</p>
+<pre><code class="language-js">// converted automatically from SRGBColorSpace to LinearSRGBColorSpace
+const color = new THREE.Color().setHex( 0x112233 );
+</code></pre>
 <p>Source color spaces may be specified explicitly, to ensure correct conversions.</p>
 <pre><code class="language-js">// assumed already LinearSRGBColorSpace; no conversion
 const color = new THREE.Color().setRGB( 0.5, 0.5, 0.5 );
@@ -41,10 +44,6 @@ const color6 = new THREE.Color(&quot;hsl(0, 100%, 50%)&quot;);
 //Separate RGB values between 0 and 1
 const color7 = new THREE.Color( 1, 0, 0 );
 </code></pre></div>
-				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">// converted automatically from SRGBColorSpace to LinearSRGBColorSpace
-const color = new THREE.Color().setHex( 0x112233 );
-</code></pre></div>
 			</header>
 			<article>
 				<div class="container-overview">
@@ -60,7 +59,7 @@ and that method is used throughout the rest of the documentation.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>r</strong>
+										<strong translate="no">r</strong>
 									</td>
 									<td class="description last">
 										<p>The red component of the color. If <code>g</code> and <code>b</code> are
@@ -69,7 +68,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>g</strong>
+										<strong translate="no">g</strong>
 									</td>
 									<td class="description last">
 										<p>The green component.</p>
@@ -77,7 +76,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>b</strong>
+										<strong translate="no">b</strong>
 									</td>
 									<td class="description last">
 										<p>The blue component.</p>
@@ -133,7 +132,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to add.</p>
@@ -154,7 +153,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color1</strong>
+										<strong translate="no">color1</strong>
 									</td>
 									<td class="description last">
 										<p>The first color.</p>
@@ -162,7 +161,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>color2</strong>
+										<strong translate="no">color2</strong>
 									</td>
 									<td class="description last">
 										<p>The second color.</p>
@@ -183,7 +182,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>s</strong>
+										<strong translate="no">s</strong>
 									</td>
 									<td class="description last">
 										<p>The scalar to add.</p>
@@ -204,7 +203,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>m</strong>
+										<strong translate="no">m</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix.</p>
@@ -252,7 +251,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to copy.</p>
@@ -274,7 +273,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to copy/convert.</p>
@@ -296,7 +295,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to copy/convert.</p>
@@ -317,7 +316,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>c</strong>
+										<strong translate="no">c</strong>
 									</td>
 									<td class="description last">
 										<p>The color to test for equality.</p>
@@ -338,7 +337,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>array</strong>
+										<strong translate="no">array</strong>
 									</td>
 									<td class="description last">
 										<p>An array holding the RGB values.</p>
@@ -346,7 +345,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>offset</strong>
+										<strong translate="no">offset</strong>
 									</td>
 									<td class="description last">
 										<p>The offset into the array.</p>
@@ -368,7 +367,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>attribute</strong>
+										<strong translate="no">attribute</strong>
 									</td>
 									<td class="description last">
 										<p>The buffer attribute holding color data.</p>
@@ -376,7 +375,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>index</strong>
+										<strong translate="no">index</strong>
 									</td>
 									<td class="description last">
 										<p>The index into the attribute.</p>
@@ -398,7 +397,7 @@ given target object.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The target object that is used to store the method's result.</p>
@@ -406,7 +405,7 @@ given target object.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -428,7 +427,7 @@ given target object.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -450,7 +449,7 @@ given target object.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -472,7 +471,7 @@ given target object.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The target color that is used to store the method's result.</p>
@@ -480,7 +479,7 @@ given target object.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -502,7 +501,7 @@ given target object.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -526,7 +525,7 @@ the two colors, where <code>0.0</code> is this color and <code>1.0</code> is the
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to converge on.</p>
@@ -534,7 +533,7 @@ the two colors, where <code>0.0</code> is this color and <code>1.0</code> is the
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>alpha</strong>
+										<strong translate="no">alpha</strong>
 									</td>
 									<td class="description last">
 										<p>The interpolation factor in the closed interval <code>[0,1]</code>.</p>
@@ -557,7 +556,7 @@ is the first and <code>1.0</code> is the second color.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color1</strong>
+										<strong translate="no">color1</strong>
 									</td>
 									<td class="description last">
 										<p>The first color.</p>
@@ -565,7 +564,7 @@ is the first and <code>1.0</code> is the second color.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>color2</strong>
+										<strong translate="no">color2</strong>
 									</td>
 									<td class="description last">
 										<p>The second color.</p>
@@ -573,7 +572,7 @@ is the first and <code>1.0</code> is the second color.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>alpha</strong>
+										<strong translate="no">alpha</strong>
 									</td>
 									<td class="description last">
 										<p>The interpolation factor in the closed interval <code>[0,1]</code>.</p>
@@ -598,7 +597,7 @@ the two colors, where 0.0 is this color and 1.0 is the first argument.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to converge on.</p>
@@ -606,7 +605,7 @@ the two colors, where 0.0 is this color and 1.0 is the first argument.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>alpha</strong>
+										<strong translate="no">alpha</strong>
 									</td>
 									<td class="description last">
 										<p>The interpolation factor in the closed interval <code>[0,1]</code>.</p>
@@ -627,7 +626,7 @@ the two colors, where 0.0 is this color and 1.0 is the first argument.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to multiply.</p>
@@ -648,7 +647,7 @@ the two colors, where 0.0 is this color and 1.0 is the first argument.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>s</strong>
+										<strong translate="no">s</strong>
 									</td>
 									<td class="description last">
 										<p>The scalar to multiply.</p>
@@ -671,7 +670,7 @@ and then converts the color back to RGB.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>h</strong>
+										<strong translate="no">h</strong>
 									</td>
 									<td class="description last">
 										<p>Hue value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -679,7 +678,7 @@ and then converts the color back to RGB.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>s</strong>
+										<strong translate="no">s</strong>
 									</td>
 									<td class="description last">
 										<p>Saturation value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -687,7 +686,7 @@ and then converts the color back to RGB.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>l</strong>
+										<strong translate="no">l</strong>
 									</td>
 									<td class="description last">
 										<p>Lightness value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -708,7 +707,7 @@ and then converts the color back to RGB.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>r</strong>
+										<strong translate="no">r</strong>
 									</td>
 									<td class="description last">
 										<p>The red component of the color. If <code>g</code> and <code>b</code> are
@@ -717,7 +716,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>g</strong>
+										<strong translate="no">g</strong>
 									</td>
 									<td class="description last">
 										<p>The green component.</p>
@@ -725,7 +724,7 @@ not provided, it can be hexadecimal triplet, a CSS-style string or another <code
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>b</strong>
+										<strong translate="no">b</strong>
 									</td>
 									<td class="description last">
 										<p>The blue component.</p>
@@ -750,7 +749,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>style</strong>
+										<strong translate="no">style</strong>
 									</td>
 									<td class="description last">
 										<p>The color name.</p>
@@ -758,7 +757,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -780,7 +779,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>v</strong>
+										<strong translate="no">v</strong>
 									</td>
 									<td class="description last">
 										<p>The vector to set.</p>
@@ -801,7 +800,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>h</strong>
+										<strong translate="no">h</strong>
 									</td>
 									<td class="description last">
 										<p>Hue value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -809,7 +808,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>s</strong>
+										<strong translate="no">s</strong>
 									</td>
 									<td class="description last">
 										<p>Saturation value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -817,7 +816,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>l</strong>
+										<strong translate="no">l</strong>
 									</td>
 									<td class="description last">
 										<p>Lightness value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -825,7 +824,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -847,7 +846,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>hex</strong>
+										<strong translate="no">hex</strong>
 									</td>
 									<td class="description last">
 										<p>The hexadecimal value.</p>
@@ -855,7 +854,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -877,7 +876,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>r</strong>
+										<strong translate="no">r</strong>
 									</td>
 									<td class="description last">
 										<p>Red channel value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -885,7 +884,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>g</strong>
+										<strong translate="no">g</strong>
 									</td>
 									<td class="description last">
 										<p>Green channel value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -893,7 +892,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>b</strong>
+										<strong translate="no">b</strong>
 									</td>
 									<td class="description last">
 										<p>Blue channel value between <code>0.0</code> and <code>1.0</code>.</p>
@@ -901,7 +900,7 @@ you don't need the other CSS-style formats.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -923,7 +922,7 @@ you don't need the other CSS-style formats.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>scalar</strong>
+										<strong translate="no">scalar</strong>
 									</td>
 									<td class="description last">
 										<p>The scalar value.</p>
@@ -947,7 +946,7 @@ all 140 color names are supported).</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>style</strong>
+										<strong translate="no">style</strong>
 									</td>
 									<td class="description last">
 										<p>Color as a CSS-style string.</p>
@@ -955,7 +954,7 @@ all 140 color names are supported).</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>colorSpace</strong>
+										<strong translate="no">colorSpace</strong>
 									</td>
 									<td class="description last">
 										<p>The color space.</p>
@@ -977,7 +976,7 @@ all 140 color names are supported).</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>color</strong>
+										<strong translate="no">color</strong>
 									</td>
 									<td class="description last">
 										<p>The color to subtract.</p>
@@ -999,7 +998,7 @@ the method returns a new instance.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>array</strong>
+										<strong translate="no">array</strong>
 									</td>
 									<td class="description last">
 										<p>The target array holding the color components.</p>
@@ -1008,7 +1007,7 @@ the method returns a new instance.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>offset</strong>
+										<strong translate="no">offset</strong>
 									</td>
 									<td class="description last">
 										<p>Index of the first element in the array.</p>

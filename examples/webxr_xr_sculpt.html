@@ -9,7 +9,8 @@
 	<body>
 
 		<div id="info">
-			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> xr - sculpt
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> xr - sculpt<br/>
+			Trigger to sculpt. Squeeze to toggle negative. Thumbstick to cycle tools.
 		</div>
 
 		<script type="importmap">
@@ -25,135 +26,196 @@
 
 			import * as THREE from 'three';
 			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-			import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 			import { XRButton } from 'three/addons/webxr/XRButton.js';
+			import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+			import { Sculptor } from 'three/addons/misc/Sculptor.js';
 
-			let container;
-			let camera, scene, renderer;
-			let controller1, controller2;
+			let renderer, scene, camera, controls;
+			let controller1, controller2, controllerGrip1, controllerGrip2;
+			let sculptor, mesh;
+			let cursor1, cursor2;
+			let activeController = null;
 
-			let controls, blob;
+			const tools = [ 'clay', 'brush', 'inflate', 'smooth', 'flatten', 'pinch', 'crease' ];
+			let toolIndex = 0;
+			const brushRadius = 0.06;
+			const strokeInterval = 1000 / 90;
+			const maxStrokesPerFrame = 4;
 
-			let points = [];
+			const _ray = new THREE.Ray();
 
 			init();
-			initBlob();
 
 			function init() {
 
-				container = document.createElement( 'div' );
-				document.body.appendChild( container );
-
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( 0x222222 );
-
-				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 50 );
-				camera.position.set( 0, 1.6, 3 );
-
-				controls = new OrbitControls( camera, container );
-				controls.target.set( 0, 1.6, 0 );
-				controls.update();
-
-				const grid = new THREE.GridHelper( 4, 1, 0x111111, 0x111111 );
-				scene.add( grid );
-
-				scene.add( new THREE.HemisphereLight( 0x888877, 0x777788, 3 ) );
-
-				const light = new THREE.DirectionalLight( 0xffffff, 3 );
-				light.position.set( 0, 6, 0 );
-				scene.add( light );
-
-				//
+				// Renderer
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.setAnimationLoop( animate );
 				renderer.xr.enabled = true;
-				container.appendChild( renderer.domElement );
+				document.body.appendChild( renderer.domElement );
 
 				document.body.appendChild( XRButton.createButton( renderer ) );
 
-				// controllers
+				// Scene
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x222222 );
+
+				// Camera
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 50 );
+				camera.position.set( 0, 1.6, 3 );
+
+				// Controls
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.target.set( 0, 1.2, - 0.8 );
+				controls.update();
+
+				// Lights
+
+				scene.add( new THREE.HemisphereLight( 0x888877, 0x777788, 3 ) );
+
+				const dirLight = new THREE.DirectionalLight( 0xffffff, 3 );
+				dirLight.position.set( 1, 3, 2 );
+				scene.add( dirLight );
+
+				// Grid
+
+				const grid = new THREE.GridHelper( 4, 1, 0x111111, 0x111111 );
+				scene.add( grid );
+
+				// Mesh
+
+				const geometry = new THREE.IcosahedronGeometry( 0.3, 24 );
+				const material = new THREE.MeshStandardMaterial( {
+					color: 0xcc6644,
+					roughness: 0.4,
+					metalness: 0.1
+				} );
+				mesh = new THREE.Mesh( geometry, material );
+				mesh.position.set( 0, 1.2, - 0.8 );
+				scene.add( mesh );
+
+				// Sculptor
+
+				sculptor = new Sculptor( mesh, camera )
+					.setTool( tools[ toolIndex ] );
+
+				// Controllers
+
+				const controllerModelFactory = new XRControllerModelFactory();
 
 				function onSelectStart() {
 
-					this.userData.isSelecting = true;
+					if ( activeController !== null ) return;
+
+					activeController = this;
+					this.userData.nextStrokeTime = null;
+					sculptor.beginStroke();
 
 				}
 
 				function onSelectEnd() {
 
-					this.userData.isSelecting = false;
+					if ( activeController !== this ) return;
+
+					activeController = null;
+					sculptor.endStroke();
+
+				}
+
+				function onSqueezeStart() {
+
+					if ( activeController !== null ) return;
+
+					sculptor.setNegative( ! sculptor.getNegative() );
+
+				}
+
+				function onConnected( event ) {
+
+					this.userData.inputSource = event.data;
+					this.userData.thumbMoved = false;
+
+				}
+
+				function onDisconnected() {
+
+					this.userData.inputSource = null;
+					this.userData.thumbMoved = false;
+
+					onSelectEnd.call( this );
 
 				}
 
 				controller1 = renderer.xr.getController( 0 );
+				controller1.addEventListener( 'connected', onConnected );
+				controller1.addEventListener( 'disconnected', onDisconnected );
 				controller1.addEventListener( 'selectstart', onSelectStart );
 				controller1.addEventListener( 'selectend', onSelectEnd );
-				controller1.userData.id = 0;
+				controller1.addEventListener( 'squeezestart', onSqueezeStart );
 				scene.add( controller1 );
 
 				controller2 = renderer.xr.getController( 1 );
+				controller2.addEventListener( 'connected', onConnected );
+				controller2.addEventListener( 'disconnected', onDisconnected );
 				controller2.addEventListener( 'selectstart', onSelectStart );
 				controller2.addEventListener( 'selectend', onSelectEnd );
-				controller2.userData.id = 1;
+				controller2.addEventListener( 'squeezestart', onSqueezeStart );
 				scene.add( controller2 );
 
-				//
+				renderer.xr.addEventListener( 'sessionend', function () {
 
-				const pivot = new THREE.Mesh( new THREE.IcosahedronGeometry( 0.01, 3 ) );
-				pivot.name = 'pivot';
-				pivot.position.z = - 0.05;
+					activeController = null;
+					sculptor.endStroke();
+					cursor1.visible = cursor2.visible = false;
 
-				const group = new THREE.Group();
-				group.add( pivot );
-
-				controller1.add( group.clone() );
-				controller2.add( group.clone() );
-
-				//
-
-				window.addEventListener( 'resize', onWindowResize );
-
-			}
-
-			function initBlob() {
-
-				/*
-				const path = 'textures/cube/SwedishRoyalCastle/';
-				const format = '.jpg';
-				const urls = [
-					path + 'px' + format, path + 'nx' + format,
-					path + 'py' + format, path + 'ny' + format,
-					path + 'pz' + format, path + 'nz' + format
-				];
-
-				const reflectionCube = new THREE.CubeTextureLoader().load( urls );
-				*/
-
-				const material = new THREE.MeshStandardMaterial( {
-					color: 0xffffff,
-					// envMap: reflectionCube,
-					roughness: 0.9,
-					metalness: 0.0,
-					transparent: true
 				} );
 
-				blob = new MarchingCubes( 64, material, false, false, 500000 );
-				blob.position.y = 1;
-				scene.add( blob );
+				controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+				controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+				scene.add( controllerGrip1 );
 
-				initPoints();
+				controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+				controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+				scene.add( controllerGrip2 );
 
-			}
+				// Controller rays
 
-			function initPoints() {
+				const lineGeometry = new THREE.BufferGeometry().setFromPoints( [
+					new THREE.Vector3( 0, 0, 0 ),
+					new THREE.Vector3( 0, 0, - 5 )
+				] );
+				const lineMaterial = new THREE.LineBasicMaterial( { color: 0xffffff, transparent: true, opacity: 0.25 } );
 
-				points = [
-					{ position: new THREE.Vector3(), strength: 0.04, subtract: 10 },
-					{ position: new THREE.Vector3(), strength: - 0.08, subtract: 10 }
-				];
+				controller1.add( new THREE.Line( lineGeometry, lineMaterial ) );
+				controller2.add( new THREE.Line( lineGeometry, lineMaterial ) );
+
+				// Brush cursors
+
+				const cursorGeo = new THREE.SphereGeometry( 1, 16, 12 );
+				const cursorMat = new THREE.MeshBasicMaterial( {
+					color: 0xffffff,
+					transparent: true,
+					opacity: 0.15,
+					depthWrite: false
+				} );
+
+				cursor1 = new THREE.Mesh( cursorGeo, cursorMat );
+				cursor1.visible = false;
+				scene.add( cursor1 );
+
+				cursor2 = new THREE.Mesh( cursorGeo, cursorMat.clone() );
+				cursor2.visible = false;
+				scene.add( cursor2 );
+
+				// Resize
+
+				window.addEventListener( 'resize', onWindowResize );
 
 			}
 
@@ -161,42 +223,86 @@
 
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
-
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
 			}
 
-			//
+			function handleController( controller, cursor, time ) {
 
-			function transformPoint( vector ) {
+				const inputSource = controller.userData.inputSource;
 
-				vector.x = ( vector.x + 1.0 ) / 2.0;
-				vector.y = ( vector.y / 2.0 );
-				vector.z = ( vector.z + 1.0 ) / 2.0;
+				// Pause while tracking is lost; the controller retains its last pose.
+				if ( ! inputSource || controller.visible === false ) {
 
-			}
+					cursor.visible = false;
+					controller.userData.nextStrokeTime = null;
+					return;
 
-			function handleController( controller ) {
+				}
 
-				const pivot = controller.getObjectByName( 'pivot' );
+				controller.updateMatrixWorld( true );
 
-				if ( pivot ) {
+				_ray.origin.setFromMatrixPosition( controller.matrixWorld );
+				_ray.direction.set( 0, 0, - 1 ).transformDirection( controller.matrixWorld );
 
-					const id = controller.userData.id;
-					const matrix = pivot.matrixWorld;
+				let hit = false;
+				let strokes = 0;
 
-					points[ id ].position.setFromMatrixPosition( matrix );
-					transformPoint( points[ id ].position );
+				if ( controller === activeController ) {
 
-					if ( controller.userData.isSelecting ) {
+					if ( controller.userData.nextStrokeTime === null ) controller.userData.nextStrokeTime = time;
 
-						const strength = points[ id ].strength / 2;
+					// Stamp at a fixed rate, independent of the headset refresh rate.
+					while ( time >= controller.userData.nextStrokeTime && strokes < maxStrokesPerFrame ) {
 
-						const vector = new THREE.Vector3().setFromMatrixPosition( matrix );
+						hit = sculptor.strokeFromRay( _ray, brushRadius );
+						controller.userData.nextStrokeTime += strokeInterval;
+						strokes ++;
 
-						transformPoint( vector );
+					}
 
-						points.push( { position: vector, strength: strength, subtract: 10 } );
+					// Bound catch-up work after long frames.
+					if ( time >= controller.userData.nextStrokeTime ) controller.userData.nextStrokeTime = time + strokeInterval;
+
+				}
+
+				if ( strokes === 0 ) hit = sculptor.pickFromRay( _ray, brushRadius );
+
+				if ( hit ) {
+
+					sculptor.getHitPoint( cursor.position ).applyMatrix4( mesh.matrixWorld );
+					cursor.scale.setScalar( brushRadius );
+					cursor.visible = true;
+
+				} else {
+
+					cursor.visible = false;
+
+				}
+
+				// Latch thumbstick input until it returns to center.
+				if ( inputSource.gamepad ) {
+
+					const axes = inputSource.gamepad.axes;
+					if ( axes.length >= 4 ) {
+
+						const thumbX = axes[ 2 ];
+						if ( ! controller.userData.thumbMoved && Math.abs( thumbX ) > 0.8 ) {
+
+							controller.userData.thumbMoved = true;
+
+							if ( activeController === null ) {
+
+								toolIndex = ( toolIndex + ( thumbX > 0 ? 1 : tools.length - 1 ) ) % tools.length;
+								sculptor.setTool( tools[ toolIndex ] );
+
+							}
+
+						} else if ( Math.abs( thumbX ) < 0.3 ) {
+
+							controller.userData.thumbMoved = false;
+
+						}
 
 					}
 
@@ -204,30 +310,12 @@
 
 			}
 
-			function updateBlob() {
+			function animate( time ) {
 
-				blob.reset();
+				handleController( controller1, cursor1, time );
+				handleController( controller2, cursor2, time );
 
-				for ( let i = 0; i < points.length; i ++ ) {
-
-					const point = points[ i ];
-					const position = point.position;
-
-					blob.addBall( position.x, position.y, position.z, point.strength, point.subtract );
-
-				}
-
-				blob.update();
-
-			}
-
-			function animate() {
-
-				handleController( controller1 );
-				handleController( controller2 );
-
-				updateBlob();
-
+				controls.update();
 				renderer.render( scene, camera );
 
 			}

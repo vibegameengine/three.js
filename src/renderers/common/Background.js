@@ -22,7 +22,7 @@ class Background extends DataMap {
 	 * Constructs a new background management component.
 	 *
 	 * @param {Renderer} renderer - The renderer.
-	 * @param {Nodes} nodes - Renderer component for managing nodes related logic.
+	 * @param {NodeManager} nodes - Renderer component for managing nodes related logic.
 	 */
 	constructor( renderer, nodes ) {
 
@@ -38,7 +38,7 @@ class Background extends DataMap {
 		/**
 		 * Renderer component for managing nodes related logic.
 		 *
-		 * @type {Nodes}
+		 * @type {NodeManager}
 		 */
 		this.nodes = nodes;
 
@@ -107,8 +107,11 @@ class Background extends DataMap {
 				// compute vertex position
 				const modifiedPosition = isOrtho.select( positionLocal.mul( orthoScale ), positionLocal );
 
-				// By using a w component of 0, the skybox will not translate when the camera moves through the scene
-				let viewProj = cameraProjectionMatrix.mul( modelViewMatrix.mul( vec4( modifiedPosition, 0.0 ) ) );
+				// by using a w component of 0, the skybox will not translate when the camera moves through the scene
+				const viewPosition = modelViewMatrix.mul( vec4( modifiedPosition, 0.0 ) );
+
+				// we force w=1.0 here to prevent the w_clip=0 divide-by-zero error for ortho cameras.
+				let viewProj = cameraProjectionMatrix.mul( vec4( viewPosition.xyz, 1.0 ) );
 
 				// force background to far plane so it does not occlude objects
 				viewProj = viewProj.setZ( viewProj.w );
@@ -200,8 +203,8 @@ class Background extends DataMap {
 
 			//
 
-			renderContext.depthClearValue = renderer._clearDepth;
-			renderContext.stencilClearValue = renderer._clearStencil;
+			renderContext.depthClearValue = renderer.getClearDepth();
+			renderContext.stencilClearValue = renderer.getClearStencil();
 
 			renderContext.clearColor = renderer.autoClearColor === true;
 			renderContext.clearDepth = renderer.autoClearDepth === true;

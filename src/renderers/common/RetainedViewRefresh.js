@@ -1,4 +1,5 @@
 import { NodeUpdateType } from '../../nodes/core/constants.js';
+import { RenderObjectRefreshType } from '../../constants.js';
 import { objectGroup } from '../../nodes/core/UniformGroupNode.js';
 
 const _bindingIds = new WeakMap();
@@ -45,12 +46,16 @@ export function refreshRepresentatives( renderObjects ) {
 export function refreshFully( renderer, renderObject ) {
 
 	const nodes = renderer._nodes;
+	const refreshType = renderer._refreshTypeOf( renderObject );
 
-	if ( nodes.needsRefresh( renderObject ) === false || renderer._refreshedWithMaterial( renderObject ) === true ) return;
+	if ( refreshType === RenderObjectRefreshType.NONE ) return;
 
 	nodes.updateBefore( renderObject );
 	nodes.updateForRender( renderObject );
-	renderer._bindings.updateForRender( renderObject );
+
+	if ( refreshType === RenderObjectRefreshType.FULL ) renderer._bindings.updateForRender( renderObject );
+	else renderer._bindings.updateSharedForRender( renderObject );
+
 	nodes.updateAfter( renderObject );
 
 }
@@ -63,7 +68,7 @@ export function refreshShared( renderer, renderObject, sources ) {
 
 	nodes.updateBefore( renderObject );
 	nodes.updateLiveForRender( renderObject, sources.liveNodes );
-	renderer._bindings.updateSharedForRender( renderObject );
+	renderer._bindings.updateViewGroupsForRender( renderObject );
 	nodes.updateAfter( renderObject );
 
 }

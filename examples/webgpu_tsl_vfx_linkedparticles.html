@@ -4,6 +4,10 @@
 		<title>three.js webgpu - vfx linked particles</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - vfx linked particles">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_tsl_vfx_linkedparticles.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_tsl_vfx_linkedparticles.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -43,7 +47,7 @@
 
 			import WebGPU from 'three/addons/capabilities/WebGPU.js';
 
-			let camera, scene, renderer, postProcessing, controls, timer, light;
+			let camera, scene, renderer, renderPipeline, controls, timer, light;
 
 			let updateParticles, spawnParticles; // TSL compute nodes
 			let getInstanceColor; // TSL function
@@ -356,14 +360,14 @@
 
 				// post processing
 
-				postProcessing = new THREE.PostProcessing( renderer );
+				renderPipeline = new THREE.RenderPipeline( renderer );
 
 				const scenePass = pass( scene, camera );
 				const scenePassColor = scenePass.getTextureNode( 'output' );
 
 				const bloomPass = bloom( scenePassColor, 0.75, 0.1, 0.5 );
 
-				postProcessing.outputNode = scenePassColor.add( bloomPass );
+				renderPipeline.outputNode = scenePassColor.add( bloomPass );
 
 				// controls
 
@@ -462,7 +466,7 @@
 
 				controls.update();
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

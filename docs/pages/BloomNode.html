@@ -14,10 +14,16 @@
 		<section>
 			<header>
 				<div class="class-description"><p>Post processing node for creating a bloom effect.</p>
+<pre><code class="language-js">const renderPipeline = new THREE.RenderPipeline( renderer );
+const scenePass = pass( scene, camera );
+const scenePassColor = scenePass.getTextureNode( 'output' );
+const bloomPass = bloom( scenePassColor );
+renderPipeline.outputNode = scenePassColor.add( bloomPass );
+</code></pre>
 <p>By default, the node affects the entire image. For a selective bloom,
 use the <code>emissive</code> material property to control which objects should
 contribute to bloom or not. This can be achieved via MRT.</p>
-<pre><code class="language-js">const postProcessing = new THREE.PostProcessing( renderer );
+<pre><code class="language-js">const renderPipeline = new THREE.RenderPipeline( renderer );
 const scenePass = pass( scene, camera );
 scenePass.setMRT( mrt( {
 	output,
@@ -26,19 +32,12 @@ scenePass.setMRT( mrt( {
 const scenePassColor = scenePass.getTextureNode( 'output' );
 const emissivePass = scenePass.getTextureNode( 'emissive' );
 const bloomPass = bloom( emissivePass );
-postProcessing.outputNode = scenePassColor.add( bloomPass );
-</code></pre></div>
-				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const postProcessing = new THREE.PostProcessing( renderer );
-const scenePass = pass( scene, camera );
-const scenePassColor = scenePass.getTextureNode( 'output' );
-const bloomPass = bloom( scenePassColor );
-postProcessing.outputNode = scenePassColor.add( bloomPass );
+renderPipeline.outputNode = scenePassColor.add( bloomPass );
 </code></pre></div>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">BloomNode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">BloomNode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { bloom } from 'three/addons/tsl/display/BloomNode.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -51,7 +50,7 @@ postProcessing.outputNode = scenePassColor.add( bloomPass );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>inputNode</strong>
+										<strong translate="no">inputNode</strong>
 									</td>
 									<td class="description last">
 										<p>The node that represents the input of the effect.</p>
@@ -59,7 +58,7 @@ postProcessing.outputNode = scenePassColor.add( bloomPass );
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>strength</strong>
+										<strong translate="no">strength</strong>
 									</td>
 									<td class="description last">
 										<p>The strength of the bloom.</p>
@@ -68,7 +67,7 @@ postProcessing.outputNode = scenePassColor.add( bloomPass );
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>radius</strong>
+										<strong translate="no">radius</strong>
 									</td>
 									<td class="description last">
 										<p>The radius of the bloom.</p>
@@ -77,7 +76,7 @@ postProcessing.outputNode = scenePassColor.add( bloomPass );
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>threshold</strong>
+										<strong translate="no">threshold</strong>
 									</td>
 									<td class="description last">
 										<p>The luminance threshold limits which bright areas contribute to the bloom effect.</p>
@@ -89,6 +88,20 @@ postProcessing.outputNode = scenePassColor.add( bloomPass );
 					</div>
 				</div>
 				<h2 class="subsection-title">Properties</h2>
+				<div class="member">
+					<h3 class="name" id="bloomTintColors" translate="no">.<a href="#bloomTintColors">bloomTintColors</a><span class="type-signature"> : Array.&lt;<a href="Vector3.html">Vector3</a>></span> </h3>
+					<div class="description">
+						<p>A per-mip tint color for the bloom, applied during the composite pass.
+Defaults to white (no tint) for each of the mips. Mutate the vectors to
+colorize the bloom (e.g. for a warm or anamorphic look).</p>
+					</div>
+				</div>
+				<div class="member">
+					<h3 class="name" id="highPassFn" translate="no">.<a href="#highPassFn">highPassFn</a><span class="type-signature"> : function</span> </h3>
+					<div class="description">
+						<p>Can be used to inject a custom high pass filter (e.g., for anamorphic effects).</p>
+					</div>
+				</div>
 				<div class="member">
 					<h3 class="name" id="inputNode" translate="no">.<a href="#inputNode">inputNode</a><span class="type-signature"> : <a href="Node.html">Node</a>.&lt;vec4></span> </h3>
 					<div class="description">
@@ -141,6 +154,15 @@ when the effect is no longer required.</p>
 							<dt class="tag-overrides"><strong>Overrides:</strong> <a href="TempNode.html#dispose">TempNode#dispose</a></dt>
 						</dl>
 					</div>
+					<h3 class="name name-method" id="getResolutionScale" translate="no">.<a href="#getResolutionScale">getResolutionScale</a><span class="signature">()</span><span class="type-signature"> : number</span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Gets the current resolution scale of the pass.</p>
+						</div>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> The current resolution scale. A value of <code>1</code> means full resolution.</dt>
+						</dl>
+					</div>
 					<h3 class="name name-method" id="getTextureNode" translate="no">.<a href="#getTextureNode">getTextureNode</a><span class="signature">()</span><span class="type-signature"> : <a href="PassTextureNode.html">PassTextureNode</a></span> </h3>
 					<div class="method">
 						<div class="description">
@@ -148,6 +170,28 @@ when the effect is no longer required.</p>
 						</div>
 						<dl class="details">
 							<dt class="tag-returns"><strong>Returns:</strong> A texture node that represents the result of the effect.</dt>
+						</dl>
+					</div>
+					<h3 class="name name-method" id="setResolutionScale" translate="no">.<a href="#setResolutionScale">setResolutionScale</a><span class="signature">( resolutionScale : <span class="param-type">number</span> )</span><span class="type-signature"> : <a href="BloomNode.html">BloomNode</a></span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Sets the resolution scale for the pass.
+The resolution scale is a factor that is multiplied with the renderer's width and height.</p>
+						</div>
+						<table class="params">
+							<tbody>
+								<tr>
+									<td class="name">
+										<strong translate="no">resolutionScale</strong>
+									</td>
+									<td class="description last">
+										<p>The resolution scale to set. A value of <code>1</code> means full resolution.</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> A reference to this node.</dt>
 						</dl>
 					</div>
 					<h3 class="name name-method" id="setSize" translate="no">.<a href="#setSize">setSize</a><span class="signature">( width : <span class="param-type">number</span>, height : <span class="param-type">number</span> )</span> </h3>
@@ -159,7 +203,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>width</strong>
+										<strong translate="no">width</strong>
 									</td>
 									<td class="description last">
 										<p>The width of the effect.</p>
@@ -167,7 +211,7 @@ when the effect is no longer required.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>height</strong>
+										<strong translate="no">height</strong>
 									</td>
 									<td class="description last">
 										<p>The height of the effect.</p>
@@ -185,7 +229,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>builder</strong>
+										<strong translate="no">builder</strong>
 									</td>
 									<td class="description last">
 										<p>The current node builder.</p>
@@ -206,7 +250,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>frame</strong>
+										<strong translate="no">frame</strong>
 									</td>
 									<td class="description last">
 										<p>The current node frame.</p>

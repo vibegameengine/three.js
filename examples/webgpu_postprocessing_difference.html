@@ -4,6 +4,10 @@
 		<title>three.js webgpu - frame difference</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - frame difference">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_postprocessing_difference.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_postprocessing_difference.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -42,7 +46,7 @@
 				speed: 0
 			};
 
-			let camera, renderer, postProcessing;
+			let camera, renderer, renderPipeline;
 			let timer, mesh, controls;
 
 			init();
@@ -80,7 +84,7 @@
 
 				// post processing
 
-				postProcessing = new THREE.PostProcessing( renderer );
+				renderPipeline = new THREE.RenderPipeline( renderer );
 
 				const scenePass = pass( scene, camera );
 
@@ -91,7 +95,7 @@
 
 				const saturationAmount = luminance( frameDiff ).mul( 1000 ).clamp( 0, 3 );
 
-				postProcessing.outputNode = saturation( currentTexture, saturationAmount );
+				renderPipeline.outputNode = saturation( currentTexture, saturationAmount );
 
 				//
 
@@ -127,7 +131,7 @@
 
 				mesh.rotation.y += timer.getDelta() * 5 * params.speed;
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

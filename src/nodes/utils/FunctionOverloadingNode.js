@@ -65,7 +65,7 @@ class FunctionOverloadingNode extends Node {
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {string} The node type.
 	 */
-	getNodeType( builder ) {
+	generateNodeType( builder ) {
 
 		const candidateFn = this.getCandidateFn( builder );
 
@@ -97,7 +97,7 @@ class FunctionOverloadingNode extends Node {
 
 				if ( layout === null ) {
 
-					throw new Error( 'FunctionOverloadingNode: FunctionNode must be a layout.' );
+					throw new Error( 'THREE.FunctionOverloadingNode: FunctionNode must be a layout.' );
 
 				}
 

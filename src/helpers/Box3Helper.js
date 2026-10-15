@@ -74,6 +74,8 @@ class Box3Helper extends LineSegments {
 	 */
 	dispose() {
 
+		super.dispose();
+
 		this.geometry.dispose();
 		this.material.dispose();
 

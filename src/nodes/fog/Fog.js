@@ -1,7 +1,6 @@
-import { positionView } from '../accessors/Position.js';
+import { positionView, positionWorld } from '../accessors/Position.js';
 import { smoothstep } from '../math/MathNode.js';
 import { Fn, output, vec4 } from '../tsl/TSLBase.js';
-import { warn } from '../../utils.js';
 
 /**
  * Returns a node that represents the `z` coordinate in view space
@@ -38,7 +37,7 @@ function getViewZNode( builder ) {
  * @param {Node} near - Defines the near value.
  * @param {Node} far - Defines the far value.
  */
-export const rangeFogFactor = Fn( ( [ near, far ], builder ) => {
+export const rangeFogFactor = /*@__PURE__*/ Fn( ( [ near, far ], builder ) => {
 
 	const viewZ = getViewZNode( builder );
 
@@ -55,11 +54,30 @@ export const rangeFogFactor = Fn( ( [ near, far ], builder ) => {
  * @function
  * @param {Node} density - Defines the fog density.
  */
-export const densityFogFactor = Fn( ( [ density ], builder ) => {
+export const densityFogFactor = /*@__PURE__*/ Fn( ( [ density ], builder ) => {
 
 	const viewZ = getViewZNode( builder );
 
 	return density.mul( density, viewZ, viewZ ).negate().exp().oneMinus();
+
+} );
+
+/**
+ * Constructs a new height fog factor node. This fog factor requires a Y-up coordinate system.
+ *
+ * @tsl
+ * @function
+ * @param {Node} density - Defines the fog density.
+ * @param {Node} height - The height threshold in world space. Everything below this y-coordinate is affected by fog.
+ */
+export const exponentialHeightFogFactor = /*@__PURE__*/ Fn( ( [ density, height ], builder ) => {
+
+	const viewZ = getViewZNode( builder );
+
+	const distance = height.sub( positionWorld.y ).max( 0 ).toConst();
+	const m = distance.mul( viewZ ).toConst();
+
+	return density.mul( density, m, m ).negate().exp().oneMinus();
 
 } );
 
@@ -72,43 +90,8 @@ export const densityFogFactor = Fn( ( [ density ], builder ) => {
  * @param {Node} color - Defines the color of the fog.
  * @param {Node} factor - Defines how the fog is factored in the scene.
  */
-export const fog = Fn( ( [ color, factor ] ) => {
+export const fog = /*@__PURE__*/ Fn( ( [ color, factor ] ) => {
 
 	return vec4( factor.toFloat().mix( output.rgb, color.toVec3() ), output.a );
 
 } );
-
-// Deprecated
-
-/**
- * @tsl
- * @function
- * @deprecated since r171. Use `fog( color, rangeFogFactor( near, far ) )` instead.
- *
- * @param {Node} color
- * @param {Node} near
- * @param {Node} far
- * @returns {Function}
- */
-export function rangeFog( color, near, far ) { // @deprecated, r171
-
-	warn( 'TSL: "rangeFog( color, near, far )" is deprecated. Use "fog( color, rangeFogFactor( near, far ) )" instead.' );
-	return fog( color, rangeFogFactor( near, far ) );
-
-}
-
-/**
- * @tsl
- * @function
- * @deprecated since r171. Use `fog( color, densityFogFactor( density ) )` instead.
- *
- * @param {Node} color
- * @param {Node} density
- * @returns {Function}
- */
-export function densityFog( color, density ) { // @deprecated, r171
-
-	warn( 'TSL: "densityFog( color, density )" is deprecated. Use "fog( color, densityFogFactor( density ) )" instead.' );
-	return fog( color, densityFogFactor( density ) );
-
-}

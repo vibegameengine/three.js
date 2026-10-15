@@ -4,6 +4,10 @@
 		<title>three.js webgl - shaders - sky sun shader</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgl - shaders - sky sun shader">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgl_shaders_sky.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgl_shaders_sky.jpg">
 		<link type="text/css" rel="stylesheet" href="main.css">
 	</head>
 	<body>
@@ -32,8 +36,9 @@
 
 			let sky, sun;
 
+			let sphere, cubeCamera;
+
 			init();
-			render();
 
 			function initSky() {
 
@@ -51,9 +56,13 @@
 					rayleigh: 3,
 					mieCoefficient: 0.005,
 					mieDirectionalG: 0.7,
-					elevation: 2,
-					azimuth: 180,
-					exposure: renderer.toneMappingExposure
+					elevation: 65,
+					azimuth: 0,
+					exposure: 0.05,
+					cloudCoverage: 0.4,
+					cloudDensity: 0.4,
+					cloudElevation: 0.5,
+					showSunDisc: true
 				};
 
 				function guiChanged() {
@@ -63,6 +72,10 @@
 					uniforms[ 'rayleigh' ].value = effectController.rayleigh;
 					uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
 					uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+					uniforms[ 'cloudCoverage' ].value = effectController.cloudCoverage;
+					uniforms[ 'cloudDensity' ].value = effectController.cloudDensity;
+					uniforms[ 'cloudElevation' ].value = effectController.cloudElevation;
+					uniforms[ 'showSunDisc' ].value = effectController.showSunDisc;
 
 					const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
 					const theta = THREE.MathUtils.degToRad( effectController.azimuth );
@@ -72,7 +85,6 @@
 					uniforms[ 'sunPosition' ].value.copy( sun );
 
 					renderer.toneMappingExposure = effectController.exposure;
-					renderer.render( scene, camera );
 
 				}
 
@@ -85,6 +97,12 @@
 				gui.add( effectController, 'elevation', 0, 90, 0.1 ).onChange( guiChanged );
 				gui.add( effectController, 'azimuth', - 180, 180, 0.1 ).onChange( guiChanged );
 				gui.add( effectController, 'exposure', 0, 1, 0.0001 ).onChange( guiChanged );
+				gui.add( effectController, 'showSunDisc' ).onChange( guiChanged );
+
+				const folderClouds = gui.addFolder( 'Clouds' );
+				folderClouds.add( effectController, 'cloudCoverage', 0, 1, 0.01 ).name( 'coverage' ).onChange( guiChanged );
+				folderClouds.add( effectController, 'cloudDensity', 0, 1, 0.01 ).name( 'density' ).onChange( guiChanged );
+				folderClouds.add( effectController, 'cloudElevation', 0, 1, 0.01 ).name( 'elevation' ).onChange( guiChanged );
 
 				guiChanged();
 
@@ -97,18 +115,24 @@
 
 				scene = new THREE.Scene();
 
-				const helper = new THREE.GridHelper( 10000, 2, 0xffffff, 0xffffff );
-				scene.add( helper );
+				const cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 256, { type: THREE.HalfFloatType } );
+				cubeCamera = new THREE.CubeCamera( 1, 1000, cubeRenderTarget );
+
+				sphere = new THREE.Mesh(
+					new THREE.SphereGeometry( 400, 64, 32 ),
+					new THREE.MeshBasicMaterial( { envMap: cubeRenderTarget.texture } )
+				);
+				scene.add( sphere );
 
 				renderer = new THREE.WebGLRenderer();
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setAnimationLoop( animate );
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
 				renderer.toneMappingExposure = 0.5;
 				document.body.appendChild( renderer.domElement );
 
 				const controls = new OrbitControls( camera, renderer.domElement );
-				controls.addEventListener( 'change', render );
 				//controls.maxPolarAngle = Math.PI / 2;
 				controls.enableZoom = false;
 				controls.enablePan = false;
@@ -126,11 +150,15 @@
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
-				render();
-
 			}
 
-			function render() {
+			function animate() {
+
+				sky.material.uniforms[ 'time' ].value = performance.now() * 0.001;
+
+				sphere.visible = false;
+				cubeCamera.update( renderer, scene );
+				sphere.visible = true;
 
 				renderer.render( scene, camera );
 

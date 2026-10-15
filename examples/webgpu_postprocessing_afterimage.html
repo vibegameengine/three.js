@@ -4,6 +4,10 @@
 		<title>three.js webgpu - postprocessing afterimage</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - postprocessing afterimage">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_postprocessing_afterimage.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_postprocessing_afterimage.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -41,7 +45,7 @@
 			import { Inspector } from 'three/addons/inspector/Inspector.js';
 
 			let camera, scene, renderer, particles;
-			let postProcessing, afterImagePass, scenePass;
+			let renderPipeline, afterImagePass, scenePass;
 
 			const params = {
 
@@ -65,6 +69,7 @@
 				camera.position.z = 1000;
 
 				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x000000 );
 
 				const sprite = new THREE.TextureLoader().load( 'textures/sprites/circle.png' );
 
@@ -121,13 +126,13 @@
 
 				// postprocessing
 
-				postProcessing = new THREE.PostProcessing( renderer );
+				renderPipeline = new THREE.RenderPipeline( renderer );
 
 				scenePass = pass( scene, camera );
 
 				afterImagePass = afterImage( scenePass, params.damp );
 
-				postProcessing.outputNode = afterImagePass;
+				renderPipeline.outputNode = afterImagePass;
 
 				//
 
@@ -143,15 +148,15 @@
 
 				if ( params.enabled === true ) {
 
-					postProcessing.outputNode = afterImagePass;
+					renderPipeline.outputNode = afterImagePass;
 
 				} else {
 
-					postProcessing.outputNode = scenePass;
+					renderPipeline.outputNode = scenePass;
 
 				}
 
-				postProcessing.needsUpdate = true;
+				renderPipeline.needsUpdate = true;
 
 
 			}
@@ -185,7 +190,7 @@
 
 				particles.rotation.z = time * 0.001;
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

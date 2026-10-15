@@ -16,7 +16,6 @@ import { REVISION, TimestampQuery } from '../../constants.js';
  * implement the interface.
  *
  * @abstract
- * @private
  */
 class Backend {
 
@@ -129,6 +128,15 @@ class Backend {
 	finishRender( /*renderContext*/ ) {}
 
 	/**
+	 * Sets the XR rendering destination.
+	 *
+	 * Backends that render directly into XR framebuffers can override this hook.
+	 *
+	 * @param {?Object} xrTarget - The XR rendering destination.
+	 */
+	setXRTarget( /*xrTarget*/ ) {}
+
+	/**
 	 * This method is executed at the beginning of a compute call and
 	 * can be used by the backend to prepare the state for upcoming
 	 * compute tasks.
@@ -237,8 +245,9 @@ class Backend {
 	 * @abstract
 	 * @param {ComputePipeline} computePipeline - The compute pipeline.
 	 * @param {Array<BindGroup>} bindings - The bindings.
+	 * @param {?Array<Promise>} [promises=null] - Optional compilation promises.
 	 */
-	createComputePipeline( /*computePipeline, bindings*/ ) { }
+	createComputePipeline( /*computePipeline, bindings, promises*/ ) { }
 
 	// cache key
 
@@ -278,10 +287,18 @@ class Backend {
 	 * Updates a GPU sampler for the given texture.
 	 *
 	 * @abstract
-	 * @param {Texture} texture - The texture to update the sampler for.
+	 * @param {Sampler} binding - The sampler binding to update.
 	 * @return {string} The current sampler key.
 	 */
-	updateSampler( /*texture*/ ) { }
+	updateSampler( /*binding*/ ) { }
+
+	/**
+	 * Frees the GPU sampler for the given sampler binding.
+	 *
+	 * @abstract
+	 * @param {Sampler} binding - The sampler binding to free.
+	 */
+	destroySampler( /*binding*/ ) { }
 
 	/**
 	 * Creates a default texture for the given texture that can be used
@@ -337,7 +354,7 @@ class Backend {
 	 * @param {number} y - The y coordinate of the copy origin.
 	 * @param {number} width - The width of the copy.
 	 * @param {number} height - The height of the copy.
-	 * @param {number} faceIndex - The face index.
+	 * @param {number} faceIndex - The cube face, depth slice or array layer index.
 	 * @return {Promise<TypedArray>} A Promise that resolves with a typed array when the copy operation has finished.
 	 */
 	async copyTextureToBuffer( /*texture, x, y, width, height, faceIndex*/ ) {}
@@ -392,6 +409,22 @@ class Backend {
 	createStorageAttribute( /*attribute*/ ) { }
 
 	/**
+	 * Creates a uniform buffer.
+	 *
+	 * @abstract
+	 * @param {Buffer} uniformBuffer - The uniform buffer.
+	 */
+	createUniformBuffer( /*uniformBuffer*/ ) { }
+
+	/**
+	 * Destroys a uniform buffer.
+	 *
+	 * @abstract
+	 * @param {Buffer} uniformBuffer - The uniform buffer.
+	 */
+	destroyUniformBuffer( /*uniformBuffer*/ ) { }
+
+	/**
 	 * Updates the GPU buffer of a shader attribute.
 	 *
 	 * @abstract
@@ -439,17 +472,23 @@ class Backend {
 	 * Updates a unique identifier for the given render context that can be used
 	 * to allocate resources like occlusion queries or timestamp queries.
 	 *
-	 * @param {RenderContext|ComputeNode} abstractRenderContext - The render context.
+	 * @param {RenderContext|ComputeNode|Array<ComputeNode>} abstractRenderContext - The render context.
 	 */
 	updateTimeStampUID( abstractRenderContext ) {
 
 		const contextData = this.get( abstractRenderContext );
 		const frame = this.renderer.info.frame;
-		const leadingContext = Array.isArray( abstractRenderContext ) ? abstractRenderContext[ 0 ] : abstractRenderContext;
-
 		let prefix;
 
-		if ( leadingContext.isComputeNode === true ) {
+		let id = abstractRenderContext.id;
+
+		if ( Array.isArray( abstractRenderContext ) ) {
+
+			id = abstractRenderContext.map( c => c.id ).join( ',' );
+
+			prefix = 'c:' + this.renderer.info.compute.frameCalls;
+
+		} else if ( abstractRenderContext.isComputeNode === true ) {
 
 			prefix = 'c:' + this.renderer.info.compute.frameCalls;
 
@@ -459,7 +498,7 @@ class Backend {
 
 		}
 
-		contextData.timestampUID = prefix + ':' + leadingContext.id + ':f' + frame;
+		contextData.timestampUID = prefix + ':' + id + ':f' + frame;
 
 	}
 
@@ -537,16 +576,28 @@ class Backend {
 	}
 
 	/**
+	 * Whether the backend supports query timestamps or not.
+	 *
+	 * @type {boolean}
+	 * @readonly
+	 */
+	get hasTimestamp() {
+
+		return false;
+
+	}
+
+	/**
 	 * Returns `true` if a timestamp for the given uid is available.
 	 *
 	 * @param {string} uid - The unique identifier.
 	 * @return {boolean} Whether the timestamp is available or not.
 	 */
-	hasTimestamp( uid ) {
+	hasTimestampQuery( uid ) {
 
 		const queryPool = this._getQueryPool( uid );
 
-		return queryPool.hasTimestamp( uid );
+		return queryPool.hasTimestampQuery( uid );
 
 	}
 
@@ -625,14 +676,6 @@ class Backend {
 	hasFeature( /*name*/ ) {}
 
 	/**
-	 * Returns the maximum anisotropy texture filtering value.
-	 *
-	 * @abstract
-	 * @return {number} The maximum anisotropy texture filtering value.
-	 */
-	getMaxAnisotropy() {}
-
-	/**
 	 * Returns the drawing buffer size.
 	 *
 	 * @return {Vector2} The drawing buffer size.
@@ -652,6 +695,13 @@ class Backend {
 	 * @param {boolean} boolean - Whether the scissor test should be enabled or not.
 	 */
 	setScissorTest( /*boolean*/ ) { }
+
+	/**
+	 * Resets the backend's internal state. A no-op for backends without a state cache (e.g. WebGPU).
+	 *
+	 * @abstract
+	 */
+	resetState() { }
 
 	/**
 	 * Returns the clear color and alpha into a single
@@ -697,6 +747,27 @@ class Backend {
 		return domElement;
 
 	}
+
+	/**
+	 * Checks if the backend has the given compatibility.
+	 *
+	 * @abstract
+	 * @param {string} name - The compatibility.
+	 * @return {boolean} Whether the backend has the given compatibility or not.
+	 */
+	hasCompatibility( /*name*/ ) {
+
+		return false;
+
+	}
+
+	/**
+	 * Initializes the render target defined in the given render context.
+	 *
+	 * @abstract
+	 * @param {RenderContext} renderContext - The render context.
+	 */
+	initRenderTarget( /*renderContext*/ ) {}
 
 	/**
 	 * Sets a dictionary for the given object into the
@@ -769,7 +840,19 @@ class Backend {
 	 *
 	 * @abstract
 	 */
-	dispose() { }
+	async dispose() {
+
+		for ( const queryPool of Object.values( this.timestampQueryPool ) ) {
+
+			if ( queryPool !== null ) {
+
+				await queryPool.dispose();
+
+			}
+
+		}
+
+	}
 
 }
 

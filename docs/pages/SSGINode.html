@@ -40,7 +40,7 @@ count then to mitigate the performance lost.</p>
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">SSGINode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">SSGINode</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { ssgi } from 'three/addons/tsl/display/SSGINode.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -53,7 +53,7 @@ count then to mitigate the performance lost.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>beautyNode</strong>
+										<strong translate="no">beautyNode</strong>
 									</td>
 									<td class="description last">
 										<p>A texture node that represents the beauty or scene pass.</p>
@@ -61,7 +61,7 @@ count then to mitigate the performance lost.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>depthNode</strong>
+										<strong translate="no">depthNode</strong>
 									</td>
 									<td class="description last">
 										<p>A texture node that represents the scene's depth.</p>
@@ -69,7 +69,7 @@ count then to mitigate the performance lost.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>normalNode</strong>
+										<strong translate="no">normalNode</strong>
 									</td>
 									<td class="description last">
 										<p>A texture node that represents the scene's normals.</p>
@@ -77,7 +77,7 @@ count then to mitigate the performance lost.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>camera</strong>
+										<strong translate="no">camera</strong>
 									</td>
 									<td class="description last">
 										<p>The camera the scene is rendered with.</p>
@@ -192,7 +192,7 @@ its effect once per frame in <code>updateBefore()</code>.</p>
 					<h3 class="name" id="useScreenSpaceSampling" translate="no">.<a href="#useScreenSpaceSampling">useScreenSpaceSampling</a><span class="type-signature"> : <a href="UniformNode.html">UniformNode</a>.&lt;bool></span> </h3>
 					<div class="description">
 						<p>Makes the sample distance in screen space instead of world-space (helps having more detail up close).</p>
-						<p>Default is <code>false</code>.</p>
+						<p>Default is <code>true</code>.</p>
 					</div>
 				</div>
 				<div class="member">
@@ -218,13 +218,22 @@ when the effect is no longer required.</p>
 							<dt class="tag-overrides"><strong>Overrides:</strong> <a href="TempNode.html#dispose">TempNode#dispose</a></dt>
 						</dl>
 					</div>
-					<h3 class="name name-method" id="getTextureNode" translate="no">.<a href="#getTextureNode">getTextureNode</a><span class="signature">()</span><span class="type-signature"> : <a href="PassTextureNode.html">PassTextureNode</a></span> </h3>
+					<h3 class="name name-method" id="getAONode" translate="no">.<a href="#getAONode">getAONode</a><span class="signature">()</span><span class="type-signature"> : <a href="PassTextureNode.html">PassTextureNode</a></span> </h3>
 					<div class="method">
 						<div class="description">
-							<p>Returns the result of the effect as a texture node.</p>
+							<p>Returns the AO result of the effect as a texture node.</p>
 						</div>
 						<dl class="details">
-							<dt class="tag-returns"><strong>Returns:</strong> A texture node that represents the result of the effect.</dt>
+							<dt class="tag-returns"><strong>Returns:</strong> A texture node that represents the AO result of the effect.</dt>
+						</dl>
+					</div>
+					<h3 class="name name-method" id="getGINode" translate="no">.<a href="#getGINode">getGINode</a><span class="signature">()</span><span class="type-signature"> : <a href="PassTextureNode.html">PassTextureNode</a></span> </h3>
+					<div class="method">
+						<div class="description">
+							<p>Returns the GI result of the effect as a texture node.</p>
+						</div>
+						<dl class="details">
+							<dt class="tag-returns"><strong>Returns:</strong> A texture node that represents the GI result of the effect.</dt>
 						</dl>
 					</div>
 					<h3 class="name name-method" id="setSize" translate="no">.<a href="#setSize">setSize</a><span class="signature">( width : <span class="param-type">number</span>, height : <span class="param-type">number</span> )</span> </h3>
@@ -236,7 +245,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>width</strong>
+										<strong translate="no">width</strong>
 									</td>
 									<td class="description last">
 										<p>The width of the effect.</p>
@@ -244,7 +253,7 @@ when the effect is no longer required.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>height</strong>
+										<strong translate="no">height</strong>
 									</td>
 									<td class="description last">
 										<p>The height of the effect.</p>
@@ -262,7 +271,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>builder</strong>
+										<strong translate="no">builder</strong>
 									</td>
 									<td class="description last">
 										<p>The current node builder.</p>
@@ -283,7 +292,7 @@ when the effect is no longer required.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>frame</strong>
+										<strong translate="no">frame</strong>
 									</td>
 									<td class="description last">
 										<p>The current node frame.</p>

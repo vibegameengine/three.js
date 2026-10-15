@@ -1,5 +1,4 @@
 import { StereoCamera, Vector2, PassNode, RendererUtils } from 'three/webgpu';
-import { nodeObject } from 'three/tsl';
 
 const _size = /*@__PURE__*/ new Vector2();
 
@@ -62,13 +61,11 @@ class StereoPassNode extends PassNode {
 
 		//
 
-		this._pixelRatio = renderer.getPixelRatio();
-
 		stereo.cameraL.coordinateSystem = renderer.coordinateSystem;
 		stereo.cameraR.coordinateSystem = renderer.coordinateSystem;
 		stereo.update( camera );
 
-		const size = renderer.getSize( _size );
+		const size = renderer.getDrawingBufferSize( _size );
 		this.setSize( size.width, size.height );
 
 		renderer.autoClear = false;
@@ -117,4 +114,4 @@ export default StereoPassNode;
  * @param {Camera} camera - The camera to render the scene with.
  * @returns {StereoPassNode}
  */
-export const stereoPass = ( scene, camera ) => nodeObject( new StereoPassNode( scene, camera ) );
+export const stereoPass = ( scene, camera ) => new StereoPassNode( scene, camera );

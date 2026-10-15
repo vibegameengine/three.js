@@ -1,6 +1,8 @@
 import { HalfFloatType, UnsignedByteType } from '../../../constants.js';
 import { GPUPrimitiveTopology, GPUTextureFormat } from './WebGPUConstants.js';
 
+const _commandList = [ null ];
+
 /**
  * A WebGPU backend utility module with common helpers.
  *
@@ -22,6 +24,15 @@ class WebGPUUtils {
 		 */
 		this.backend = backend;
 
+		/**
+		 * Caches the preferred canvas format.
+		 *
+		 * @private
+		 * @type {?string}
+		 * @default null
+		 */
+		this._preferredCanvasFormat = null;
+
 	}
 
 	/**
@@ -34,17 +45,37 @@ class WebGPUUtils {
 
 		let format;
 
-		if ( renderContext.depthTexture !== null ) {
+		if ( renderContext.depth ) {
 
-			format = this.getTextureFormatGPU( renderContext.depthTexture );
+			if ( renderContext.depthTexture !== null ) {
 
-		} else if ( renderContext.depth && renderContext.stencil ) {
+				format = this.getTextureFormatGPU( renderContext.depthTexture );
 
-			format = GPUTextureFormat.Depth24PlusStencil8;
+			} else if ( renderContext.stencil ) {
 
-		} else if ( renderContext.depth ) {
+				if ( this.backend.renderer.reversedDepthBuffer === true ) {
 
-			format = GPUTextureFormat.Depth24Plus;
+					format = GPUTextureFormat.Depth32FloatStencil8;
+
+				} else {
+
+					format = GPUTextureFormat.Depth24PlusStencil8;
+
+				}
+
+			} else {
+
+				if ( this.backend.renderer.reversedDepthBuffer === true ) {
+
+					format = GPUTextureFormat.Depth32Float;
+
+				} else {
+
+					format = GPUTextureFormat.Depth24Plus;
+
+				}
+
+			}
 
 		}
 
@@ -80,10 +111,21 @@ class WebGPUUtils {
 
 		} else if ( texture.isDepthTexture && ! texture.renderTarget ) {
 
-			const renderer = this.backend.renderer;
-			const renderTarget = renderer.getRenderTarget();
+			const textureData = this.backend.get( texture );
 
-			samples = renderTarget ? renderTarget.samples : renderer.currentSamples;
+			if ( textureData.texture !== undefined ) {
+
+				// use the effective sample count of the allocated texture
+
+				samples = textureData.texture.sampleCount;
+
+			} else {
+
+				// otherwise use the current samples of the renderer
+
+				samples = this.backend.renderer.currentSamples;
+
+			}
 
 		} else if ( texture.renderTarget ) {
 
@@ -91,10 +133,11 @@ class WebGPUUtils {
 
 		}
 
-		samples = samples || 1;
+		samples = this.getSampleCount( samples || 1 );
 
 		const isMSAA = samples > 1 && texture.renderTarget !== null && ( texture.isDepthTexture !== true && texture.isFramebufferTexture !== true );
-		const primarySamples = isMSAA ? 1 : samples;
+		const isMSAAArrayDepthTexture = samples > 1 && texture.renderTarget !== null && texture.isDepthTexture === true && texture.isArrayTexture === true;
+		const primarySamples = isMSAA || isMSAAArrayDepthTexture ? 1 : samples;
 
 		return { samples, primarySamples, isMSAA };
 
@@ -226,7 +269,13 @@ class WebGPUUtils {
 
 		if ( bufferType === undefined ) {
 
-			return navigator.gpu.getPreferredCanvasFormat();
+			if ( this._preferredCanvasFormat === null ) {
+
+				this._preferredCanvasFormat = navigator.gpu.getPreferredCanvasFormat();
+
+			}
+
+			return this._preferredCanvasFormat;
 
 		} else if ( bufferType === UnsignedByteType ) {
 
@@ -238,11 +287,29 @@ class WebGPUUtils {
 
 		} else {
 
-			throw new Error( 'Unsupported output buffer type.' );
+			throw new Error( 'THREE.WebGPUUtils: Unsupported output buffer type.' );
 
 		}
 
 	}
+
+}
+
+/**
+ * Submits a single GPU command to the device queue using a shared, module-scoped
+ * array to avoid per-call array allocations.
+ *
+ * @private
+ * @param {GPUDevice} device - The GPU device.
+ * @param {GPUCommandBuffer} command - The command buffer to submit.
+ */
+export function submit( device, command ) {
+
+	_commandList[ 0 ] = command;
+
+	device.queue.submit( _commandList );
+
+	_commandList[ 0 ] = null;
 
 }
 

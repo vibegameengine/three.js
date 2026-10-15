@@ -64,7 +64,7 @@ function euclideanModulo( n, m ) {
 
 /**
  * Performs a linear mapping from range `<a1, a2>` to range `<b1, b2>`
- * for the given value.
+ * for the given value. `a2` must be greater than `a1`.
  *
  * @param {number} x - The value to be mapped.
  * @param {number} a1 - Minimum value for range A.
@@ -159,9 +159,9 @@ function pingpong( x, length = 1 ) {
  *
  * See [Smoothstep](http://en.wikipedia.org/wiki/Smoothstep) for more details.
  *
- * @param {number} x - The value to evaluate based on its position between min and max.
- * @param {number} min - The min value. Any x value below min will be `0`.
- * @param {number} max - The max value. Any x value above max will be `1`.
+ * @param {number} x - The value to evaluate based on its position between `min` and `max`.
+ * @param {number} min - The min value. Any `x` value below `min` will be `0`. `min` must be lower than `max`.
+ * @param {number} max - The max value. Any `x` value above `max` will be `1`. `max` must be greater than `min`.
  * @return {number} The alternated value.
  */
 function smoothstep( x, min, max ) {
@@ -177,11 +177,11 @@ function smoothstep( x, min, max ) {
 
 /**
  * A [variation on smoothstep](https://en.wikipedia.org/wiki/Smoothstep#Variations)
- * that has zero 1st and 2nd order derivatives at x=0 and x=1.
+ * that has zero 1st and 2nd order derivatives at `x=0` and `x=1`.
  *
- * @param {number} x - The value to evaluate based on its position between min and max.
- * @param {number} min - The min value. Any x value below min will be `0`.
- * @param {number} max - The max value. Any x value above max will be `1`.
+ * @param {number} x - The value to evaluate based on its position between `min` and `max`.
+ * @param {number} min - The min value. Any `x` value below `min` will be `0`. `min` must be lower than `max`.
+ * @param {number} max - The max value. Any `x` value above `max` will be `1`. `max` must be greater than `min`.
  * @return {number} The alternated value.
  */
 function smootherstep( x, min, max ) {
@@ -280,21 +280,21 @@ function radToDeg( radians ) {
 }
 
 /**
- * Returns `true` if the given number is a power of two.
+ * Returns `true` if the given integer is a power of two.
  *
  * @param {number} value - The value to check.
- * @return {boolean} Whether the given number is a power of two or not.
+ * @return {boolean} Whether the given integer is a power of two or not.
  */
 function isPowerOfTwo( value ) {
 
-	return ( value & ( value - 1 ) ) === 0 && value !== 0;
+	return value > 0 && Number.isInteger( value ) && 2 ** Math.round( Math.log2( value ) ) === value;
 
 }
 
 /**
  * Returns the smallest power of two that is greater than or equal to the given number.
  *
- * @param {number} value - The value to find a POT for.
+ * @param {number} value - The value to find a POT for. Must be greater than `0`.
  * @return {number} The smallest power of two that is greater than or equal to the given number.
  */
 function ceilPowerOfTwo( value ) {
@@ -306,7 +306,7 @@ function ceilPowerOfTwo( value ) {
 /**
  * Returns the largest power of two that is less than or equal to the given number.
  *
- * @param {number} value - The value to find a POT for.
+ * @param {number} value - The value to find a POT for. Must be greater than `0`.
  * @return {number} The largest power of two that is less than or equal to the given number.
  */
 function floorPowerOfTwo( value ) {
@@ -402,6 +402,7 @@ function denormalize( value, array ) {
 			return value / 65535.0;
 
 		case Uint8Array:
+		case Uint8ClampedArray:
 
 			return value / 255.0;
 
@@ -419,7 +420,7 @@ function denormalize( value, array ) {
 
 		default:
 
-			throw new Error( 'Invalid component type.' );
+			throw new Error( 'THREE.MathUtils: Invalid component type.' );
 
 	}
 
@@ -449,6 +450,7 @@ function normalize( value, array ) {
 			return Math.round( value * 65535.0 );
 
 		case Uint8Array:
+		case Uint8ClampedArray:
 
 			return Math.round( value * 255.0 );
 
@@ -466,7 +468,7 @@ function normalize( value, array ) {
 
 		default:
 
-			throw new Error( 'Invalid component type.' );
+			throw new Error( 'THREE.MathUtils: Invalid component type.' );
 
 	}
 

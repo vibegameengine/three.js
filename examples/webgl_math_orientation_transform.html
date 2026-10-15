@@ -4,6 +4,10 @@
 		<title>three.js webgl - math - orientation transform</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgl - math - orientation transform">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgl_math_orientation_transform.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgl_math_orientation_transform.jpg">
 		<link type="text/css" rel="stylesheet" href="main.css">
 	</head>
 	<body>
@@ -33,7 +37,8 @@
 			const spherical = new THREE.Spherical();
 			const rotationMatrix = new THREE.Matrix4();
 			const targetQuaternion = new THREE.Quaternion();
-			const clock = new THREE.Clock();
+			const timer = new THREE.Timer();
+			timer.connect( document );
 			const speed = Math.PI / 2;
 
 			const params = {
@@ -106,7 +111,9 @@
 
 			function animate() {
 
-				const delta = clock.getDelta();
+				timer.update();
+
+				const delta = timer.getDelta();
 
 				if ( mesh.quaternion.equals( targetQuaternion ) === false ) {
 

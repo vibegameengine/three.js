@@ -4,6 +4,10 @@
 		<title>three.js webgpu - arraycamera</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - arraycamera">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_camera_array.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_camera_array.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -66,7 +70,6 @@
 				const light = new THREE.DirectionalLight( 0xffffff, 3 );
 				light.position.set( 0.5, 0.5, 1 );
 				light.castShadow = true;
-				light.shadow.bias = - 0.001;
 				light.shadow.camera.zoom = 4; // tighter shadow map
 				scene.add( light );
 

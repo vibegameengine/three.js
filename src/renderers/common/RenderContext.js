@@ -26,6 +26,14 @@ class RenderContext {
 		this.id = _id ++;
 
 		/**
+		 * The MRT configuration.
+		 *
+		 * @type {?MRTNode}
+		 * @default null
+		 */
+		this.mrt = null;
+
+		/**
 		 * Whether the current active framebuffer has a color attachment.
 		 *
 		 * @type {boolean}
@@ -213,6 +221,22 @@ class RenderContext {
 		 * @default null
 		 */
 		this.clippingContext = null;
+
+		/**
+		 * The current camera.
+		 *
+		 * @type {?Camera}
+		 * @default null
+		 */
+		this.camera = null;
+
+		/**
+		 * Whether a fullscreen pass is rendered or not.
+		 *
+		 * @type {boolean}
+		 * @default false
+		 */
+		this.fullscreenPass = false;
 
 		/**
 		 * This flag can be used for type testing.

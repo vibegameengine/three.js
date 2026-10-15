@@ -1,4 +1,4 @@
-export const REVISION = '182';
+export const REVISION = '186';
 
 /**
  * Represents mouse buttons and interaction types in context of controls.
@@ -70,6 +70,7 @@ export const PCFShadowMap = 1;
  *
  * @type {number}
  * @constant
+ * @deprecated since r186. Use `PCFShadowMap` instead.
  */
 export const PCFSoftShadowMap = 2;
 
@@ -154,6 +155,14 @@ export const MultiplyBlending = 4;
  * @constant
  */
 export const CustomBlending = 5;
+
+/**
+ * Represents material blending.
+ *
+ * @type {number}
+ * @constant
+ */
+export const MaterialBlending = 6;
 
 /**
  * A `source + destination` blending equation.
@@ -1158,6 +1167,17 @@ export const InterpolateLinear = 2301;
 export const InterpolateSmooth = 2302;
 
 /**
+ * Bezier interpolation mode for keyframe tracks.
+ *
+ * Uses cubic Bezier curves with explicit 2D control points.
+ * Requires tangent data to be set on the track.
+ *
+ * @type {number}
+ * @constant
+ */
+export const InterpolateBezier = 2303;
+
+/**
  * Zero curvature ending for animations.
  *
  * @type {number}
@@ -1681,6 +1701,28 @@ export const InterpolationSamplingMode = {
 };
 
 /**
+ * Compatibility flags for features that may not be supported across all platforms.
+ *
+ * @type {Object}
+ * @constant
+ */
+export const Compatibility = {
+	TEXTURE_COMPARE: 'depthTextureCompare'
+};
+
+/**
+ * Represents the refresh types of render objects.
+ *
+ * @type {ConstantsRenderObjectRefreshType}
+ * @constant
+ */
+export const RenderObjectRefreshType = {
+	NONE: 0,
+	SHARED: 1,
+	FULL: 2
+};
+
+/**
  * This type represents mouse buttons and interaction types in context of controls.
  *
  * @typedef {Object} ConstantsMouse
@@ -1728,4 +1770,13 @@ export const InterpolationSamplingMode = {
  * @property {string} SAMPLE - Sample-specific sampling mode.
  * @property {string} FIRST - Flat interpolation using the first vertex.
  * @property {string} EITHER - Flat interpolation using either vertex.
+ */
+
+/**
+ * Represents the refresh types of render objects.
+ *
+ * @typedef {Object} ConstantsRenderObjectRefreshType
+ * @property {number} NONE - No refresh required.
+ * @property {number} SHARED - Only shared uniform buffers require an update.
+ * @property {number} FULL - The render object requires a full refresh.
  */

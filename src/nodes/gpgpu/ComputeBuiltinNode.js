@@ -55,7 +55,7 @@ class ComputeBuiltinNode extends Node {
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {string} The node type.
 	 */
-	getNodeType( /*builder*/ ) {
+	generateNodeType( /*builder*/ ) {
 
 		return this.nodeType;
 
@@ -110,7 +110,7 @@ class ComputeBuiltinNode extends Node {
 
 		} else {
 
-			warn( `ComputeBuiltinNode: Compute built-in value ${builtinName} can not be accessed in the ${builder.shaderStage} stage` );
+			warn( `TSL: Compute built-in value "${builtinName}" can not be accessed in the ${builder.shaderStage} stage` );
 			return builder.generateConst( nodeType );
 
 		}

@@ -22,9 +22,10 @@ class StorageBuffer extends Buffer {
 		/**
 		 * This flag can be used for type testing.
 		 *
+		 * @private
 		 * @type {BufferAttribute}
 		 */
-		this.attribute = attribute;
+		this._attribute = attribute;
 
 		/**
 		 * This flag can be used for type testing.
@@ -34,6 +35,17 @@ class StorageBuffer extends Buffer {
 		 * @default true
 		 */
 		this.isStorageBuffer = true;
+
+	}
+
+	/**
+	 * The storage buffer attribute.
+	 *
+	 * @type {BufferAttribute}
+	 */
+	get attribute() {
+
+		return this._attribute;
 
 	}
 

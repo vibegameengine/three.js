@@ -93,8 +93,6 @@ class Triangle {
 	 */
 	static getBarycoord( point, a, b, c, target ) {
 
-		// based on: http://www.blackpawn.com/texts/pointinpoly/default.html
-
 		_v0.subVectors( c, a );
 		_v1.subVectors( b, a );
 		_v2.subVectors( point, a );
@@ -228,7 +226,7 @@ class Triangle {
 		_v1.subVectors( a, b );
 
 		// strictly front facing
-		return ( _v0.cross( _v1 ).dot( direction ) < 0 ) ? true : false;
+		return _v0.cross( _v1 ).dot( direction ) < 0;
 
 	}
 

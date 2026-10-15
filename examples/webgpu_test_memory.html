@@ -4,6 +4,10 @@
 		<title>three.js webgpu - memory test I</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - memory test I">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_test_memory.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_test_memory.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 
@@ -35,7 +39,7 @@
 		<script type="module">
 
 			import * as THREE from 'three/webgpu';
-			import { pass, mrt, directionToColor, normalView, screenUV, context, sample, colorToDirection } from 'three/tsl';
+			import { pass, mrt, packNormalToRGB, normalView, screenUV, context, sample, unpackRGBToNormal } from 'three/tsl';
 			import { outline } from 'three/addons/tsl/display/OutlineNode.js';
 			import { ao } from 'three/addons/tsl/display/GTAONode.js';
 
@@ -44,7 +48,7 @@
 			let camera, scene, renderer, light;
 			let generateMeshes = true;
 			let mesh;
-			let postProcessing;
+			let renderPipeline;
 			let aoNode, outlineNode, scenePass, prePass;
 			const selectedObjects = [];
 
@@ -143,10 +147,10 @@
 
 			function updatePostProcessing() {
 
-				if ( postProcessing ) {
+				if ( renderPipeline ) {
 
-					postProcessing.dispose();
-					postProcessing = null;
+					renderPipeline.dispose();
+					renderPipeline = null;
 
 				}
 
@@ -180,7 +184,7 @@
 
 				if ( params.enablePP ) {
 
-					postProcessing = new THREE.PostProcessing( renderer );
+					renderPipeline = new THREE.RenderPipeline( renderer );
 
 					scenePass = pass( scene, camera );
 					let colorNode = scenePass;
@@ -189,12 +193,12 @@
 
 						prePass = pass( scene, camera );
 						prePass.setMRT( mrt( {
-							output: directionToColor( normalView )
+							output: packNormalToRGB( normalView )
 						} ) );
 
 						const prePassNormal = sample( ( uv ) => {
 
-							return colorToDirection( prePass.getTextureNode().sample( uv ) );
+							return unpackRGBToNormal( prePass.getTextureNode().sample( uv ) );
 
 						} );
 						const prePassDepth = prePass.getTextureNode( 'depth' );
@@ -216,7 +220,7 @@
 
 					}
 
-					postProcessing.outputNode = colorNode;
+					renderPipeline.outputNode = colorNode;
 
 				}
 
@@ -283,9 +287,9 @@
 
 				}
 
-				if ( postProcessing ) {
+				if ( renderPipeline ) {
 
-					postProcessing.render();
+					renderPipeline.render();
 
 				} else {
 

@@ -151,9 +151,9 @@ class VarNode extends Node {
 
 	}
 
-	getNodeType( builder ) {
+	generateNodeType( builder ) {
 
-		return builder.typeOf( this.node );
+		return this.node.getNodeType( builder );
 
 	}
 
@@ -174,6 +174,14 @@ class VarNode extends Node {
 	build( ...params ) {
 
 		const builder = params[ 0 ];
+
+		const refNode = this.getShared( builder );
+
+		if ( this !== refNode ) {
+
+			return refNode.build( ...params );
+
+		}
 
 		if ( this._hasStack( builder ) === false && builder.buildStage === 'setup' ) {
 
@@ -254,7 +262,7 @@ class VarNode extends Node {
 
 			if ( this.isIntent( builder ) !== true ) {
 
-				error( 'TSL: ".toVar()" can not be used with void type.' );
+				error( 'TSL: ".toVar()" can not be used with void type.', this.stackTrace );
 
 			}
 
@@ -351,7 +359,6 @@ export const Const = ( node, name = null ) => createVar( node, name, true ).toSt
  * @tsl
  * @function
  * @param {Node} node - The node for which a variable should be created.
- * @param {?string} name - The name of the variable in the shader.
  * @returns {VarNode}
  */
 export const VarIntent = ( node ) => {

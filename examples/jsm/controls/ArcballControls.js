@@ -98,9 +98,9 @@ const _EPS = 0.000001;
  * consistent camera movements. Dragging cursor/fingers will cause camera to orbit around the center of the trackball in a conservative
  * way (returning to the starting point will make the camera return to its starting orientation).
  *
- * In addition to supporting pan, zoom and pinch gestures, Arcball controls provide focus< functionality with a double click/tap for intuitively
- * moving the object's point of interest in the center of the virtual trackball. Focus allows a much better inspection and navigation in complex
- * environment. Moreover Arcball controls allow FOV manipulation (in a vertigo-style method) and z-rotation. Saving and restoring of Camera State
+ * In addition to supporting pan, zoom and pinch gestures, double clicking/tapping focuses on a point, intuitively moving the object's
+ * point of interest to the center of the virtual trackball. Focus allows a much better inspection and navigation in complex environment.
+ * Moreover Arcball controls allow FOV manipulation (in a vertigo-style method) and z-rotation. Saving and restoring of Camera State
  * is supported also through clipboard (use ctrl+c and ctrl+v shortcuts for copy and paste the state).
  *
  * Unlike {@link OrbitControls} and {@link TrackballControls}, `ArcballControls` doesn't require `update()` to be called externally in an
@@ -264,6 +264,10 @@ class ArcballControls extends Controls {
 		 * If set to `true`, the camera's near and far values will be adjusted every time zoom is
 		 * performed trying to maintain the same visible portion given by initial near and far
 		 * values. Only works with perspective cameras.
+		 *
+		 * This feature only works as expected if the camera's initial state (position, near and far values)
+		 * is correctly configured before creating the controls. Otherwise {@link ArcballControls#setCamera}
+		 * must be called by the application.
 		 *
 		 * @type {boolean}
 		 * @default false
@@ -453,7 +457,6 @@ class ArcballControls extends Controls {
 
 		super.connect( element );
 
-		this.domElement.style.touchAction = 'none';
 		this._devPxRatio = window.devicePixelRatio;
 
 		this.domElement.addEventListener( 'contextmenu', this._onContextMenu );
@@ -462,6 +465,8 @@ class ArcballControls extends Controls {
 		this.domElement.addEventListener( 'pointercancel', this._onPointerCancel );
 
 		window.addEventListener( 'resize', this._onWindowResize );
+
+		this.domElement.style.touchAction = 'none'; // Disable touch scroll
 
 	}
 
@@ -476,6 +481,8 @@ class ArcballControls extends Controls {
 		window.removeEventListener( 'pointerup', this._onPointerUp );
 
 		window.removeEventListener( 'resize', this._onWindowResize );
+
+		this.domElement.style.touchAction = ''; // Restore touch scroll
 
 	}
 
@@ -2005,8 +2012,8 @@ class ArcballControls extends Controls {
 		const gizmoZ = new Line( curveGeometry, curveMaterialZ );
 
 		const rotation = Math.PI * 0.5;
-		gizmoX.rotation.x = rotation;
-		gizmoY.rotation.y = rotation;
+		gizmoX.rotation.y = rotation;
+		gizmoY.rotation.x = rotation;
 
 
 		//setting state
@@ -2556,7 +2563,7 @@ class ArcballControls extends Controls {
 	 * Rotates camera around its direction axis passing by a given point by a given angle.
 	 *
 	 * @private
-	 * @param {Vector3} point - The point where the rotation axis is passing trough.
+	 * @param {Vector3} point - The point where the rotation axis is passing through.
 	 * @param {number} angle - Angle in radians.
 	 * @returns {Object} The computed transformation matrix.
 	 */

@@ -20,7 +20,9 @@ class NodeStorageBuffer extends StorageBuffer {
 	 */
 	constructor( nodeUniform, groupNode ) {
 
-		super( 'StorageBuffer_' + _id ++, nodeUniform ? nodeUniform.value : null );
+		const label = nodeUniform && nodeUniform.name ? nodeUniform.name : _id ++;
+
+		super( 'StorageBuffer_' + label, nodeUniform ? nodeUniform.value : null );
 
 		/**
 		 * The node uniform.
@@ -46,13 +48,24 @@ class NodeStorageBuffer extends StorageBuffer {
 	}
 
 	/**
+	 * The storage buffer attribute node.
+	 *
+	 * @type {StorageBufferAttribute}
+	 */
+	get attribute() {
+
+		return this.nodeUniform.value;
+
+	}
+
+	/**
 	 * The storage buffer.
 	 *
-	 * @type {BufferAttribute}
+	 * @type {Float32Array}
 	 */
 	get buffer() {
 
-		return this.nodeUniform.value;
+		return this.nodeUniform.value.array;
 
 	}
 

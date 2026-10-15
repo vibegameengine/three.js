@@ -5,6 +5,8 @@ import { EventDispatcher } from '../../core/EventDispatcher.js';
 import { MathUtils } from '../../math/MathUtils.js';
 import { warn, error } from '../../utils.js';
 
+import StackTrace from './StackTrace.js';
+
 const _parentBuildStage = {
 	analyze: 'setup',
 	generate: 'analyze'
@@ -73,14 +75,6 @@ class Node extends EventDispatcher {
 		this.readsScene = null;
 
 		/**
-		 * The UUID of the node.
-		 *
-		 * @type {string}
-		 * @readonly
-		 */
-		this.uuid = MathUtils.generateUUID();
-
-		/**
 		 * The version of the node. The version automatically is increased when {@link Node#needsUpdate} is set to `true`.
 		 *
 		 * @type {number}
@@ -138,7 +132,16 @@ class Node extends EventDispatcher {
 		this._cacheKey = null;
 
 		/**
-		 * The cache key 's version.
+		 * The UUID of the node.
+		 *
+		 * @type {string}
+		 * @default null
+		 * @private
+		 */
+		this._uuid = null;
+
+		/**
+		 * The cache key's version.
 		 *
 		 * @private
 		 * @type {number}
@@ -146,7 +149,27 @@ class Node extends EventDispatcher {
 		 */
 		this._cacheKeyVersion = 0;
 
-		Object.defineProperty( this, 'id', { value: _nodeId ++ } );
+		/**
+		 * The unique ID of the node.
+		 *
+		 * @type {number}
+		 * @readonly
+		 */
+		this.id = _nodeId ++;
+
+		/**
+		 * The stack trace of the node for debugging purposes.
+		 *
+		 * @type {?string}
+		 * @default null
+		 */
+		this.stackTrace = null;
+
+		if ( Node.captureStackTrace === true ) {
+
+			this.stackTrace = new StackTrace();
+
+		}
 
 	}
 
@@ -164,6 +187,24 @@ class Node extends EventDispatcher {
 			this.version ++;
 
 		}
+
+	}
+
+	/**
+	 * The UUID of the node.
+	 *
+	 * @type {string}
+	 * @readonly
+	 */
+	get uuid() {
+
+		if ( this._uuid === null ) {
+
+			this._uuid = MathUtils.generateUUID();
+
+		}
+
+		return this._uuid;
 
 	}
 
@@ -477,16 +518,17 @@ class Node extends EventDispatcher {
 	 */
 	getHash( /*builder*/ ) {
 
-		return this.uuid;
+		return String( this.id );
 
 	}
 
 	/**
 	 * Returns the update type of {@link Node#update}.
 	 *
+	 * @param {NodeFrame} [frame] - The current node frame.
 	 * @return {NodeUpdateType} The update type.
 	 */
-	getUpdateType() {
+	getUpdateType( /*frame*/ ) {
 
 		return this.updateType;
 
@@ -495,9 +537,10 @@ class Node extends EventDispatcher {
 	/**
 	 * Returns the update type of {@link Node#updateBefore}.
 	 *
+	 * @param {NodeFrame} [frame] - The current node frame.
 	 * @return {NodeUpdateType} The update type.
 	 */
-	getUpdateBeforeType() {
+	getUpdateBeforeType( /*frame*/ ) {
 
 		return this.updateBeforeType;
 
@@ -506,9 +549,10 @@ class Node extends EventDispatcher {
 	/**
 	 * Returns the update type of {@link Node#updateAfter}.
 	 *
+	 * @param {NodeFrame} [frame] - The current node frame.
 	 * @return {NodeUpdateType} The update type.
 	 */
-	getUpdateAfterType() {
+	getUpdateAfterType( /*frame*/ ) {
 
 		return this.updateAfterType;
 
@@ -548,15 +592,61 @@ class Node extends EventDispatcher {
 	 * Returns the node's type.
 	 *
 	 * @param {NodeBuilder} builder - The current node builder.
+	 * @param {string} [output=null] - The output of the node.
 	 * @return {string} The type of the node.
 	 */
-	getNodeType( builder ) {
+	getNodeType( builder, output = null ) {
+
+		const nodeData = builder.getDataFromNode( this );
+
+		let type;
+
+		if ( output !== null ) {
+
+			nodeData.typeFromOutput = nodeData.typeFromOutput || {};
+
+			type = nodeData.typeFromOutput[ output ];
+
+			if ( type === undefined ) {
+
+				type = this.generateNodeType( builder, output );
+
+				nodeData.typeFromOutput[ output ] = type;
+
+			}
+
+		} else {
+
+			type = nodeData.type;
+
+			if ( type === undefined ) {
+
+				type = this.generateNodeType( builder );
+
+				nodeData.type = type;
+
+			}
+
+		}
+
+		return type;
+
+	}
+
+	/**
+	 * Returns the node's type.
+	 *
+	 * @param {NodeBuilder} builder - The current node builder.
+	 * @param {string} [output=null] - The output of the node.
+	 * @return {string} The type of the node.
+	 */
+	generateNodeType( builder, output = null ) {
 
 		const nodeProperties = builder.getNodeProperties( this );
 
 		if ( nodeProperties.outputNode ) {
 
-			return nodeProperties.outputNode.getNodeType( builder );
+			return nodeProperties.outputNode.getNodeType( builder, output );
 
 		}
 
@@ -568,7 +658,8 @@ class Node extends EventDispatcher {
 	 * This method is used during the build process of a node and ensures
 	 * equal nodes are not built multiple times but just once. For example if
 	 * `attribute( 'uv' )` is used multiple times by the user, the build
-	 * process makes sure to process just the first node.
+	 * process makes sure to process just the first node. It also handles
+	 * node overrides if an override context is set.
 	 *
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {Node} The shared node if possible. Otherwise `this` is returned.
@@ -578,7 +669,43 @@ class Node extends EventDispatcher {
 		const hash = this.getHash( builder );
 		const nodeFromHash = builder.getNodeFromHash( hash );
 
-		return nodeFromHash || this;
+		let sharedNode = null;
+
+		if ( nodeFromHash && nodeFromHash !== this ) {
+
+			sharedNode = nodeFromHash;
+
+		} else if ( builder.context.overrideNodes ) {
+
+			const callback = builder.context.overrideNodes.get( this );
+
+			if ( callback ) {
+
+				const nodeData = builder.getDataFromNode( this );
+
+				if ( nodeData.isOverwritten !== true ) {
+
+					nodeData.isOverwritten = true;
+
+					// cancel the override for use the same node inside the callback
+
+					sharedNode = callback( builder ).overrideNode( this, null );
+
+					nodeData.sharedNode = sharedNode;
+
+				} else {
+
+					// avoid recursive override calls
+
+					sharedNode = nodeData.sharedNode;
+
+				}
+
+			}
+
+		}
+
+		return sharedNode || this;
 
 	}
 
@@ -794,7 +921,6 @@ class Node extends EventDispatcher {
 
 		//
 
-		builder.addNode( this );
 		builder.addChain( this );
 
 		/* Build stages expected results:
@@ -807,6 +933,8 @@ class Node extends EventDispatcher {
 		const buildStage = builder.getBuildStage();
 
 		if ( buildStage === 'setup' ) {
+
+			builder.addNode( this );
 
 			this.updateReference( builder );
 
@@ -843,6 +971,8 @@ class Node extends EventDispatcher {
 					}
 
 				}
+
+				builder.addSequentialNode( this );
 
 			}
 
@@ -913,7 +1043,6 @@ class Node extends EventDispatcher {
 		}
 
 		builder.removeChain( this );
-		builder.addSequentialNode( this );
 
 		return result;
 
@@ -1103,5 +1232,13 @@ class Node extends EventDispatcher {
 	}
 
 }
+
+/**
+ * Enables or disables the automatic capturing of stack traces for nodes.
+ *
+ * @type {boolean}
+ * @default false
+ */
+Node.captureStackTrace = false;
 
 export default Node;

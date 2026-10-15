@@ -1,16 +1,18 @@
 import {
 	InterpolateLinear,
 	InterpolateSmooth,
-	InterpolateDiscrete
+	InterpolateDiscrete,
+	InterpolateBezier
 } from '../constants.js';
 import { CubicInterpolant } from '../math/interpolants/CubicInterpolant.js';
 import { LinearInterpolant } from '../math/interpolants/LinearInterpolant.js';
 import { DiscreteInterpolant } from '../math/interpolants/DiscreteInterpolant.js';
+import { BezierInterpolant } from '../math/interpolants/BezierInterpolant.js';
 import * as AnimationUtils from './AnimationUtils.js';
 import { warn, error } from '../utils.js';
 
 /**
- * Represents s a timed sequence of keyframes, which are composed of lists of
+ * Represents a timed sequence of keyframes, which are composed of lists of
  * times and related values, and which are used to animate a specific property
  * of an object.
  */
@@ -22,7 +24,7 @@ class KeyframeTrack {
 	 * @param {string} name - The keyframe track's name.
 	 * @param {Array<number>} times - A list of keyframe times.
 	 * @param {Array<number|string|boolean>} values - A list of keyframe values.
-	 * @param {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth)} [interpolation] - The interpolation type.
+	 * @param {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth|InterpolateBezier)} [interpolation] - The interpolation type.
 	 */
 	constructor( name, times, values, interpolation ) {
 
@@ -93,6 +95,15 @@ class KeyframeTrack {
 
 			}
 
+			if ( AnimationUtils.hasTangents( track.settings ) ) {
+
+				json.settings = {
+					inTangents: AnimationUtils.convertArray( track.settings.inTangents, Array ),
+					outTangents: AnimationUtils.convertArray( track.settings.outTangents, Array )
+				};
+
+			}
+
 		}
 
 		json.type = track.ValueTypeName; // mandatory
@@ -141,9 +152,36 @@ class KeyframeTrack {
 	}
 
 	/**
+	 * Factory method for creating a new Bezier interpolant.
+	 *
+	 * The Bezier interpolant requires tangent data to be set via the `settings` property
+	 * on the track before creating the interpolant. The settings should contain:
+	 * - `inTangents`: Float32Array with [time, value] pairs per keyframe per component
+	 * - `outTangents`: Float32Array with [time, value] pairs per keyframe per component
+	 *
+	 * @static
+	 * @param {TypedArray} [result] - The result buffer.
+	 * @return {BezierInterpolant} The new interpolant.
+	 */
+	InterpolantFactoryMethodBezier( result ) {
+
+		const interpolant = new BezierInterpolant( this.times, this.values, this.getValueSize(), result );
+
+		if ( this.settings ) {
+
+			interpolant.inTangents = this.settings.inTangents;
+			interpolant.outTangents = this.settings.outTangents;
+
+		}
+
+		return interpolant;
+
+	}
+
+	/**
 	 * Defines the interpolation factor method for this keyframe track.
 	 *
-	 * @param {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth)} interpolation - The interpolation type.
+	 * @param {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth|InterpolateBezier)} interpolation - The interpolation type.
 	 * @return {KeyframeTrack} A reference to this keyframe track.
 	 */
 	setInterpolation( interpolation ) {
@@ -167,6 +205,12 @@ class KeyframeTrack {
 			case InterpolateSmooth:
 
 				factoryMethod = this.InterpolantFactoryMethodSmooth;
+
+				break;
+
+			case InterpolateBezier:
+
+				factoryMethod = this.InterpolantFactoryMethodBezier;
 
 				break;
 
@@ -206,7 +250,7 @@ class KeyframeTrack {
 	/**
 	 * Returns the current interpolation type.
 	 *
-	 * @return {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth)} The interpolation type.
+	 * @return {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth|InterpolateBezier)} The interpolation type.
 	 */
 	getInterpolation() {
 
@@ -223,6 +267,10 @@ class KeyframeTrack {
 			case this.InterpolantFactoryMethodSmooth:
 
 				return InterpolateSmooth;
+
+			case this.InterpolantFactoryMethodBezier:
+
+				return InterpolateBezier;
 
 		}
 
@@ -278,6 +326,13 @@ class KeyframeTrack {
 			for ( let i = 0, n = times.length; i !== n; ++ i ) {
 
 				times[ i ] *= timeScale;
+
+			}
+
+			if ( AnimationUtils.hasTangents( this.settings ) ) {
+
+				scaleTangentTimes( this.settings.inTangents, timeScale );
+				scaleTangentTimes( this.settings.outTangents, timeScale );
 
 			}
 
@@ -425,7 +480,7 @@ class KeyframeTrack {
 	 * Optimizes this keyframe track by removing equivalent sequential keys (which are
 	 * common in morph target sequences).
 	 *
-	 * @return {AnimationClip} A reference to this animation clip.
+	 * @return {KeyframeTrack} A reference to this keyframe track.
 	 */
 	optimize() {
 
@@ -556,7 +611,28 @@ class KeyframeTrack {
 		// Interpolant argument to constructor is not saved, so copy the factory method directly.
 		track.createInterpolant = this.createInterpolant;
 
+		if ( AnimationUtils.hasTangents( this.settings ) ) {
+
+			track.settings = {
+				inTangents: this.settings.inTangents.slice(),
+				outTangents: this.settings.outTangents.slice()
+			};
+
+		}
+
 		return track;
+
+	}
+
+}
+
+function scaleTangentTimes( tangents, timeScale ) {
+
+	// tangents are [ time, value ] pairs, so only every second entry is a time
+
+	for ( let i = 0, n = tangents.length; i !== n; i += 2 ) {
+
+		tangents[ i ] *= timeScale;
 
 	}
 
@@ -589,7 +665,7 @@ KeyframeTrack.prototype.ValueBufferType = Float32Array;
 /**
  * The default interpolation type of this keyframe track.
  *
- * @type {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth)}
+ * @type {(InterpolateLinear|InterpolateDiscrete|InterpolateSmooth|InterpolateBezier)}
  * @default InterpolateLinear
  */
 KeyframeTrack.prototype.DefaultInterpolation = InterpolateLinear;

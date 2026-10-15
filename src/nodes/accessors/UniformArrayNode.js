@@ -41,7 +41,7 @@ class UniformArrayElementNode extends ArrayElementNode {
 	generate( builder ) {
 
 		const snippet = super.generate( builder );
-		const type = this.getNodeType();
+		const type = this.getNodeType( builder );
 		const paddedType = this.node.getPaddedType();
 
 		return builder.format( snippet, paddedType, type );
@@ -135,7 +135,7 @@ class UniformArrayNode extends BufferNode {
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {string} The node type.
 	 */
-	getNodeType( /*builder*/ ) {
+	generateNodeType( /*builder*/ ) {
 
 		return this.paddedType;
 
@@ -186,13 +186,38 @@ class UniformArrayNode extends BufferNode {
 
 	}
 
-	/**
-	 * The update makes sure to correctly transfer the data from the (complex) objects
-	 * in the array to the internal, correctly padded value buffer.
-	 *
-	 * @param {NodeFrame} frame - A reference to the current node frame.
-	 */
 	update( /*frame*/ ) {
+
+		this.updateBuffer();
+
+	}
+
+	/**
+	 * Composes a user-defined update with the buffer transfer.
+	 *
+	 * @param {Function} callback - The update function.
+	 * @param {string} updateType - The update type.
+	 * @return {UniformArrayNode} A reference to this node.
+	 */
+	onUpdate( callback, updateType ) {
+
+		callback = callback.bind( this );
+
+		return super.onUpdate( ( frame, self ) => {
+
+			callback( frame, self );
+
+			this.updateBuffer();
+
+		}, updateType );
+
+	}
+
+	/**
+	 * The method makes sure to correctly transfer the data from the (complex) objects
+	 * in the array to the internal, correctly padded value buffer.
+	 */
+	updateBuffer() {
 
 		const { array, value } = this;
 
@@ -314,6 +339,8 @@ class UniformArrayNode extends BufferNode {
 		this.value = new arrayType( length * paddedElementLength );
 		this.bufferCount = length;
 		this.bufferType = paddedType;
+
+		this.updateBuffer(); // initialize the buffer values
 
 		return super.setup( builder );
 

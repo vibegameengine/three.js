@@ -1,7 +1,6 @@
 import { WebGLCoordinateSystem } from '../../constants.js';
 import TempNode from '../core/TempNode.js';
 import { addMethodChaining, Fn, int, nodeProxyIntent } from '../tsl/TSLCore.js';
-import { warn } from '../../utils.js';
 
 const _vectorOperators = {
 	'==': 'equal',
@@ -107,15 +106,15 @@ class OperatorNode extends TempNode {
 	 * @param {?string} [output=null] - The output type.
 	 * @return {string} The node type.
 	 */
-	getNodeType( builder, output = null ) {
+	generateNodeType( builder, output = null ) {
 
 		const op = this.op;
 
 		const aNode = this.aNode;
 		const bNode = this.bNode;
 
-		const typeA = builder.typeOf( aNode );
-		const typeB = bNode ? builder.typeOf( bNode ) : null;
+		const typeA = aNode.getNodeType( builder );
+		const typeB = bNode ? bNode.getNodeType( builder ) : null;
 
 		if ( typeA === 'void' || typeB === 'void' ) {
 
@@ -129,9 +128,15 @@ class OperatorNode extends TempNode {
 
 			return builder.getIntegerType( typeA );
 
-		} else if ( op === '!' || op === '&&' || op === '||' || op === '^^' ) {
+		} else if ( op === '&&' || op === '||' || op === '^^' ) {
 
 			return 'bool';
+
+		} else if ( op === '!' ) {
+
+			const typeLength = builder.getTypeLength( typeA );
+
+			return typeLength > 1 ? `bvec${ typeLength }` : 'bool';
 
 		} else if ( op === '==' || op === '!=' || op === '<' || op === '>' || op === '<=' || op === '>=' ) {
 
@@ -331,9 +336,23 @@ class OperatorNode extends TempNode {
 
 				}
 
-			} else if ( op === '!' || op === '~' ) {
+			} else if ( op === '!' ) {
 
-				return builder.format( `(${op}${a})`, typeA, output );
+				if ( isGLSL && builder.isVector( typeA ) ) {
+
+					return builder.format( `not( ${a} )`, output );
+
+				} else {
+
+					// WGSL and scalars on GLSL
+
+					return builder.format( `( ${op} ${a} )`, typeA, output );
+
+				}
+
+			} else if ( op === '~' ) {
+
+				return builder.format( `( ${op} ${a} )`, typeA, output );
 
 			} else if ( fnOpSnippet ) {
 
@@ -651,7 +670,7 @@ export const shiftRight = /*@__PURE__*/ nodeProxyIntent( OperatorNode, '>>' ).se
  * @param {Node} a - The node to increment.
  * @returns {OperatorNode}
  */
-export const incrementBefore = Fn( ( [ a ] ) => {
+export const incrementBefore = /*@__PURE__*/ Fn( ( [ a ] ) => {
 
 	a.addAssign( 1 );
 	return a;
@@ -666,7 +685,7 @@ export const incrementBefore = Fn( ( [ a ] ) => {
  * @param {Node} a - The node to decrement.
  * @returns {OperatorNode}
  */
-export const decrementBefore = Fn( ( [ a ] ) => {
+export const decrementBefore = /*@__PURE__*/ Fn( ( [ a ] ) => {
 
 	a.subAssign( 1 );
 	return a;
@@ -731,21 +750,3 @@ addMethodChaining( 'incrementBefore', incrementBefore );
 addMethodChaining( 'decrementBefore', decrementBefore );
 addMethodChaining( 'increment', increment );
 addMethodChaining( 'decrement', decrement );
-
-/**
- * @tsl
- * @function
- * @deprecated since r175. Use {@link mod} instead.
- *
- * @param {Node} a - The first input.
- * @param {Node} b - The second input.
- * @returns {OperatorNode}
- */
-export const modInt = ( a, b ) => { // @deprecated, r175
-
-	warn( 'TSL: "modInt()" is deprecated. Use "mod( int( ... ) )" instead.' );
-	return mod( int( a ), int( b ) );
-
-};
-
-addMethodChaining( 'modInt', modInt );

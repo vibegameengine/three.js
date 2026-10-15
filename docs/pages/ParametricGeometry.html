@@ -16,7 +16,7 @@
 				<div class="class-description"><p>This class can be used to generate a geometry based on a parametric surface.</p>
 <p>Reference: <a href="https://prideout.net/blog/old/blog/index.html@p=44.html" target="_blank" rel="noopener">Mesh Generation with Python</a></p></div>
 				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const geometry = new THREE.ParametricGeometry( klein, 25, 25 );
+				<div translate="no"><pre><code class="language-js">const geometry = new ParametricGeometry( klein, 25, 25 );
 const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 const klein = new THREE.Mesh( geometry, material );
 scene.add( klein );
@@ -24,7 +24,7 @@ scene.add( klein );
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">ParametricGeometry</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">ParametricGeometry</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -37,7 +37,7 @@ scene.add( klein );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>func</strong>
+										<strong translate="no">func</strong>
 									</td>
 									<td class="description last">
 										<p>The parametric function. Default is a function that generates a curved plane surface.</p>
@@ -45,7 +45,7 @@ scene.add( klein );
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>slices</strong>
+										<strong translate="no">slices</strong>
 									</td>
 									<td class="description last">
 										<p>The number of slices to use for the parametric function.</p>
@@ -54,7 +54,7 @@ scene.add( klein );
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>stacks</strong>
+										<strong translate="no">stacks</strong>
 									</td>
 									<td class="description last">
 										<p>The stacks of slices to use for the parametric function.</p>
@@ -84,7 +84,7 @@ after instantiation does not change the geometry.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>u</strong>
+										<strong translate="no">u</strong>
 									</td>
 									<td class="description last">
 										<p>The <code>u</code> coordinate on the surface in the range <code>[0,1]</code>.</p>
@@ -92,7 +92,7 @@ after instantiation does not change the geometry.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>v</strong>
+										<strong translate="no">v</strong>
 									</td>
 									<td class="description last">
 										<p>The <code>v</code> coordinate on the surface in the range <code>[0,1]</code>.</p>
@@ -100,7 +100,7 @@ after instantiation does not change the geometry.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>target</strong>
+										<strong translate="no">target</strong>
 									</td>
 									<td class="description last">
 										<p>The target vector that is used to store the method's result.</p>

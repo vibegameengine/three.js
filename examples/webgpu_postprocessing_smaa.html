@@ -4,6 +4,10 @@
 		<title>three.js webgpu - postprocessing smaa</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - postprocessing smaa">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_postprocessing_smaa.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_postprocessing_smaa.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -37,7 +41,7 @@
 
 			import { Inspector } from 'three/addons/inspector/Inspector.js';
 
-			let camera, scene, renderer, postProcessing;
+			let camera, scene, renderer, renderPipeline;
 
 			const params = {
 				enabled: true,
@@ -81,12 +85,12 @@
 
 				// post processing
 
-				postProcessing = new THREE.PostProcessing( renderer );
+				renderPipeline = new THREE.RenderPipeline( renderer );
 
 				const scenePass = pass( scene, camera ).toInspector( 'Color' );
 				const smaaPass = smaa( scenePass );
 
-				postProcessing.outputNode = smaaPass;
+				renderPipeline.outputNode = smaaPass;
 
 				//
 
@@ -99,15 +103,15 @@
 			
 					if ( value === true ) {
 
-						postProcessing.outputNode = smaaPass;
+						renderPipeline.outputNode = smaaPass;
 
 					} else {
 
-						postProcessing.outputNode = scenePass;
+						renderPipeline.outputNode = scenePass;
 
 					}
 
-					postProcessing.needsUpdate = true;
+					renderPipeline.needsUpdate = true;
 
 				} );
 
@@ -143,7 +147,7 @@
 
 				}
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

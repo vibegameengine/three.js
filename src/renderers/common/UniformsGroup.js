@@ -47,6 +47,62 @@ class UniformsGroup extends UniformBuffer {
 		 */
 		this.uniforms = [];
 
+		/**
+		 * A cache for the uniform update ranges.
+		 *
+		 * @private
+		 * @type {Map<number, {start: number, count: number}>}
+		 */
+		this._updateRangeCache = new Map();
+
+		/**
+		 * Uniform indices whose range has already been pushed into `updateRanges`
+		 * during the current update cycle. Reset on `clearUpdateRanges()`.
+		 *
+		 * @private
+		 * @type {Set<number>}
+		 */
+		this._addedIndices = new Set();
+
+	}
+
+	/**
+	 * Adds a uniform's update range to this buffer.
+	 *
+	 * @param {Uniform} uniform - The uniform.
+	 */
+	addUniformUpdateRange( uniform ) {
+
+		const index = uniform.index;
+
+		if ( this._addedIndices.has( index ) ) return;
+
+		let range = this._updateRangeCache.get( index );
+
+		if ( range === undefined ) {
+
+			range = { start: 0, count: 0 };
+			this._updateRangeCache.set( index, range );
+
+		}
+
+		range.start = uniform.offset;
+		range.count = uniform.itemSize;
+
+		this._addedIndices.add( index );
+		this.updateRanges.push( range );
+
+	}
+
+	/**
+	 * Clears all update ranges of this buffer.
+	 */
+	clearUpdateRanges() {
+
+		this._addedIndices.clear();
+
+		super.clearUpdateRanges();
+
 	}
 
 	/**
@@ -156,6 +212,7 @@ class UniformsGroup extends UniformBuffer {
 			}
 
 			uniform.offset = offset / bytesPerElement;
+			uniform.index = i;
 
 			offset += itemSize;
 
@@ -189,6 +246,17 @@ class UniformsGroup extends UniformBuffer {
 		}
 
 		return updated;
+
+	}
+
+	/**
+	 * Releases the buffer.
+	 */
+	release() {
+
+		super.release();
+
+		this._values = null;
 
 	}
 
@@ -235,6 +303,8 @@ class UniformsGroup extends UniformBuffer {
 			b[ offset ] = a[ offset ] = v;
 			updated = true;
 
+			this.addUniformUpdateRange( uniform );
+
 		}
 
 		return updated;
@@ -264,6 +334,8 @@ class UniformsGroup extends UniformBuffer {
 			b[ offset + 1 ] = a[ offset + 1 ] = v.y;
 
 			updated = true;
+
+			this.addUniformUpdateRange( uniform );
 
 		}
 
@@ -295,6 +367,8 @@ class UniformsGroup extends UniformBuffer {
 			b[ offset + 2 ] = a[ offset + 2 ] = v.z;
 
 			updated = true;
+
+			this.addUniformUpdateRange( uniform );
 
 		}
 
@@ -328,6 +402,8 @@ class UniformsGroup extends UniformBuffer {
 
 			updated = true;
 
+			this.addUniformUpdateRange( uniform );
+
 		}
 
 		return updated;
@@ -357,6 +433,8 @@ class UniformsGroup extends UniformBuffer {
 			b[ offset + 2 ] = a[ offset + 2 ] = c.b;
 
 			updated = true;
+
+			this.addUniformUpdateRange( uniform );
 
 		}
 
@@ -396,6 +474,8 @@ class UniformsGroup extends UniformBuffer {
 
 			updated = true;
 
+			this.addUniformUpdateRange( uniform );
+
 		}
 
 		return updated;
@@ -422,6 +502,8 @@ class UniformsGroup extends UniformBuffer {
 			b.set( e, offset );
 			setArray( a, e, offset );
 			updated = true;
+
+			this.addUniformUpdateRange( uniform );
 
 		}
 

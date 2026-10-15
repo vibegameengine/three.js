@@ -10,6 +10,9 @@ const _vector = /*@__PURE__*/ new Vector3();
 /**
  * This displays a cone shaped helper object for a {@link SpotLight}.
  *
+ * When the spot light or its target are transformed or light properties are
+ * changed, it's necessary to call the `update()` method of the respective helper.
+ *
  * ```js
  * const spotLight = new THREE.SpotLight( 0xffffff );
  * spotLight.position.set( 10, 10, 10 );
@@ -92,6 +95,8 @@ class SpotLightHelper extends Object3D {
 	 */
 	dispose() {
 
+		super.dispose();
+
 		this.cone.geometry.dispose();
 		this.cone.material.dispose();
 
@@ -122,7 +127,7 @@ class SpotLightHelper extends Object3D {
 
 		}
 
-		this.matrixWorld.copy( this.light.matrixWorld );
+		this.matrixWorldNeedsUpdate = true;
 
 		const coneLength = this.light.distance ? this.light.distance : 1000;
 		const coneWidth = coneLength * Math.tan( this.light.angle );

@@ -18,6 +18,10 @@
 <a href="https://en.wikipedia.org/wiki/Row-_and_column-major_order#Column-major_order" target="_blank" rel="noopener">row-major</a>
 order, while internally they are stored in the <a href="Matrix2.html#elements">Matrix2#elements</a> array in column-major order.
 This means that calling:</p>
+<pre><code class="language-js">const m = new THREE.Matrix2();
+m.set( 11, 12,
+       21, 22 );
+</code></pre>
 <p>will result in the elements array containing:</p>
 <pre><code class="language-js">m.elements = [ 11, 21,
                12, 22 ];
@@ -28,11 +32,6 @@ most people are used to thinking about matrices in row-major order, the
 three.js documentation shows matrices in row-major order. Just bear in
 mind that if you are reading the source code, you'll have to take the
 transpose of any matrices outlined here to make sense of the calculations.</p></div>
-				<h2>Code Example</h2>
-				<div translate="no"><pre><code class="language-js">const m = new THREE.Matrix2();
-m.set( 11, 12,
-       21, 22 );
-</code></pre></div>
 			</header>
 			<article>
 				<div class="container-overview">
@@ -48,7 +47,7 @@ initializes the matrix as an identity matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>n11</strong>
+										<strong translate="no">n11</strong>
 									</td>
 									<td class="description last">
 										<p>1-1 matrix element.</p>
@@ -56,7 +55,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n12</strong>
+										<strong translate="no">n12</strong>
 									</td>
 									<td class="description last">
 										<p>1-2 matrix element.</p>
@@ -64,7 +63,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n21</strong>
+										<strong translate="no">n21</strong>
 									</td>
 									<td class="description last">
 										<p>2-1 matrix element.</p>
@@ -72,7 +71,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n22</strong>
+										<strong translate="no">n22</strong>
 									</td>
 									<td class="description last">
 										<p>2-2 matrix element.</p>
@@ -94,13 +93,6 @@ initializes the matrix as an identity matrix.</p>
 						<p>A column-major list of matrix values.</p>
 					</div>
 				</div>
-				<div class="member">
-					<h3 class="name" id="isMatrix2" translate="no">.<a href="#isMatrix2">isMatrix2</a><span class="type-signature"> : boolean</span> <span class="type-signature">(readonly) </span></h3>
-					<div class="description">
-						<p>This flag can be used for type testing.</p>
-						<p>Default is <code>true</code>.</p>
-					</div>
-				</div>
 				<h2 class="subsection-title">Methods</h2>
 					<h3 class="name name-method" id="fromArray" translate="no">.<a href="#fromArray">fromArray</a><span class="signature">( array : <span class="param-type">Array.&lt;number></span>, offset : <span class="param-type">number</span> )</span><span class="type-signature"> : <a href="Matrix2.html">Matrix2</a></span> </h3>
 					<div class="method">
@@ -111,7 +103,7 @@ initializes the matrix as an identity matrix.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>array</strong>
+										<strong translate="no">array</strong>
 									</td>
 									<td class="description last">
 										<p>The matrix elements in column-major order.</p>
@@ -119,7 +111,7 @@ initializes the matrix as an identity matrix.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>offset</strong>
+										<strong translate="no">offset</strong>
 									</td>
 									<td class="description last">
 										<p>Index of the first element in the array.</p>
@@ -151,7 +143,7 @@ in row-major order.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>n11</strong>
+										<strong translate="no">n11</strong>
 									</td>
 									<td class="description last">
 										<p>1-1 matrix element.</p>
@@ -159,7 +151,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n12</strong>
+										<strong translate="no">n12</strong>
 									</td>
 									<td class="description last">
 										<p>1-2 matrix element.</p>
@@ -167,7 +159,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n21</strong>
+										<strong translate="no">n21</strong>
 									</td>
 									<td class="description last">
 										<p>2-1 matrix element.</p>
@@ -175,7 +167,7 @@ in row-major order.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>n22</strong>
+										<strong translate="no">n22</strong>
 									</td>
 									<td class="description last">
 										<p>2-2 matrix element.</p>

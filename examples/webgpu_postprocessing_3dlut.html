@@ -4,6 +4,10 @@
 		<title>three.js webgpu - 3d luts</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - 3d luts">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_postprocessing_3dlut.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_postprocessing_3dlut.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -63,7 +67,7 @@
 				'NightLUT': null
 			};
 
-			let camera, scene, renderer, postProcessing, controls, lutPass;
+			let camera, scene, renderer, renderPipeline, controls, lutPass;
 
 			init();
 
@@ -73,6 +77,7 @@
 				camera.position.set( 8, 10, 12 );
 
 				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x000000 );
 
 				// Loaders
 
@@ -207,12 +212,12 @@
 
 				// post processing
 
-				postProcessing = new THREE.PostProcessing( renderer );
+				renderPipeline = new THREE.RenderPipeline( renderer );
 
 				// ignore default output color transform ( toneMapping and outputColorSpace )
 				// use renderOutput() for control the sequence
 
-				postProcessing.outputColorTransform = false;
+				renderPipeline.outputColorTransform = false;
 
 				// scene pass
 
@@ -222,7 +227,7 @@
 				const lut = lutMap[ params.lut ];
 				lutPass = lut3D( outputPass, texture3D( lut.texture3D ), lut.texture3D.image.width, uniform( 1 ) );
 
-				postProcessing.outputNode = lutPass;
+				renderPipeline.outputNode = lutPass;
 
 				// controls
 
@@ -265,7 +270,7 @@
 
 				}
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

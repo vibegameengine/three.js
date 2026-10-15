@@ -3,6 +3,10 @@
 		<title>three.js webgpu - compute snow</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - compute snow">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_compute_particles_snow.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_compute_particles_snow.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 		<!-- <link type="text/css" rel="stylesheet" href="main.css"> -->
 	</head>
@@ -49,7 +53,7 @@
 			let camera, scene, renderer;
 			let controls;
 			let computeParticles;
-			let postProcessing;
+			let renderPipeline;
 
 			let collisionCamera, collisionPosRT, collisionPosMaterial;
 
@@ -68,18 +72,7 @@
 				scene.fog = new THREE.Fog( 0x0f3c37, 5, 40 );
 
 				const dirLight = new THREE.DirectionalLight( 0xf9ff9b, 9 );
-				dirLight.castShadow = true;
 				dirLight.position.set( 10, 10, 0 );
-				dirLight.castShadow = true;
-				dirLight.shadow.camera.near = 1;
-				dirLight.shadow.camera.far = 30;
-				dirLight.shadow.camera.right = 30;
-				dirLight.shadow.camera.left = - 30;
-				dirLight.shadow.camera.top = 30;
-				dirLight.shadow.camera.bottom = - 30;
-				dirLight.shadow.mapSize.width = 2048;
-				dirLight.shadow.mapSize.height = 2048;
-				dirLight.shadow.bias = - 0.009;
 				scene.add( dirLight );
 
 				scene.add( new THREE.HemisphereLight( 0x0f3c37, 0x080d10, 100 ) );
@@ -92,12 +85,14 @@
 				collisionCamera.layers.enable( 1 );
 
 				collisionPosRT = new THREE.RenderTarget( 1024, 1024 );
+				collisionPosRT.texture.format = THREE.RedFormat;
 				collisionPosRT.texture.type = THREE.HalfFloatType;
 				collisionPosRT.texture.magFilter = THREE.NearestFilter;
 				collisionPosRT.texture.minFilter = THREE.NearestFilter;
 				collisionPosRT.texture.generateMipmaps = false;
 
 				collisionPosMaterial = new THREE.MeshBasicNodeMaterial();
+				collisionPosMaterial.blending = THREE.NoBlending;
 				collisionPosMaterial.fog = false;
 				collisionPosMaterial.toneMapped = false;
 				collisionPosMaterial.colorNode = positionWorld.y;
@@ -157,11 +152,11 @@
 
 					const rippleOnSurface = texture( collisionPosRT.texture, getCoord( position.xz ) ).toInspector( 'Collision Test', () => {
 
-						return texture( collisionPosRT.texture ).y; // .div( collisionCamera.position.y );
+						return texture( collisionPosRT.texture ); // .div( collisionCamera.position.y );
 
 					} );
 
-					const rippleFloorArea = rippleOnSurface.y.add( scale.x.mul( surfaceOffset ) );
+					const rippleFloorArea = rippleOnSurface.add( scale.x.mul( surfaceOffset ) );
 
 					If( position.y.greaterThan( rippleFloorArea ), () => {
 
@@ -200,7 +195,6 @@
 
 					const rainParticles = new THREE.Mesh( geometry, staticMaterial );
 					rainParticles.count = maxParticleCount;
-					rainParticles.castShadow = true;
 					rainParticles.layers.disableAll();
 					rainParticles.layers.enable( layer );
 
@@ -249,7 +243,6 @@
 						const coneGeometry = new THREE.ConeGeometry( radius * 0.95, radius * 1.25, 32 );
 
 						const cone = new THREE.Mesh( coneGeometry, coneMaterial );
-						cone.castShadow = true;
 						cone.position.y = ( ( count - i ) * 1.5 ) + ( count * .6 );
 						object.add( cone );
 
@@ -284,6 +277,7 @@
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.setClearColor( 0x000000 );
 				renderer.setAnimationLoop( animate );
 				renderer.inspector = new Inspector();
 				document.body.appendChild( renderer.domElement );
@@ -322,8 +316,8 @@
 				totalPass = totalPass.mul( vignette );
 				totalPass = totalPass.add( teapotTreePass.mul( 10 ).add( teapotTreePassBlurred ).toInspector( 'Teapot Blur' ) );
 
-				postProcessing = new THREE.PostProcessing( renderer );
-				postProcessing.outputNode = totalPass;
+				renderPipeline = new THREE.RenderPipeline( renderer );
+				renderPipeline.outputNode = totalPass;
 
 				//
 
@@ -367,7 +361,7 @@
 				scene.overrideMaterial = null;
 				renderer.setRenderTarget( null );
 
-				postProcessing.render();
+				renderPipeline.render();
 
 			}
 

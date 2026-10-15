@@ -4,6 +4,10 @@
 		<title>three.js webgpu - skinning</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<meta property="og:title" content="three.js webgpu - skinning">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://threejs.org/examples/webgpu_skinning.html">
+		<meta property="og:image" content="https://threejs.org/examples/screenshots/webgpu_skinning.jpg">
 		<link type="text/css" rel="stylesheet" href="example.css">
 	</head>
 	<body>
@@ -40,7 +44,7 @@
 
 			let camera, scene, renderer;
 
-			let mixer, clock;
+			let mixer, timer;
 
 			init();
 
@@ -53,7 +57,8 @@
 				scene.backgroundNode = screenUV.y.mix( color( 0x66bbff ), color( 0x4466ff ) );
 				camera.lookAt( 0, 1, 0 );
 
-				clock = new THREE.Clock();
+				timer = new THREE.Timer();
+				timer.connect( document );
 
 				//lights
 
@@ -103,7 +108,9 @@
 
 			function animate() {
 
-				const delta = clock.getDelta();
+				timer.update();
+
+				const delta = timer.getDelta();
 
 				if ( mixer ) mixer.update( delta );
 

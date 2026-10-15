@@ -29,7 +29,7 @@ scene.add( mesh );
 			</header>
 			<article>
 				<h2 class="subsection-title">Import</h2>
-				<p><span translate="no">LWOLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#en/installation" target="_blank" rel="noopener">Installation#Addons</a>.</p>
+				<p><span translate="no">LWOLoader</span> is an addon, and must be imported explicitly, see <a href="https://threejs.org/manual/#installation#addons" target="_blank" rel="noopener">Installation#Addons</a>.</p>
 				<pre><code class="language-js">import { LWOLoader } from 'three/addons/loaders/LWOLoader.js';</code></pre>
 				<div class="container-overview">
 					<h2>Constructor</h2>
@@ -42,7 +42,7 @@ scene.add( mesh );
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>manager</strong>
+										<strong translate="no">manager</strong>
 									</td>
 									<td class="description last">
 										<p>The loading manager.</p>
@@ -50,6 +50,9 @@ scene.add( mesh );
 								</tr>
 							</tbody>
 						</table>
+						<dl class="details">
+							<dt class="important tag-deprecated"><strong>Deprecated:</strong> since r185.</dt>
+						</dl>
 					</div>
 				</div>
 				<h2 class="subsection-title">Methods</h2>
@@ -63,7 +66,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>url</strong>
+										<strong translate="no">url</strong>
 									</td>
 									<td class="description last">
 										<p>The path/URL of the file to be loaded. This can also be a data URI.</p>
@@ -71,7 +74,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onLoad</strong>
+										<strong translate="no">onLoad</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when the loading process has been finished.</p>
@@ -79,7 +82,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onProgress</strong>
+										<strong translate="no">onProgress</strong>
 									</td>
 									<td class="description last">
 										<p>Executed while the loading is in progress.</p>
@@ -87,7 +90,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>onError</strong>
+										<strong translate="no">onError</strong>
 									</td>
 									<td class="description last">
 										<p>Executed when errors occur.</p>
@@ -108,7 +111,7 @@ to the <code>onLoad()</code> callback.</p>
 							<tbody>
 								<tr>
 									<td class="name">
-										<strong>iffBuffer</strong>
+										<strong translate="no">iffBuffer</strong>
 									</td>
 									<td class="description last">
 										<p>The raw LWO data as an array buffer.</p>
@@ -116,7 +119,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>path</strong>
+										<strong translate="no">path</strong>
 									</td>
 									<td class="description last">
 										<p>The URL base path.</p>
@@ -124,7 +127,7 @@ to the <code>onLoad()</code> callback.</p>
 								</tr>
 								<tr>
 									<td class="name">
-										<strong>modelName</strong>
+										<strong translate="no">modelName</strong>
 									</td>
 									<td class="description last">
 										<p>The model name.</p>
