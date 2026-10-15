@@ -59,6 +59,12 @@ class TempNode extends Node {
 
 			if ( nodeData.propertyName !== undefined ) {
 
+				if ( nodeData.flowCodes !== undefined && builder.context.nodeBlock !== undefined ) {
+
+					builder.addFlowCodeHierarchy( this, builder.context.nodeBlock );
+
+				}
+
 				return builder.format( nodeData.propertyName, type, output );
 
 			} else if ( type !== 'void' && output !== 'void' && this.hasDependencies( builder ) ) {
