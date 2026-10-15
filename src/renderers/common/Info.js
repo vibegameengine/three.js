@@ -522,6 +522,8 @@ class Info {
 
 		if ( attribute.isInterleavedBufferAttribute ) attribute = attribute.data;
 
+		if ( attribute.zeroFilledType ) return attribute.count * attribute.itemSize * attribute.zeroFilledType.BYTES_PER_ELEMENT;
+
 		if ( attribute.array ) {
 
 			return attribute.array.byteLength;

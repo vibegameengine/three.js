@@ -177,6 +177,9 @@ class RTTNode extends TextureNode {
 	 */
 	setSize( width, height ) {
 
+		this.width = width;
+		this.height = height;
+
 		const effectiveWidth = Math.floor( width * this._resolutionScale );
 		const effectiveHeight = Math.floor( height * this._resolutionScale );
 
