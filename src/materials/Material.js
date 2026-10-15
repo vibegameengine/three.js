@@ -3,7 +3,6 @@ import { EventDispatcher } from '../core/EventDispatcher.js';
 import { FrontSide, NormalBlending, LessEqualDepth, AddEquation, OneMinusSrcAlphaFactor, SrcAlphaFactor, AlwaysStencilFunc, KeepStencilOp } from '../constants.js';
 import { generateUUID } from '../math/MathUtils.js';
 import { warn } from '../utils.js';
-import { touchMaterials } from '../core/DrawListRevision.js';
 import { signalSource } from '../core/SourceSignals.js';
 import { Vector2 } from '../math/Vector2.js';
 import { Plane } from '../math/Plane.js';
@@ -1231,7 +1230,6 @@ class Material extends EventDispatcher {
 
 		if ( value !== true ) return;
 		this.version ++;
-		touchMaterials();
 		signalSource( this );
 
 	}

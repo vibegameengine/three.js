@@ -139,7 +139,7 @@ class MaterialNode extends Node {
 
 			if ( material.alphaMap && material.alphaMap.isTexture === true ) {
 
-				node = opacityNode.mul( this.getTexture( 'alpha' ) );
+				node = opacityNode.mul( this.getTexture( 'alpha' ).g );
 
 			} else {
 

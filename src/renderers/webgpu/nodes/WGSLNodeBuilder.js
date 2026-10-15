@@ -777,6 +777,23 @@ class WGSLNodeBuilder extends NodeBuilder {
 	 * @param {?string} offsetSnippet - A WGSL snippet that represents the offset that will be applied to the unnormalized texture coordinate before sampling the texture.
 	 * @return {string} The WGSL snippet.
 	 */
+	/**
+	 * Generates the WGSL snippet that reads a texel of a storage texture binding, which has no mip
+	 * level argument.
+	 *
+	 * @param {string} textureProperty - The name of the storage texture uniform in the shader.
+	 * @param {string} uvIndexSnippet - A WGSL snippet of the integer texel coordinates.
+	 * @param {?string} depthSnippet - A WGSL snippet of the array layer, if any.
+	 * @return {string} The WGSL snippet.
+	 */
+	generateStorageTextureLoad( textureProperty, uvIndexSnippet, depthSnippet ) {
+
+		if ( depthSnippet ) return `textureLoad( ${ textureProperty }, ${ uvIndexSnippet }, ${ depthSnippet } )`;
+
+		return `textureLoad( ${ textureProperty }, ${ uvIndexSnippet } )`;
+
+	}
+
 	generateTextureLoad( texture, textureProperty, uvIndexSnippet, levelSnippet, depthSnippet, offsetSnippet ) {
 
 		if ( levelSnippet === null ) levelSnippet = '0u';
@@ -1307,7 +1324,37 @@ class WGSLNodeBuilder extends NodeBuilder {
 	 * @param {?string} [name=null] - An optional uniform name.
 	 * @return {NodeUniform} The node uniform object.
 	 */
+	/**
+	 * The node whose binding a read-write storage texture uses in a shader stage: the first node of
+	 * that texture seen there. A shader that loads and stores one texture through two nodes then has
+	 * one read_write binding for it, as WebGPU refuses two writable bindings of the same texture.
+	 *
+	 * @param {StorageTextureNode} node - A read-write storage texture node.
+	 * @param {string} shaderStage - The shader stage.
+	 * @return {StorageTextureNode} The node that owns the texture's binding.
+	 */
+	readWriteStorageTextureOwner( node, shaderStage ) {
+
+		const owners = this.readWriteStorageTextures ??= new Map();
+		let byTexture = owners.get( shaderStage );
+		if ( byTexture === undefined ) owners.set( shaderStage, byTexture = new Map() );
+
+		const owner = byTexture.get( node.value );
+		if ( owner !== undefined ) return owner;
+
+		byTexture.set( node.value, node );
+		return node;
+
+	}
+
 	getUniformFromNode( node, type, shaderStage, name = null ) {
+
+		if ( type === 'storageTexture' && node.access === NodeAccess.READ_WRITE ) {
+
+			const owner = this.readWriteStorageTextureOwner( node, shaderStage );
+			if ( owner !== node ) return this.getUniformFromNode( owner, type, shaderStage, name );
+
+		}
 
 		const uniformNode = super.getUniformFromNode( node, type, shaderStage, name );
 		const nodeData = this.getDataFromNode( node, shaderStage, this.globalCache );
@@ -1355,7 +1402,7 @@ class WGSLNodeBuilder extends NodeBuilder {
 
 				// Cube textures always need samplers (they use textureSampleLevel, not textureLoad)
 				// Also textureGather always need sampler.
-				const needsSampler = node.value.isCubeTexture === true || ( this.isUnfilterable( node.value ) === false && texture.store === false ) || node.gatherNode !== null;
+				const needsSampler = node.value.isCubeTexture === true || ( this.isUnfilterable( node.value ) === false && texture.store === false && node.sampler !== false ) || node.gatherNode !== null;
 
 				if ( needsSampler ) {
 
@@ -2145,7 +2192,7 @@ ${ flowData.code }
 
 				// Cube textures always need samplers (they use textureSampleLevel, not textureLoad)
 				// Also textureGather always need sampler.
-				const needsSampler = texture.isCubeTexture === true || ( this.isUnfilterable( texture ) === false && textureNode.isStorageTextureNode !== true ) || textureNode.gatherNode !== null;
+				const needsSampler = texture.isCubeTexture === true || ( this.isUnfilterable( texture ) === false && textureNode.isStorageTextureNode !== true && textureNode.sampler !== false ) || textureNode.gatherNode !== null;
 
 				if ( needsSampler ) {
 

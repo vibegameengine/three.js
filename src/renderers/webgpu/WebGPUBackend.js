@@ -2082,6 +2082,44 @@ class WebGPUBackend extends Backend {
 
 		}
 
+		this._dispatch( passEncoderGPU, computeNode, computeNodeData, dispatchSize );
+
+	}
+
+	/**
+	 * Executes a compute command from a plan: the pipeline and bind group records it holds are
+	 * read directly instead of being looked up for this call.
+	 *
+	 * @param {Node|Array<Node>} computeGroup - The group of compute nodes of a compute call.
+	 * @param {Node} computeNode - The compute node.
+	 * @param {ComputeCallPlan} plan - The node's plan.
+	 * @param {number|Array<number>|IndirectStorageBufferAttribute} [dispatchSize=null] - The dispatch size.
+	 */
+	computeByPlan( computeGroup, computeNode, plan, dispatchSize = null ) {
+
+		const groupGPU = this.get( computeGroup );
+		this._beginPendingCompute( computeGroup, groupGPU );
+		const { passEncoderGPU } = groupGPU;
+
+		const pipelineGPU = plan.pipelineData.pipeline;
+
+		if ( groupGPU.currentPipeline !== pipelineGPU ) {
+
+			passEncoderGPU.setPipeline( pipelineGPU );
+			groupGPU.currentPipeline = pipelineGPU;
+
+		}
+
+		const groupData = plan.groupData;
+
+		for ( let i = 0, l = groupData.length; i < l; i ++ ) passEncoderGPU.setBindGroup( i, groupData[ i ].group );
+
+		this._dispatch( passEncoderGPU, computeNode, plan.nodeData, dispatchSize );
+
+	}
+
+	_dispatch( passEncoderGPU, computeNode, computeNodeData, dispatchSize ) {
+
 		if ( dispatchSize === null ) {
 
 			dispatchSize = computeNode.dispatchSize || computeNode.count;

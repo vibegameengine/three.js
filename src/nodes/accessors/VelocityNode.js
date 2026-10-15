@@ -6,11 +6,11 @@ import { NodeUpdateScope, NodeUpdateType } from '../core/constants.js';
 import { Matrix4 } from '../../math/Matrix4.js';
 import { uniform } from '../core/UniformNode.js';
 import { sub } from '../math/OperatorNode.js';
-import { cameraProjectionMatrix } from './Camera.js';
 import { renderGroup } from '../core/UniformGroupNode.js';
 import { gpuScenePreviousWorldMatrix, usesGpuScene } from './GpuSceneNode.js';
 
 const _objectData = new WeakMap();
+const _projectionOverride = { matrix: null };
 
 /**
  * A node for representing motion or velocity vectors. Foundation
@@ -36,14 +36,6 @@ class VelocityNode extends TempNode {
 	constructor() {
 
 		super( 'vec2' );
-
-		/**
-		 * The current projection matrix.
-		 *
-		 * @type {?Matrix4}
-		 * @default null
-		 */
-		this.projectionMatrix = null;
 
 		/**
 		 * Overwritten since velocity nodes are updated per object.
@@ -82,6 +74,16 @@ class VelocityNode extends TempNode {
 		this.previousProjectionMatrix = uniform( new Matrix4() ).setGroup( renderGroup );
 
 		/**
+		 * Uniform node representing the projection matrix the current position is measured with:
+		 * the unjittered projection set by {@link VelocityNode#setProjectionMatrix}, or the camera's.
+		 * It belongs to the render group, beside the previous projection, so both change together
+		 * whenever the view does, also for draws whose object bindings are not refreshed.
+		 *
+		 * @type {UniformNode<mat4>}
+		 */
+		this.currentProjectionMatrix = uniform( new Matrix4() ).setGroup( renderGroup );
+
+		/**
 		 * Uniform node representing the previous view matrix.
 		 *
 		 * @type {UniformNode<mat4>}
@@ -98,7 +100,20 @@ class VelocityNode extends TempNode {
 	 */
 	setProjectionMatrix( projectionMatrix ) {
 
-		this.projectionMatrix = projectionMatrix;
+		_projectionOverride.matrix = projectionMatrix;
+
+	}
+
+	/**
+	 * The projection matrix motion is measured with this frame, set through
+	 * {@link VelocityNode#setProjectionMatrix}. It is shared by every velocity node, since they
+	 * share the per-camera matrices they record.
+	 *
+	 * @type {?Matrix4}
+	 */
+	get projectionMatrix() {
+
+		return _projectionOverride.matrix;
 
 	}
 
@@ -155,6 +170,7 @@ class VelocityNode extends TempNode {
 
 			this.previousProjectionMatrix.value.copy( cameraData.previousProjectionMatrix );
 			this.previousCameraViewMatrix.value.copy( cameraData.previousCameraViewMatrix );
+			this.currentProjectionMatrix.value.copy( cameraData.currentProjectionMatrix );
 
 		}
 
@@ -179,13 +195,11 @@ class VelocityNode extends TempNode {
 	 */
 	setup( builder ) {
 
-		const projectionMatrix = ( this.projectionMatrix === null ) ? cameraProjectionMatrix : uniform( this.projectionMatrix );
-
 		const previousModelWorldMatrix = usesGpuScene( builder ) ? gpuScenePreviousWorldMatrix : this.previousModelWorldMatrix;
 
 		const previousModelViewMatrix = this.previousCameraViewMatrix.mul( previousModelWorldMatrix );
 
-		const clipPositionCurrent = projectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
+		const clipPositionCurrent = this.currentProjectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
 		const clipPositionPrevious = this.previousProjectionMatrix.mul( previousModelViewMatrix ).mul( positionPrevious );
 
 		const ndcPositionCurrent = clipPositionCurrent.xy.div( clipPositionCurrent.w );
@@ -217,9 +231,8 @@ class PreviousViewDepthRatioNode extends VelocityNode {
 
 	setup( builder ) {
 
-		const projectionMatrix = ( this.projectionMatrix === null ) ? cameraProjectionMatrix : uniform( this.projectionMatrix );
 		const previousModelWorldMatrix = usesGpuScene( builder ) ? gpuScenePreviousWorldMatrix : this.previousModelWorldMatrix;
-		const clipPositionCurrent = projectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
+		const clipPositionCurrent = this.currentProjectionMatrix.mul( modelViewMatrix ).mul( positionLocal );
 		const clipPositionPrevious = this.previousProjectionMatrix.mul( this.previousCameraViewMatrix.mul( previousModelWorldMatrix ) ).mul( positionPrevious );
 
 		return clipPositionPrevious.w.div( clipPositionCurrent.w ).sub( 1 );

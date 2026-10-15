@@ -1,4 +1,65 @@
 import BindGroup from '../BindGroup.js';
+import { renderGroup } from '../../../nodes/core/UniformGroupNode.js';
+
+const _viewGroupsOff = new URLSearchParams( globalThis.location?.search ?? '' ).get( 'viewGroups' ) === '0';
+const _viewGroups = new WeakMap();
+const _viewBindings = new WeakMap();
+
+function viewBinding( binding, view ) {
+
+	let clones = _viewBindings.get( view );
+	if ( clones === undefined ) _viewBindings.set( view, clones = new Map() );
+
+	let clone = clones.get( binding );
+
+	if ( clone === undefined ) {
+
+		clone = binding.clone();
+		if ( clone.isUniformsGroup === true ) {
+
+			clone._buffer = null;
+			clone._values = null;
+			clone._updateRanges = [];
+
+		}
+
+		clones.set( binding, clone );
+
+	}
+
+	return clone;
+
+}
+
+/**
+ * The render-group bind group a view draws with. Every camera gets its own copy of each shared
+ * render group, holding its own uniform buffers, as every view has its own view uniform buffer:
+ * a pass drawn from another camera then writes that camera's buffers instead of rewriting the ones
+ * draws recorded for the first camera still read.
+ *
+ * @private
+ * @param {BindGroup} group - The render group shared across node builder states.
+ * @param {Object} view - The camera the draws are made from.
+ * @return {BindGroup} The view's own copy of the group.
+ */
+function viewGroup( group, view ) {
+
+	let groups = _viewGroups.get( view );
+	if ( groups === undefined ) _viewGroups.set( view, groups = new Map() );
+
+	let copy = groups.get( group );
+
+	if ( copy === undefined ) {
+
+		copy = new BindGroup( group.name, group.bindings.map( ( binding ) => viewBinding( binding, view ) ), group.index, group.bindingsReference );
+		copy.sharedAcrossStates = true;
+		groups.set( group, copy );
+
+	}
+
+	return copy;
+
+}
 
 /**
  * This module represents the state of a node builder after it was
@@ -119,16 +180,19 @@ class NodeBuilderState {
 
 	}
 
-	shareBindings( material ) {
+	shareBindings( material, view = null ) {
 
 		if ( this.materialBindings === null ) return null;
 
-		let shared = this.materialBindings.get( material );
+		let byView = this.materialBindings.get( material );
+		if ( byView === undefined ) this.materialBindings.set( material, byView = new Map() );
+
+		let shared = byView.get( view );
 
 		if ( shared === undefined ) {
 
-			shared = { bindings: this.createBindings(), users: 0, renderId: - 1 };
-			this.materialBindings.set( material, shared );
+			shared = { bindings: this.createBindings( view ), users: 0, renderId: - 1, view };
+			byView.set( view, shared );
 
 		}
 
@@ -144,7 +208,9 @@ class NodeBuilderState {
 
 		if ( shared.users > 0 ) return false;
 
-		this.materialBindings.delete( material );
+		const byView = this.materialBindings.get( material );
+		byView.delete( shared.view );
+		if ( byView.size === 0 ) this.materialBindings.delete( material );
 
 		return true;
 
@@ -153,11 +219,12 @@ class NodeBuilderState {
 	/**
 	 * This method is used to create a array of bind groups based
 	 * on the existing bind groups of this state. Shared groups are
-	 * not cloned.
+	 * not cloned; a shared render group is the given view's own copy.
 	 *
+	 * @param {?Object} [view=null] - The camera the bindings draw from.
 	 * @return {Array<BindGroup>} A array of bind groups.
 	 */
-	createBindings() {
+	createBindings( view = null ) {
 
 		const bindings = [];
 
@@ -175,6 +242,10 @@ class NodeBuilderState {
 					bindingsGroup.bindings.push( instanceBinding.clone() );
 
 				}
+
+			} else if ( view !== null && _viewGroupsOff === false && instanceGroup.bindings[ 0 ].groupNode === renderGroup ) {
+
+				bindings.push( viewGroup( instanceGroup, view ) );
 
 			} else {
 

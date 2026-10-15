@@ -103,7 +103,7 @@ function recordMatrix( records, base ) {
 
 function primitiveField( records, primitive, field ) {
 
-	const recordBase = uint( primitive ).mul( uint( PRIMITIVE_VEC4S ) ).toVar();
+	const recordBase = uint( primitive ).mul( uint( PRIMITIVE_VEC4S ) );
 
 	if ( field === 'custom' ) return records.element( recordBase.add( uint( PrimitiveLayout.custom ) ) );
 	if ( field === 'previousWorld' ) return recordMatrix( records, recordBase.add( uint( PrimitiveLayout.previousWorld ) ) );

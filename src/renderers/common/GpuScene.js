@@ -147,6 +147,15 @@ class GpuScene {
 		const { ids, records } = this.scatter;
 		const source = this.records.array;
 
+		// A binding may create the grown buffer while primitives are still being
+		// registered. Upload the final contents even if that buffer already exists.
+		if ( this.grown ) {
+
+			this.records.clearUpdateRanges();
+			this.records.needsUpdate = true;
+
+		}
+
 		for ( let i = 0; i < count; i ++ ) {
 
 			const id = dirty[ i ];

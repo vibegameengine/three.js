@@ -40,6 +40,7 @@ import { reference } from '../../nodes/accessors/ReferenceNode.js';
 import { highpModelNormalViewMatrix, highpModelViewMatrix } from '../../nodes/accessors/ModelNode.js';
 import { context } from '../../nodes/core/ContextNode.js';
 import GpuSceneScatter from './GpuSceneScatter.js';
+import ComputeCallPlan from './ComputeCallPlan.js';
 import { levelGeometryFor } from './ScreenSizeLods.js';
 import { error, warn, warnOnce, yieldToMain } from '../../utils.js';
 
@@ -351,6 +352,27 @@ class Renderer {
 		this._animation = null;
 
 		/**
+		 * The highest frame rate the animation loop runs at. Ticks of the display that
+		 * come sooner are skipped whole: no node frame, no info reset, no inspector
+		 * frame, no callback. `0` follows the display.
+		 *
+		 * @type {number}
+		 * @default 0
+		 */
+		this.maxFrameRate = 0;
+
+		/**
+		 * Chooses the mip bias of a texture sampled in a fragment shader that names
+		 * neither a level nor a bias: return a float node, or `null` to sample as is.
+		 * An upscaler sets it so material textures are filtered for the output
+		 * resolution rather than the lower one the scene renders at.
+		 *
+		 * @type {?function(Texture): ?Node<float>}
+		 * @default null
+		 */
+		this.textureMipBias = null;
+
+		/**
 		 * A reference to a renderer module for managing shader program bindings.
 		 *
 		 * @private
@@ -376,6 +398,14 @@ class Renderer {
 		 * @default null
 		 */
 		this._pipelines = null;
+
+		/**
+		 * The plan of each compute node already dispatched once.
+		 *
+		 * @private
+		 * @type {WeakMap<Node, ComputeCallPlan>}
+		 */
+		this._computePlans = new WeakMap();
 
 		/**
 		 * A reference to a renderer module for managing render bundles.
@@ -3153,14 +3183,20 @@ class Renderer {
 
 		}
 
-		backend.beginCompute( computeNodes );
-
 		const dispatchLayout = Array.isArray( dispatchSize ) ? 'grid' : 'linear';
 
 		for ( const computeNode of computeList ) {
 
 			if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = dispatchLayout;
 			else if ( computeNode.dispatchLayout !== dispatchLayout ) throw new Error( `THREE.Renderer: compute node "${ computeNode.name }" was built for a ${ computeNode.dispatchLayout } dispatch and is now dispatched as a ${ dispatchLayout }; its instanceIndex would be wrong.` );
+
+			nodes.updateBeforeForCompute( computeNode );
+
+		}
+
+		backend.beginCompute( computeNodes );
+
+		for ( const computeNode of computeList ) {
 
 			// onInit
 
@@ -3171,6 +3207,7 @@ class Renderer {
 					computeNode.removeEventListener( 'dispose', dispose );
 
 					pipelines.delete( computeNode );
+					this._computePlans.delete( computeNode );
 					bindings.deleteForCompute( computeNode );
 					nodes.delete( computeNode );
 
@@ -3190,12 +3227,24 @@ class Renderer {
 
 			}
 
-			nodes.updateBeforeForCompute( computeNode );
+			let plan = this._computePlans.get( computeNode );
+
+			if ( plan !== undefined && plan.version === computeNode.version && globalThis.__computePlansOff !== true ) {
+
+				plan.refresh( nodes.nodeFrame, bindings );
+				backend.computeByPlan( computeNodes, computeNode, plan, dispatchSize );
+				continue;
+
+			}
+
 			nodes.updateForCompute( computeNode );
 			bindings.updateForCompute( computeNode );
 
 			const computeBindings = bindings.getForCompute( computeNode );
 			const computePipeline = pipelines.getForCompute( computeNode, computeBindings );
+
+			plan = new ComputeCallPlan( this, computeNode, computeBindings, computePipeline );
+			this._computePlans.set( computeNode, plan );
 
 			backend.compute( computeNodes, computeNode, computeBindings, computePipeline, dispatchSize );
 

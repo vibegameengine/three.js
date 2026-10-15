@@ -342,11 +342,7 @@ class RenderObject {
 		 */
 		this.onGeometryDispose = () => {
 
-			// clear geometry cache attributes
-
-			this.attributes = null;
-			this.attributesId = null;
-			this.vertexBuffers = null;
+			this.dispose();
 
 		};
 
@@ -446,8 +442,8 @@ class RenderObject {
 
 			const nodeBuilderState = this.getNodeBuilderState();
 
-			this.materialBindings = this._drawsItsOwnMaterial() ? nodeBuilderState.shareBindings( this.material ) : null;
-			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings();
+			this.materialBindings = this._drawsItsOwnMaterial() ? nodeBuilderState.shareBindings( this.material, this.camera ) : null;
+			this._bindings = this.materialBindings !== null ? this.materialBindings.bindings : nodeBuilderState.createBindings( this.camera );
 
 		}
 
@@ -869,6 +865,12 @@ class RenderObject {
 		if ( object.skeleton ) {
 
 			cacheKey += object.skeleton.bones.length + ',';
+
+		}
+
+		if ( object.skinCache !== undefined ) {
+
+			cacheKey += 'skinCache' + object.skinCache.positions.id + ',';
 
 		}
 

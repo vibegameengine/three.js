@@ -13,6 +13,9 @@ import { hashArray } from '../../../nodes/core/NodeUtils.js';
 import { error } from '../../../utils.js';
 
 const _chainKeys = [];
+
+const GROUP_OBJECT = 0;
+const GROUP_VERSIONED = 1;
 const _cacheKeyValues = [];
 
 // Dedicated uniform for output pass array layer selection
@@ -110,11 +113,50 @@ class NodeManager extends DataMap {
 	}
 
 	/**
-	 * Returns `true` if the given node uniforms group must be updated or not.
+	 * The state {@link Nodes#updateGroup} keeps for the given uniforms group, looked up once so a
+	 * caller that refreshes the group on every call can test it with {@link Nodes#updateGroupState}.
 	 *
-	 * @param {NodeUniformsGroup} nodeUniformsGroup - The node uniforms group.
-	 * @return {boolean} Whether the node uniforms group requires an update or not.
+	 * @param {NodeUniformsGroup} nodeUniformsGroup - The uniforms group.
+	 * @return {Object} The group's update state.
 	 */
+	groupUpdateState( nodeUniformsGroup ) {
+
+		const groupNode = nodeUniformsGroup.groupNode;
+
+		if ( groupNode.updateType === NodeUpdateType.OBJECT ) return { kind: GROUP_OBJECT, data: null, groupNode };
+
+		_chainKeys[ 0 ] = groupNode;
+		_chainKeys[ 1 ] = nodeUniformsGroup;
+
+		let groupData = this.groupsData.get( _chainKeys );
+		if ( groupData === undefined ) this.groupsData.set( _chainKeys, groupData = {} );
+
+		_chainKeys[ 0 ] = null;
+		_chainKeys[ 1 ] = null;
+
+		return { kind: GROUP_VERSIONED, data: groupData, groupNode };
+
+	}
+
+	/**
+	 * Whether a uniforms group needs its update now, from the state {@link Nodes#groupUpdateState}
+	 * returned for it; the same rules as {@link Nodes#updateGroup}.
+	 *
+	 * @param {Object} state - The group's update state.
+	 * @return {boolean} Whether the group needs an update.
+	 */
+	updateGroupState( state ) {
+
+		if ( state.kind === GROUP_OBJECT ) return true;
+
+		const data = state.data;
+		const version = state.groupNode.version;
+		if ( data.version === version ) return false;
+		data.version = version;
+		return true;
+
+	}
+
 	updateGroup( nodeUniformsGroup ) {
 
 		const groupNode = nodeUniformsGroup.groupNode;
@@ -1175,6 +1217,18 @@ class NodeManager extends DataMap {
 			nodeFrame.updateNode( node );
 
 		}
+
+	}
+
+	updateBeforeForCompute( computeNode ) {
+
+		const updateBeforeNodes = this.getForCompute( computeNode ).updateBeforeNodes;
+
+		if ( updateBeforeNodes.length === 0 ) return;
+
+		const nodeFrame = this.getNodeFrame();
+
+		for ( const node of updateBeforeNodes ) if ( node.isComputeNode !== true ) nodeFrame.updateBeforeNode( node );
 
 	}
 

@@ -223,14 +223,15 @@ class TextureNode extends UniformNode {
 	}
 
 	/**
-	 * Overwritten since the uniform hash is defined by the texture's UUID.
+	 * Overwritten since the uniform hash is defined by the texture's UUID. Reads without a
+	 * sampler get a binding of their own, so a texture only ever loaded binds no sampler.
 	 *
 	 * @param {NodeBuilder} builder - The current node builder.
 	 * @return {string} The uniform hash.
 	 */
 	getUniformHash( /*builder*/ ) {
 
-		return this.value.uuid;
+		return this.sampler === false ? this.value.uuid + ':load' : this.value.uuid;
 
 	}
 
@@ -440,9 +441,19 @@ class TextureNode extends UniformNode {
 
 		}
 
+		let biasNode = this.biasNode;
+
+		const filteredSample = this.sampler !== false && this.compareNode === null && this.gradNode === null && this.gatherNode === null && this.isStorageTextureNode !== true;
+
+		if ( biasNode === null && levelNode === null && filteredSample && builder.shaderStage === 'fragment' && typeof builder.renderer.textureMipBias === 'function' ) {
+
+			biasNode = builder.renderer.textureMipBias( this.value ) || null;
+
+		}
+
 		properties.uvNode = uvNode;
 		properties.levelNode = levelNode;
-		properties.biasNode = this.biasNode;
+		properties.biasNode = biasNode;
 		properties.compareNode = compareNode;
 		properties.compareStepNode = compareStepNode;
 		properties.gradNode = this.gradNode;
@@ -461,7 +472,7 @@ class TextureNode extends UniformNode {
 	 */
 	generateUV( builder, uvNode ) {
 
-		return uvNode.build( builder, this.sampler === true ? 'vec2' : 'ivec2' );
+		return uvNode.build( builder, this.sampler === true && this.isStorageTextureNode !== true ? 'vec2' : 'ivec2' );
 
 	}
 
@@ -523,6 +534,10 @@ class TextureNode extends UniformNode {
 		} else if ( compareSnippet ) {
 
 			snippet = builder.generateTextureCompare( texture, textureProperty, uvSnippet, compareSnippet, depthSnippet, offsetSnippet );
+
+		} else if ( this.isStorageTextureNode === true && builder.generateStorageTextureLoad !== undefined ) {
+
+			snippet = builder.generateStorageTextureLoad( textureProperty, uvSnippet, depthSnippet );
 
 		} else if ( this.sampler === false ) {
 

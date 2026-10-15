@@ -1,5 +1,6 @@
 import DataMap from './DataMap.js';
 import { AttributeType } from './Constants.js';
+import { DynamicDrawUsage } from '../../constants.js';
 import { objectGroup } from '../../nodes/core/UniformGroupNode.js';
 
 /**
@@ -374,6 +375,42 @@ class Bindings extends DataMap {
 	 * @param {BindGroup} bindGroup - The bind group to update.
 	 * @param {Array<BindGroup>} bindings - The bind groups.
 	 */
+	_refreshPlanOf( bindGroup ) {
+
+		let plan = bindGroup.refreshPlan;
+
+		if ( plan === undefined ) {
+
+			plan = bindGroup.bindings.map( ( binding ) => ( { binding, group: this.nodes.groupUpdateState( binding ), attribute: null, attributeData: null, source: null } ) );
+			bindGroup.refreshPlan = plan;
+
+		}
+
+		return plan;
+
+	}
+
+	_refreshStorage( entry ) {
+
+		const attribute = entry.binding.attribute;
+
+		if ( entry.attribute !== attribute ) {
+
+			entry.attribute = attribute;
+			entry.attributeData = this.attributes.get( attribute );
+			entry.source = attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
+
+		}
+
+		const version = entry.attributeData.version;
+		const source = entry.source;
+
+		if ( version !== undefined && version >= source.version && source.usage !== DynamicDrawUsage ) return;
+
+		this.attributes.update( attribute, attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE );
+
+	}
+
 	_update( bindGroup, bindings ) {
 
 		const { backend } = this;
@@ -382,25 +419,26 @@ class Bindings extends DataMap {
 
 		// iterate over all bindings and check if buffer updates or a new binding group is required
 
-		for ( const binding of bindGroup.bindings ) {
+		const plan = this._refreshPlanOf( bindGroup );
 
-			const updatedGroup = this.nodes.updateGroup( binding );
+		for ( let i = 0, l = plan.length; i < l; i ++ ) {
+
+			const entry = plan[ i ];
+			const binding = entry.binding;
 
 			// every uniforms group is a uniform buffer. So if no update is required,
 			// we move one with the next binding. Otherwise the next if block will update the group.
 
-			if ( updatedGroup === false ) continue;
+			if ( this.nodes.updateGroupState( entry.group ) === false ) continue;
 
 			//
 
 			if ( binding.isStorageBuffer ) {
 
 				const attribute = binding.attribute;
-				const attributeType = attribute.isIndirectStorageBufferAttribute ? AttributeType.INDIRECT : AttributeType.STORAGE;
-
 				const bindingData = backend.get( binding );
 
-				this.attributes.update( attribute, attributeType );
+				this._refreshStorage( entry );
 
 				if ( bindingData.attribute !== attribute ) {
 
