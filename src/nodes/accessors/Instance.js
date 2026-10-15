@@ -75,7 +75,7 @@ function createInstanceMatrixNode( builder, instanceMatrix, instanceId ) {
 
 }
 
-function previousMatricesOf( matrices ) {
+export function previousInstanceMatricesFor( matrices ) {
 
 	let previousMatrices = _previousInstanceMatrices.get( matrices );
 
@@ -132,19 +132,11 @@ export function advancePreviousMatrices( previousMatrices, matrices, frameId ) {
 
 }
 
-export function previousInstanceMatricesOf( matrices ) {
-
-	const previousMatrices = _previousInstanceMatrices.get( matrices );
-
-	return previousMatrices === undefined ? null : previousMatrices.attribute;
-
-}
-
 function createPreviousInstanceMatrixNode( builder, matrices, instanceMatrixNode, instanceId ) {
 
 	if ( matrices.isStorageInstancedBufferAttribute === true ) return instanceMatrixNode;
 
-	const previousMatrices = previousMatricesOf( matrices );
+	const previousMatrices = previousInstanceMatricesFor( matrices );
 
 	OnBeforeFrameUpdate( ( { frameId } ) => advancePreviousMatrices( previousMatrices, matrices, frameId ) );
 

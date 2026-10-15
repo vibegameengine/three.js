@@ -278,6 +278,8 @@ class Bindings extends DataMap {
 
 						this.attributes.update( attribute, attributeType );
 
+						this.backend.get( binding ).attribute = attribute;
+
 					}
 
 				}

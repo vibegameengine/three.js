@@ -1,5 +1,5 @@
 import Node from './Node.js';
-import { NodeUpdateType } from './constants.js';
+import { NodeUpdateScope, NodeUpdateType } from './constants.js';
 
 /**
  * This node can be used to group single instances of {@link UniformNode}
@@ -66,6 +66,8 @@ class UniformGroupNode extends Node {
 		 * @default null
 		 */
 		this.updateType = updateType;
+
+		if ( updateType === NodeUpdateType.OBJECT ) this.updateScope = NodeUpdateScope.OBJECT;
 
 		/**
 		 * This flag can be used for type testing.

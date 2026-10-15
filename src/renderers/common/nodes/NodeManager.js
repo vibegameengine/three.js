@@ -1297,7 +1297,7 @@ class NodeManager extends DataMap {
 
 export function bindGroupSignature( bindGroup ) {
 
-	let signature = `${ bindGroup.name }@${ bindGroup.index }`;
+	let signature = bindGroup.name;
 
 	for ( const binding of bindGroup.bindings ) {
 

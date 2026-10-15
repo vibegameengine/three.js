@@ -1107,32 +1107,7 @@ class Renderer {
 
 		for ( const item of compilationPromises ) {
 
-			const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId, item.geometry );
-			renderObject.drawRange = item.geometry.drawRange;
-			renderObject.group = item.group;
-
-			// Use async node building to yield to main thread
-			await this._nodes.getForRenderAsync( renderObject );
-
-			this._isPreCompiling = true; // note: no awaits are allowed when this flag is true otherwise the state leaks outside of this method
-			this._nodes.updateBefore( renderObject );
-			this._geometries.updateForRender( renderObject );
-			this._nodes.updateForRender( renderObject );
-			this._bindings.updateForRender( renderObject );
-			this._isPreCompiling = false;
-
-			// Wait for pipeline creation
-			const pipelinePromises = [];
-			this._pipelines.getForRender( renderObject, pipelinePromises );
-			if ( pipelinePromises.length > 0 ) {
-
-				await Promise.all( pipelinePromises );
-
-			}
-
-			this._isPreCompiling = true;
-			this._nodes.updateAfter( renderObject );
-			this._isPreCompiling = false;
+			await this._compileWorkItem( item );
 
 			loaded ++;
 
@@ -1146,6 +1121,37 @@ class Renderer {
 			await yieldToMain();
 
 		}
+
+	}
+
+	async _compileWorkItem( item ) {
+
+		const renderObject = this._objects.get( item.object, item.material, item.scene, item.camera, item.lightsNode, item.renderContext, item.clippingContext, item.passId, item.geometry );
+		renderObject.drawRange = item.geometry.drawRange;
+		renderObject.group = item.group;
+
+		// Use async node building to yield to main thread
+		await this._nodes.getForRenderAsync( renderObject );
+
+		this._isPreCompiling = true; // note: no awaits are allowed when this flag is true otherwise the state leaks outside of this method
+		this._nodes.updateBefore( renderObject );
+		this._geometries.updateForRender( renderObject );
+		this._nodes.updateForRender( renderObject );
+		this._bindings.updateForRender( renderObject );
+		this._isPreCompiling = false;
+
+		// Wait for pipeline creation
+		const pipelinePromises = [];
+		this._pipelines.getForRender( renderObject, pipelinePromises );
+		if ( pipelinePromises.length > 0 ) {
+
+			await Promise.all( pipelinePromises );
+
+		}
+
+		this._isPreCompiling = true;
+		this._nodes.updateAfter( renderObject );
+		this._isPreCompiling = false;
 
 	}
 

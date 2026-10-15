@@ -801,6 +801,12 @@ class NodeMaterial extends Material {
 
 		}
 
+		if ( this.positionNode !== null ) {
+
+			positionLocal.assign( subBuild( this.positionNode, 'POSITION', 'vec3' ) );
+
+		}
+
 		if ( object.isBatchedMesh ) {
 
 			batch( object );
@@ -810,12 +816,6 @@ class NodeMaterial extends Material {
 		if ( ( object.isInstancedMesh && object.instanceMatrix && object.instanceMatrix.isInstancedBufferAttribute === true ) ) {
 
 			instancedMesh( object );
-
-		}
-
-		if ( this.positionNode !== null ) {
-
-			positionLocal.assign( subBuild( this.positionNode, 'POSITION', 'vec3' ) );
 
 		}
 

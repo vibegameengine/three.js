@@ -2628,7 +2628,7 @@ class WebGPUBackend extends Backend {
 
 		for ( let i = 0, l = bindings.length; i < l; i ++ ) {
 
-			command.bindGroup( bindings[ i ].index, this.get( bindings[ i ] ).group );
+			command.bindGroup( i, this.get( bindings[ i ] ).group );
 
 		}
 

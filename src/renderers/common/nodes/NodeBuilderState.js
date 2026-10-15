@@ -51,7 +51,7 @@ function viewGroup( group, view ) {
 
 	if ( copy === undefined ) {
 
-		copy = new BindGroup( group.name, group.bindings.map( ( binding ) => viewBinding( binding, view ) ), group.index, group.bindingsReference );
+		copy = new BindGroup( group.name, group.bindings.map( ( binding ) => viewBinding( binding, view ) ) );
 		copy.sharedAcrossStates = true;
 		groups.set( group, copy );
 

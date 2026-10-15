@@ -252,7 +252,7 @@ class RetainedScenePass {
 		const renderList = { opaque: this.list.items, transparent: [], transparentDoublePass: [] };
 		renderer._renderBundle( { bundleGroup: this.bundleGroup, camera, renderList }, sceneRef, lightsNode, true );
 
-		this.renderBundle = renderer._bundles.get( this.bundleGroup, camera );
+		this.renderBundle = renderer._bundles.get( this.bundleGroup, camera, renderer._currentRenderContext );
 		const renderObjects = renderer.backend.get( this.renderBundle ).renderObjects;
 		if ( renderObjects.length !== this.list.items.length ) throw new Error( `RetainedScenePass: encoded ${ renderObjects.length } draws for ${ this.list.items.length } retained items.` );
 

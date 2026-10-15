@@ -168,7 +168,7 @@ class RetainedTransparents {
 		renderer._renderBundle( { bundleGroup: draw.bundleGroup, camera: frame.camera, renderList }, frame.sceneRef, frame.lightsNode, true );
 		if ( draw.side === 'front' && entry.doublePass ) material.side = DoubleSide;
 
-		draw.renderBundle = renderer._bundles.get( draw.bundleGroup, frame.camera );
+		draw.renderBundle = renderer._bundles.get( draw.bundleGroup, frame.camera, renderer._currentRenderContext );
 		draw.renderObjects = renderer.backend.get( draw.renderBundle ).renderObjects;
 		draw.encodedFor = frame.encodeKey;
 		draw.bindGroups.clear();
