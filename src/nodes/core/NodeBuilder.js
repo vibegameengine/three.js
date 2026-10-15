@@ -640,13 +640,15 @@ class NodeBuilder {
 
 			for ( const binding of bindings ) {
 
+				cacheKeyString += `|${ binding.visibility }:`;
+
 				if ( binding.isNodeUniformsGroup ) {
 
 					binding.uniforms.sort( ( a, b ) => a.nodeUniform.node.id - b.nodeUniform.node.id );
 
 					for ( const uniform of binding.uniforms ) {
 
-						cacheKeyString += uniform.nodeUniform.node.id;
+						cacheKeyString += uniform.nodeUniform.node.id + ',';
 
 					}
 

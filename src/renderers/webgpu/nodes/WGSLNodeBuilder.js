@@ -777,22 +777,6 @@ class WGSLNodeBuilder extends NodeBuilder {
 	 * @param {?string} offsetSnippet - A WGSL snippet that represents the offset that will be applied to the unnormalized texture coordinate before sampling the texture.
 	 * @return {string} The WGSL snippet.
 	 */
-	/**
-	 * Generates the WGSL snippet that reads a texel of a storage texture binding, which has no mip
-	 * level argument.
-	 *
-	 * @param {string} textureProperty - The name of the storage texture uniform in the shader.
-	 * @param {string} uvIndexSnippet - A WGSL snippet of the integer texel coordinates.
-	 * @param {?string} depthSnippet - A WGSL snippet of the array layer, if any.
-	 * @return {string} The WGSL snippet.
-	 */
-	generateStorageTextureLoad( textureProperty, uvIndexSnippet, depthSnippet ) {
-
-		if ( depthSnippet ) return `textureLoad( ${ textureProperty }, ${ uvIndexSnippet }, ${ depthSnippet } )`;
-
-		return `textureLoad( ${ textureProperty }, ${ uvIndexSnippet } )`;
-
-	}
 
 	generateTextureLoad( texture, textureProperty, uvIndexSnippet, levelSnippet, depthSnippet, offsetSnippet ) {
 
@@ -2723,7 +2707,7 @@ fn main( ${shaderData.varyings} ) -> ${shaderData.returnType} {
 	 */
 	wrapsDispatch() {
 
-		const computeNode = this.object;
+		const computeNode = this.compute;
 		const [ , sizeY = 1, sizeZ = 1 ] = computeNode.workgroupSize;
 
 		if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = 'linear';

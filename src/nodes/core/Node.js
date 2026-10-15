@@ -372,13 +372,17 @@ class Node extends EventDispatcher {
 	 *
 	 * @param {traverseCallback} callback - A callback that is executed per node.
 	 */
-	traverse( callback ) {
+	traverse( callback, visited = new Set() ) {
+
+		if ( visited.has( this ) ) return;
+
+		visited.add( this );
 
 		callback( this );
 
 		for ( const childNode of this.getChildren() ) {
 
-			childNode.traverse( callback );
+			childNode.traverse( callback, visited );
 
 		}
 

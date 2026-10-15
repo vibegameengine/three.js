@@ -180,7 +180,7 @@ class ComputeNode extends Node {
 
 		if ( this.count !== null && this.countNode === null ) {
 
-			this.countNode = uniform( this.count, 'uint' ).onObjectUpdate( () => this.count );
+			this.countNode = uniform( this.count, 'uint' ).onObjectUpdate( () => this.dispatchCount ?? this.count );
 
 		}
 

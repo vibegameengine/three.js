@@ -46,6 +46,16 @@ import { error, warn, warnOnce, yieldToMain } from '../../utils.js';
 
 const _scene = /*@__PURE__*/ new Scene();
 const _drawingBufferSize = /*@__PURE__*/ new Vector2();
+
+const UNBOUNDED_THREAD_COUNT = 0xffffffff;
+
+function dispatchedThreadCount( dispatchSize ) {
+
+	if ( dispatchSize === null ) return null;
+
+	return typeof dispatchSize === 'number' ? dispatchSize : UNBOUNDED_THREAD_COUNT;
+
+}
 const _screen = /*@__PURE__*/ new Vector4();
 const _frustum = /*@__PURE__*/ new Frustum();
 const _frustumArray = /*@__PURE__*/ new FrustumArray();
@@ -3195,6 +3205,8 @@ class Renderer {
 
 			if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = dispatchLayout;
 			else if ( computeNode.dispatchLayout !== dispatchLayout ) throw new Error( `THREE.Renderer: compute node "${ computeNode.name }" was built for a ${ computeNode.dispatchLayout } dispatch and is now dispatched as a ${ dispatchLayout }; its instanceIndex would be wrong.` );
+
+			computeNode.dispatchCount = dispatchedThreadCount( dispatchSize ?? computeNode.dispatchSize );
 
 			nodes.updateBeforeForCompute( computeNode );
 

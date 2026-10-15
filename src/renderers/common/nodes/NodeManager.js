@@ -1169,15 +1169,13 @@ class NodeManager extends DataMap {
 	 */
 	updateBeforeForCompute( computeNode ) {
 
-		const nodeBuilder = this.getForCompute( computeNode );
+		const updateBeforeNodes = this.getForCompute( computeNode ).updateBeforeNodes;
 
-		for ( const node of nodeBuilder.updateBeforeNodes ) {
+		if ( updateBeforeNodes.length === 0 ) return;
 
-			// update frame state for each node
+		const nodeFrame = this.getNodeFrameForCompute( computeNode );
 
-			this.getNodeFrameForCompute( computeNode ).updateBeforeNode( node );
-
-		}
+		for ( const node of updateBeforeNodes ) if ( node.isComputeNode !== true ) nodeFrame.updateBeforeNode( node );
 
 	}
 
@@ -1217,18 +1215,6 @@ class NodeManager extends DataMap {
 			nodeFrame.updateNode( node );
 
 		}
-
-	}
-
-	updateBeforeForCompute( computeNode ) {
-
-		const updateBeforeNodes = this.getForCompute( computeNode ).updateBeforeNodes;
-
-		if ( updateBeforeNodes.length === 0 ) return;
-
-		const nodeFrame = this.getNodeFrame();
-
-		for ( const node of updateBeforeNodes ) if ( node.isComputeNode !== true ) nodeFrame.updateBeforeNode( node );
 
 	}
 

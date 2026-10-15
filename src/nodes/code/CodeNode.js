@@ -1,6 +1,8 @@
 import Node from '../core/Node.js';
 import { nodeProxy } from '../tsl/TSLBase.js';
 
+const WORKGROUP_SYNCHRONIZATION = /\b(workgroupBarrier|storageBarrier|textureBarrier|workgroupUniformLoad|subgroupBarrier)\s*\(/;
+
 /**
  * This class represents native code sections. It is the base
  * class for modules like {@link FunctionNode} which allows to implement
@@ -97,6 +99,13 @@ class CodeNode extends Node {
 	}
 
 	generate( builder ) {
+
+		if ( WORKGROUP_SYNCHRONIZATION.test( this.code ) ) {
+
+			builder.allowEarlyReturns = false;
+			builder.allowGlobalVariables = false;
+
+		}
 
 		const includes = this.getIncludes( builder );
 

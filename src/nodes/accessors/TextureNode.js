@@ -535,10 +535,6 @@ class TextureNode extends UniformNode {
 
 			snippet = builder.generateTextureCompare( texture, textureProperty, uvSnippet, compareSnippet, depthSnippet, offsetSnippet );
 
-		} else if ( this.isStorageTextureNode === true && builder.generateStorageTextureLoad !== undefined ) {
-
-			snippet = builder.generateStorageTextureLoad( textureProperty, uvSnippet, depthSnippet );
-
 		} else if ( this.sampler === false ) {
 
 			snippet = builder.generateTextureLoad( texture, textureProperty, uvSnippet, levelSnippet, depthSnippet, offsetSnippet );
