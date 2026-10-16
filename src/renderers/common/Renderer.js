@@ -1968,6 +1968,8 @@ class Renderer {
 
 		// finish render pass
 
+		if ( this.gpuScene !== null ) this._uploadPrimitivesFirstReadInPass();
+
 		this.backend.finishRender( renderContext );
 
 		// restore render tree
@@ -4238,6 +4240,14 @@ class Renderer {
 		if ( this._gpuSceneScatter === undefined ) this._gpuSceneScatter = new GpuSceneScatter();
 
 		this._gpuSceneScatter.dispatch( this, gpuScene, scattered );
+
+	}
+
+	_uploadPrimitivesFirstReadInPass() {
+
+		const gpuScene = this.gpuScene;
+
+		if ( gpuScene.uploadInPlace() === true ) this._attributes.update( gpuScene.records, AttributeType.STORAGE );
 
 	}
 

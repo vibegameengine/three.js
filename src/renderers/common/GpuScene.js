@@ -182,6 +182,45 @@ class GpuScene {
 
 	}
 
+	uploadInPlace() {
+
+		const dirty = this.dirty;
+
+		if ( dirty.length === 0 && this.grown === false ) return false;
+
+		const records = this.records;
+		records.clearUpdateRanges();
+
+		if ( this.grown === false ) {
+
+			let first = dirty[ 0 ], last = first;
+
+			for ( let i = 1; i <= dirty.length; i ++ ) {
+
+				const id = dirty[ i ];
+
+				if ( id === last + 1 ) {
+
+					last = id;
+					continue;
+
+				}
+
+				records.addUpdateRange( first * PRIMITIVE_FLOATS, ( last - first + 1 ) * PRIMITIVE_FLOATS );
+				first = last = id;
+
+			}
+
+		}
+
+		for ( let i = 0, l = dirty.length; i < l; i ++ ) this.dirtyMarks[ dirty[ i ] ] = 0;
+		dirty.length = 0;
+		this.grown = false;
+		records.needsUpdate = true;
+		return true;
+
+	}
+
 	takeGrown() {
 
 		const grown = this.grown;
