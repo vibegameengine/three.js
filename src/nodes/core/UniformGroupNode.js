@@ -67,7 +67,7 @@ class UniformGroupNode extends Node {
 		 */
 		this.updateType = updateType;
 
-		if ( updateType === NodeUpdateType.OBJECT ) this.updateScope = NodeUpdateScope.OBJECT;
+		if ( updateType === NodeUpdateType.OBJECT ) this.updateScope = NodeUpdateScope.MATERIAL;
 
 		/**
 		 * This flag can be used for type testing.
