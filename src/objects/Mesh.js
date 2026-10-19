@@ -57,6 +57,7 @@ class Mesh extends Object3D {
 		 * @default true
 		 */
 		this.isMesh = true;
+		this.castShadow = true;
 
 		this.type = 'Mesh';
 
