@@ -252,6 +252,8 @@ class Renderer {
 		 */
 		this.info = new Info();
 
+		this.skippedDraws = 0;
+
 		/**
 		 * A global context node that stores override nodes for specific transformations or calculations.
 		 * These nodes can be used to replace default behavior in the rendering pipeline.
@@ -416,6 +418,8 @@ class Renderer {
 		 * @type {WeakMap<Node, ComputeCallPlan>}
 		 */
 		this._computePlans = new WeakMap();
+
+		this._dispatchedCompute = new WeakSet();
 
 		/**
 		 * A reference to a renderer module for managing render bundles.
@@ -1509,7 +1513,13 @@ class Renderer {
 				renderObject.group = group;
 				renderObject.pipeline = pipeline;
 				if ( this._pipelines.isReady( renderObject ) ) this.backend.draw( renderObject, this.info );
-				else ready = false;
+				else {
+
+					ready = false;
+					this.skippedDraws ++;
+					this.heldBackObjects?.add( renderObject.object );
+
+				}
 
 			}
 			renderBundleData.preparedDraws.length = 0;
@@ -3206,7 +3216,7 @@ class Renderer {
 		for ( const computeNode of computeList ) {
 
 			if ( computeNode.dispatchLayout === undefined ) computeNode.dispatchLayout = dispatchLayout;
-			else if ( computeNode.dispatchLayout !== dispatchLayout ) throw new Error( `THREE.Renderer: compute node "${ computeNode.name }" was built for a ${ computeNode.dispatchLayout } dispatch and is now dispatched as a ${ dispatchLayout }; its instanceIndex would be wrong.` );
+			else if ( computeNode.dispatchLayout !== dispatchLayout ) this._relayoutCompute( computeNode, dispatchLayout );
 
 			computeNode.dispatchCount = dispatchedThreadCount( dispatchSize ?? computeNode.dispatchSize );
 
@@ -3253,6 +3263,7 @@ class Renderer {
 
 				plan.refresh( nodes.nodeFrame, bindings );
 				backend.computeByPlan( computeNodes, computeNode, plan, dispatchSize );
+				this._dispatchedCompute.add( computeNode );
 				continue;
 
 			}
@@ -3267,6 +3278,7 @@ class Renderer {
 			this._computePlans.set( computeNode, plan );
 
 			backend.compute( computeNodes, computeNode, computeBindings, computePipeline, dispatchSize );
+			this._dispatchedCompute.add( computeNode );
 
 			nodes.updateAfterForCompute( computeNode );
 
@@ -3281,6 +3293,54 @@ class Renderer {
 		//
 
 		if ( recorded ) this.inspector.finishCompute( this.backend.getTimestampUID( computeNodes ) );
+
+	}
+
+	async precompileCompute( computeNodes ) {
+
+		const compilations = [];
+
+		for ( const computeNode of computeNodes ) {
+
+			if ( this._pipelines.has( computeNode ) ) continue;
+
+			this._forgetComputeOnDispose( computeNode );
+			this._nodes.updateForCompute( computeNode );
+			this._bindings.updateForCompute( computeNode );
+			this._pipelines.getForCompute( computeNode, this._bindings.getForCompute( computeNode ), compilations );
+
+		}
+
+		await Promise.all( compilations );
+
+	}
+
+	_forgetComputeOnDispose( computeNode ) {
+
+		const dispose = () => {
+
+			computeNode.removeEventListener( 'dispose', dispose );
+
+			this._pipelines.delete( computeNode );
+			this._computePlans.delete( computeNode );
+			this._bindings.deleteForCompute( computeNode );
+			this._nodes.delete( computeNode );
+
+		};
+
+		computeNode.addEventListener( 'dispose', dispose );
+
+	}
+
+	_relayoutCompute( computeNode, dispatchLayout ) {
+
+		if ( this._dispatchedCompute.has( computeNode ) ) throw new Error( `THREE.Renderer: compute node "${ computeNode.name }" was built for a ${ computeNode.dispatchLayout } dispatch and is now dispatched as a ${ dispatchLayout }; its instanceIndex would be wrong.` );
+
+		this._pipelines.delete( computeNode );
+		this._computePlans.delete( computeNode );
+		this._bindings.deleteForCompute( computeNode );
+		this._nodes.delete( computeNode );
+		computeNode.dispatchLayout = dispatchLayout;
 
 	}
 
@@ -4204,6 +4264,38 @@ class Renderer {
 
 	}
 
+	beginAsyncPipelineCompilation() {
+
+		this._pipelines.asyncCompilations = [];
+
+	}
+
+	takeAsyncPipelineCompilations() {
+
+		const pending = this._pipelines.asyncCompilations ?? [];
+		if ( this._pipelines.asyncCompilations !== null ) this._pipelines.asyncCompilations = [];
+		return pending;
+
+	}
+
+	endAsyncPipelineCompilation() {
+
+		this._pipelines.asyncCompilations = null;
+
+	}
+
+	compileDrawsInBackground() {
+
+		this._pipelines.drawsCompileInBackground = true;
+
+	}
+
+	rewriteGpuSceneCustomData( object ) {
+
+		if ( this.gpuScene !== null ) this.gpuScene.rewriteCustomData( object );
+
+	}
+
 	_syncGpuSceneObject( object, { topLevel, toScreen } ) {
 
 		this.gpuScene.sync( object, this._gpuSceneFrame( topLevel, toScreen ) );
@@ -4273,6 +4365,14 @@ class Renderer {
 		renderObject.drawRange = geometry.drawRange;
 		renderObject.group = group;
 
+		// @important UE delays the whole primitive's proxy until all its PSOs are precached (DelayUntilPSOPrecached); we hold back each render object until its own shader is built, because a pass that first meets the object later cannot be known in advance here. Passes that cache their output redraw through skippedDraws. Do not fix this to match UE.
+		if ( this._pipelines.drawsCompileInBackground === true && this._nodes.getForRenderDeferred( renderObject ) === null ) {
+
+			this._holdBackUnbuilt( renderObject, group );
+			return;
+
+		}
+
 		const refreshType = this._refreshRenderObject( renderObject );
 
 		this._pipelines.updateForRender( renderObject );
@@ -4301,7 +4401,26 @@ class Renderer {
 
 			if ( refreshType !== RenderObjectRefreshType.NONE ) this._nodes.updateAfter( renderObject );
 
+		} else {
+
+			this.skippedDraws ++;
+			this.heldBackObjects?.add( renderObject.object );
+
 		}
+
+	}
+
+	_holdBackUnbuilt( renderObject, group ) {
+
+		this.skippedDraws ++;
+		this.heldBackObjects?.add( renderObject.object );
+
+		if ( this._currentRenderBundle === null ) return;
+
+		const renderBundleData = this.backend.get( this._currentRenderBundle );
+		renderBundleData.renderObjects.push( renderObject );
+		renderObject.bundle = this._currentRenderBundle.bundleGroup;
+		if ( renderBundleData.preparing === true ) renderBundleData.preparedDraws.push( { renderObject, group, pipeline: undefined } );
 
 	}
 

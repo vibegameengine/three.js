@@ -6,6 +6,8 @@ import { NodeUpdateType } from '../core/constants.js';
 import { addMethodChaining, nodeObject } from '../tsl/TSLCore.js';
 import { warn, error } from '../../utils.js';
 
+const _collectors = new Set();
+
 /**
  * Represents a compute shader node.
  *
@@ -19,6 +21,25 @@ class ComputeNode extends Node {
 
 	}
 
+	static collectCreatedComputeNodes() {
+
+		const created = [];
+		_collectors.add( created );
+
+		return {
+
+			take() {
+
+				_collectors.delete( created );
+
+				return created;
+
+			}
+
+		};
+
+	}
+
 	/**
 	 * Constructs a new compute node.
 	 *
@@ -28,6 +49,8 @@ class ComputeNode extends Node {
 	constructor( computeNode, workgroupSize ) {
 
 		super( 'void' );
+
+		for ( const created of _collectors ) created.push( this );
 
 		/**
 		 * This flag can be used for type testing.

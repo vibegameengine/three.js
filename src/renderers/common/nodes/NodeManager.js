@@ -17,6 +17,43 @@ const _chainKeys = [];
 const GROUP_OBJECT = 0;
 const GROUP_VERSIONED = 1;
 const _cacheKeyValues = [];
+const _runningBuilds = new WeakMap();
+
+function passStateOf( renderer ) {
+
+	return {
+		_renderTarget: renderer._renderTarget,
+		_mrt: renderer._mrt,
+		_currentRenderContext: renderer._currentRenderContext,
+		_outputRenderTarget: renderer._outputRenderTarget,
+		contextNode: renderer.contextNode
+	};
+
+}
+
+const IDLE_BUILD_DEADLINE_MS = 50;
+
+function whenIdle( callback ) {
+
+	if ( typeof requestIdleCallback === 'function' ) requestIdleCallback( callback, { timeout: IDLE_BUILD_DEADLINE_MS } );
+	else setTimeout( callback, 0 );
+
+}
+
+function runningBuildsOf( nodeBuilderCache ) {
+
+	let running = _runningBuilds.get( nodeBuilderCache );
+
+	if ( running === undefined ) {
+
+		running = new Map();
+		_runningBuilds.set( nodeBuilderCache, running );
+
+	}
+
+	return running;
+
+}
 
 // Dedicated uniform for output pass array layer selection
 // This is separate from cameraIndex to avoid the sharedUniformGroup complexity
@@ -263,29 +300,12 @@ class NodeManager extends DataMap {
 
 					try {
 
-						if ( useAsync ) {
-
-							await nodeBuilder.buildAsync();
-
-						} else {
-
-							nodeBuilder.build();
-
-						}
+						nodeBuilder.build();
 
 					} catch ( e ) {
 
 						nodeBuilder = this._createNodeBuilder( renderObject, new NodeMaterial() );
-
-						if ( useAsync ) {
-
-							await nodeBuilder.buildAsync();
-
-						} else {
-
-							nodeBuilder.build();
-
-						}
+						nodeBuilder.build();
 
 						error( 'TSL: ' + e );
 
@@ -297,14 +317,30 @@ class NodeManager extends DataMap {
 
 				if ( useAsync ) {
 
-					return buildNodeBuilder().then( ( nodeBuilder ) => {
+					const running = runningBuildsOf( nodeBuilderCache );
+					let build = running.get( cacheKey );
 
-						nodeBuilderState = this._createNodeBuilderState( nodeBuilder );
-						nodeBuilderCache.set( cacheKey, nodeBuilderState );
-						nodeBuilderState.usedTimes ++;
-						renderObjectData.nodeBuilderState = nodeBuilderState;
+					if ( build === undefined ) {
 
-						return nodeBuilderState;
+						build = buildNodeBuilder().then( ( nodeBuilder ) => {
+
+							const builtState = this._createNodeBuilderState( nodeBuilder );
+							nodeBuilderCache.set( cacheKey, builtState );
+
+							return builtState;
+
+						} ).finally( () => running.delete( cacheKey ) );
+
+						running.set( cacheKey, build );
+
+					}
+
+					return build.then( ( builtState ) => {
+
+						builtState.usedTimes ++;
+						renderObjectData.nodeBuilderState = builtState;
+
+						return builtState;
 
 					} );
 
@@ -414,9 +450,16 @@ class NodeManager extends DataMap {
 			// Mark as pending and add to build queue
 			renderObjectData.pendingBuild = true;
 
+			const passState = passStateOf( this.renderer );
+
 			this._buildQueue.push( () => {
 
-				return this.getForRenderAsync( renderObject ).then( () => {
+				const outsideState = passStateOf( this.renderer );
+				Object.assign( this.renderer, passState );
+				const build = this.getForRenderAsync( renderObject );
+				Object.assign( this.renderer, outsideState );
+
+				return build.then( () => {
 
 					renderObjectData.pendingBuild = false;
 
@@ -424,8 +467,7 @@ class NodeManager extends DataMap {
 
 			} );
 
-			// Start processing queue if not already running
-			this._processBuildQueue();
+			whenIdle( () => this._processBuildQueue() );
 
 		}
 
@@ -455,10 +497,15 @@ class NodeManager extends DataMap {
 
 			this._buildInProgress = false;
 
-			// Process next item in queue
-			this._processBuildQueue();
+			whenIdle( () => this._processBuildQueue() );
 
 		} );
+
+	}
+
+	hasNodeBuilderState( renderObject ) {
+
+		return this.get( renderObject ).nodeBuilderState !== undefined || this.nodeBuilderCache.has( this.getForRenderCacheKey( renderObject ) );
 
 	}
 

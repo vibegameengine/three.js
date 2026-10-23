@@ -3,6 +3,7 @@ import { Vector4 } from '../../math/Vector4.js';
 import { drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedViewRefresh, { refreshFully, refreshRepresentatives, refreshShared } from './RetainedViewRefresh.js';
 import { SteadyUniformSources } from './SteadyUniforms.js';
+import RetainedUploads from './RetainedUploads.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 const NO_DRAWS = Object.freeze( [] );
@@ -48,12 +49,12 @@ class RetainedTransparents {
 		this.visible = [];
 		this.viewRefresh = new RetainedViewRefresh();
 		this.refreshSteps = null;
+		this.geometryUploads = new RetainedUploads();
 
 	}
 
 	rebuild( items ) {
 
-		this.viewRefresh.release();
 		this.entries = items.map( ( item ) => ( {
 			item,
 			groupOrder: item.groupOrder,
@@ -78,6 +79,8 @@ class RetainedTransparents {
 		const { renderContext, camera, frustum, projScreenMatrix, lodView = camera } = frame;
 		this.visible.length = 0;
 
+		if ( this.geometryUploads.upload( renderer ) ) for ( const entry of this.entries ) entry.front.encodedFor = entry.back.encodedFor = null;
+
 		for ( const entry of this.entries ) {
 
 			if ( entry.item.hidden === true || drawnAtThisSize( entry.item, lodView ) === false ) continue;
@@ -97,13 +100,14 @@ class RetainedTransparents {
 
 		for ( const { entry, side } of transparentDrawSequence( this.visible ) ) encoded = this._drawSide( renderer, frame, entry, entry[ side ] ) || encoded;
 
-		if ( encoded ) this._trackEncodedDraws();
+		if ( encoded ) this._trackEncodedDraws( renderer );
 
 	}
 
 	dispose() {
 
 		this.viewRefresh.release();
+		this.geometryUploads.dispose();
 
 	}
 
@@ -122,13 +126,15 @@ class RetainedTransparents {
 
 	}
 
-	_trackEncodedDraws() {
+	_trackEncodedDraws( renderer ) {
 
 		const renderObjects = [];
 
-		for ( const entry of this.entries ) for ( const draw of [ entry.front, entry.back ] ) renderObjects.push( ...draw.renderObjects );
+		for ( const entry of this.entries ) for ( const draw of [ entry.front, entry.back ] ) for ( const renderObject of draw.renderObjects ) if ( renderer._nodes.hasNodeBuilderState( renderObject ) ) renderObjects.push( renderObject );
 
 		this.viewRefresh.reset( refreshRepresentatives( renderObjects ) );
+		this.geometryUploads.clear();
+		this.geometryUploads.rememberRenderObjects( renderer, renderObjects );
 
 	}
 
@@ -172,7 +178,7 @@ class RetainedTransparents {
 		draw.renderObjects = renderer.backend.get( draw.renderBundle ).renderObjects;
 		draw.encodedFor = frame.encodeKey;
 		draw.bindGroups.clear();
-		for ( const renderObject of draw.renderObjects ) for ( const bindGroup of renderObject.getBindings() ) draw.bindGroups.set( bindGroup, renderer.backend.get( bindGroup ).group );
+		for ( const renderObject of draw.renderObjects ) if ( renderer._nodes.hasNodeBuilderState( renderObject ) ) for ( const bindGroup of renderObject.getBindings() ) draw.bindGroups.set( bindGroup, renderer.backend.get( bindGroup ).group );
 
 	}
 

@@ -1,22 +1,18 @@
 import { Vector4 } from '../../math/Vector4.js';
-import { DynamicDrawUsage } from '../../constants.js';
-import { listenForDirtyBuffers, takeDirtyBuffers } from '../../core/DrawListRevision.js';
 import { AttributeType } from './Constants.js';
 import RetainedDrawList from './RetainedDrawList.js';
 import RetainedCulling, { ARGS_STRIDE } from './RetainedCulling.js';
+import RetainedSlots from './RetainedSlots.js';
+import RetainedChunks from './RetainedChunks.js';
 import { drawSlotKey, drawnAtThisSize } from './ScreenSizeLods.js';
 import RetainedTransparents from './RetainedTransparents.js';
+import RetainedUploads from './RetainedUploads.js';
 import { SteadyUniformSources } from './SteadyUniforms.js';
 import RetainedViewRefresh, { refreshFully, refreshShared } from './RetainedViewRefresh.js';
 
 const _depth = /*@__PURE__*/ new Vector4();
 const _pipelineOrderOff = new URLSearchParams( globalThis.location?.search ?? '' ).get( 'pipelineOrder' ) === '0';
-
-function bufferOf( attribute ) {
-
-	return attribute.isInterleavedBufferAttribute ? attribute.data : attribute;
-
-}
+const _inListOrder = ( a, b ) => a.listIndex - b.listIndex;
 
 function shownInWorld( object ) {
 
@@ -34,20 +30,16 @@ class RetainedScenePass {
 		this.rasterBins = null;
 		this.transparents = new RetainedTransparents();
 		this.culling = null;
-		this.bundleGroup = { version: 0, static: true };
-		this.encoded = { listVersion: - 1, context: null, contextNode: null, contextNodeVersion: - 1 };
+		this.slots = new RetainedSlots();
+		this.chunks = new RetainedChunks();
+		this.encoded = { context: null, contextNode: null, contextNodeVersion: - 1 };
 		this.representatives = [];
 		this.viewRefresh = new RetainedViewRefresh();
 		this.calledBack = new Set();
-		this.bindGroups = new Map();
-		this.uploads = new Map();
-		this.dynamicUploads = [];
-		this.gpuBuffers = new Map();
-		this.bindings = [];
-		this.dirty = [];
+		this.bindingOf = new Map();
+		this.geometryUploads = new RetainedUploads();
 		this.reencode = true;
 		this.sortByPipeline = false;
-		this.stopListening = listenForDirtyBuffers();
 
 	}
 
@@ -78,38 +70,51 @@ class RetainedScenePass {
 
 		renderer._flushGpuScene();
 
-		if ( this.culling.stale ) this._replaceCulling( renderer );
+		if ( this.culling.stale ) this.culling.followRecords();
 
 		this._uploadChangedBuffers( renderer );
 
 		if ( this.culling.drawsKnown === false ) return;
 
 		this.culling.aim( frustum, camera );
-		renderer.compute( this.culling.node );
+		renderer.compute( this.culling.node, Math.max( 1, this.slots.capacity ) );
 
 	}
 
 	draw( renderer, sceneRef, lightsNode, renderContext, camera ) {
 
-		if ( this._needsEncode( renderer, renderContext ) === false ) {
+		if ( this.reencode || this._contextChanged( renderer, renderContext ) ) this.chunks.markAllDirty();
 
-			for ( const object of this.list.callbacks ) object.onBeforeRender( renderer, sceneRef, camera, object.geometry, object.material, null );
+		const chunks = this.chunks.chunks;
+		const backend = renderer.backend;
 
-			this._refreshRepresentatives( renderer );
+		for ( const chunk of chunks ) if ( chunk.renderBundle === undefined || backend.get( chunk.renderBundle ).version !== chunk.bundleGroup.version ) chunk.dirty = true;
 
-			if ( this._bindGroupsChanged( renderer ) === false ) {
+		const recorded = this._objectsOf( chunks.filter( ( chunk ) => chunk.dirty ) );
+		const replayed = this.list.callbacks.filter( ( object ) => recorded.has( object ) === false );
 
-				renderer.backend.drawBundle( renderContext, this.renderBundle );
-				for ( const object of this.list.callbacks ) object.onAfterRender( renderer, sceneRef, camera, object.geometry, object.material, null );
-				return;
+		for ( const object of replayed ) object.onBeforeRender( renderer, sceneRef, camera, object.geometry, object.material, null );
 
-			}
+		this._refreshRepresentatives( renderer );
 
-			this.reencode = true;
+		for ( const chunk of chunks ) if ( chunk.dirty === false && this._bindGroupsChanged( renderer, chunk ) ) chunk.dirty = true;
+
+		let encoded = false;
+
+		for ( const chunk of chunks ) {
+
+			if ( chunk.dirty ) {
+
+				this._encodeChunk( renderer, { sceneRef, lightsNode, camera }, chunk );
+				encoded = true;
+
+			} else backend.drawBundle( renderContext, chunk.renderBundle );
 
 		}
 
-		this._encode( renderer, sceneRef, lightsNode, renderContext, camera );
+		for ( const object of replayed ) object.onAfterRender( renderer, sceneRef, camera, object.geometry, object.material, null );
+
+		if ( encoded ) this._afterEncode( renderer, renderContext );
 
 	}
 
@@ -125,7 +130,7 @@ class RetainedScenePass {
 		this._unbind();
 		this.viewRefresh.release();
 		this.transparents.dispose();
-		this.stopListening();
+		this.geometryUploads.dispose();
 
 	}
 
@@ -147,31 +152,36 @@ class RetainedScenePass {
 		this._updateLods( camera );
 		if ( this.list.isCurrent( scene, camera, this.rasterBins ) === false ) this.list.build( scene, camera, this.rasterBins );
 
-		for ( const item of this.list.items ) item.clippingContext = renderContext.clippingContext;
+		this.list.items.forEach( ( item, index ) => {
 
-		this._unbind();
-		this.culling = new RetainedCulling( renderer.gpuScene, this.list.items.length );
+			item.clippingContext = renderContext.clippingContext;
+			item.listIndex = index;
+
+		} );
+
+		const { removed } = this.slots.assign( this.list.items );
+		this._reserveCulling( renderer );
+		for ( const slot of removed ) this.culling.release( slot );
 		this._describeItems( renderer, camera, renderContext );
+		this.culling.upload();
+		this.chunks.assign( this.list.items, _inListOrder );
 		for ( const item of this.list.transparent ) item.clippingContext = renderContext.clippingContext;
 		this.transparents.rebuild( this.list.transparent );
-		this.reencode = true;
 
 	}
 
-	_replaceCulling( renderer ) {
+	_reserveCulling( renderer ) {
 
-		const previous = this.culling;
-		this.culling = new RetainedCulling( renderer.gpuScene, previous.count );
-		this.culling.spheres.array.set( previous.spheres.array );
-		this.culling.primitives.array.set( previous.primitives.array );
-		this.culling.instances.array.set( previous.instances.array );
-		this.culling.bands.array.set( previous.bands.array );
-		this.culling.drawInstances.set( previous.drawInstances );
-		this.culling.hidden.set( previous.hidden );
-		this.culling.args.array.set( previous.args.array );
-		this.culling.drawsKnown = previous.drawsKnown;
-		this.culling.upload();
-		for ( const { binding } of this.bindings ) binding.indirect = this.culling.args;
+		if ( this.culling === null ) {
+
+			this.culling = new RetainedCulling( renderer.gpuScene, this.slots.capacity );
+			return;
+
+		}
+
+		if ( this.culling.reserve( this.slots.capacity ) === false ) return;
+
+		for ( const binding of this.bindingOf.values() ) binding.indirect = this.culling.args;
 		this.reencode = true;
 
 	}
@@ -179,42 +189,66 @@ class RetainedScenePass {
 	_describeItems( renderer, camera, renderContext ) {
 
 		const gpuScene = renderer.gpuScene;
-		const bindingOf = new Map();
+		const bound = new Set();
 
-		this.list.items.forEach( ( item, index ) => {
+		for ( const item of this.list.items ) {
 
-			const { object, band } = item;
+			const { object, band, slot } = item;
 			const bounds = object.geometry;
 			if ( bounds.boundingSphere === null ) bounds.computeBoundingSphere();
 			const alwaysDrawn = object.frustumCulled === false || object.isSkinnedMesh === true || object.isSprite === true;
-			this.culling.describe( index, { sphere: bounds.boundingSphere, primitive: gpuScene.primitiveOf( object ).id, alwaysDrawn, band } );
-			item.cullIndex = index;
-			this.culling.hidden[ index ] = item.hidden ? 1 : 0;
+			this.culling.describe( slot, { sphere: bounds.boundingSphere, primitive: gpuScene.primitiveOf( object ).id, alwaysDrawn, band } );
+			item.cullIndex = slot;
+			this.culling.hidden[ slot ] = item.hidden ? 1 : 0;
 
-			if ( object.instanceCulling !== undefined && object.instanceCulling !== null && object.instanceCulling.retained !== true ) return;
+			if ( object.instanceCulling !== undefined && object.instanceCulling !== null && object.instanceCulling.retained !== true ) continue;
 
-			let binding = bindingOf.get( object );
+			const binding = this._bindingFor( object, { camera, renderContext }, bound );
+			binding.groupOffsets.set( drawSlotKey( item ), slot * ARGS_STRIDE );
 
-			if ( binding === undefined ) {
+		}
 
-				binding = { camera, context: renderContext, indirect: this.culling.args, indirectOffset: 0, instanceIds: null, idBase: 0, groupOffsets: new Map(), retained: true };
-				bindingOf.set( object, binding );
-				object.instanceCulling = binding;
-				this.bindings.push( { object, binding } );
+		for ( const [ object, binding ] of this.bindingOf ) {
 
-			}
+			if ( bound.has( object ) ) continue;
+			if ( object.instanceCulling === binding ) object.instanceCulling = null;
+			this.bindingOf.delete( object );
 
-			binding.groupOffsets.set( drawSlotKey( item ), index * ARGS_STRIDE );
+		}
 
-		} );
+	}
+
+	_bindingFor( object, { camera, renderContext }, bound ) {
+
+		let binding = this.bindingOf.get( object );
+
+		if ( binding === undefined ) {
+
+			binding = { camera, context: renderContext, indirect: this.culling.args, indirectOffset: 0, instanceIds: null, idBase: 0, groupOffsets: new Map(), retained: true };
+			this.bindingOf.set( object, binding );
+
+		}
+
+		if ( bound.has( object ) === false ) {
+
+			bound.add( object );
+			binding.camera = camera;
+			binding.context = renderContext;
+			binding.indirect = this.culling.args;
+			binding.groupOffsets.clear();
+			object.instanceCulling = binding;
+
+		}
+
+		return binding;
 
 	}
 
 	_unbind() {
 
-		for ( const { object, binding } of this.bindings ) if ( object.instanceCulling === binding ) object.instanceCulling = null;
+		for ( const [ object, binding ] of this.bindingOf ) if ( object.instanceCulling === binding ) object.instanceCulling = null;
 
-		this.bindings.length = 0;
+		this.bindingOf.clear();
 
 	}
 
@@ -235,38 +269,52 @@ class RetainedScenePass {
 
 	}
 
-	_needsEncode( renderer, renderContext ) {
+	_contextChanged( renderer, renderContext ) {
 
 		const encoded = this.encoded;
 
-		if ( this.reencode || this.renderBundle === undefined ) return true;
-		if ( renderer.backend.get( this.renderBundle ).version !== this.bundleGroup.version ) return true;
-
-		return encoded.listVersion !== this.list.version || encoded.context !== renderContext || encoded.contextNode !== renderer.contextNode || encoded.contextNodeVersion !== renderer.contextNode.version;
+		return encoded.context !== renderContext || encoded.contextNode !== renderer.contextNode || encoded.contextNodeVersion !== renderer.contextNode.version;
 
 	}
 
-	_encode( renderer, sceneRef, lightsNode, renderContext, camera ) {
+	_objectsOf( chunks ) {
 
-		this.bundleGroup.version ++;
-		const renderList = { opaque: this.list.items, transparent: [], transparentDoublePass: [] };
-		renderer._renderBundle( { bundleGroup: this.bundleGroup, camera, renderList }, sceneRef, lightsNode, true );
+		const objects = new Set();
 
-		this.renderBundle = renderer._bundles.get( this.bundleGroup, camera, renderer._currentRenderContext );
-		const renderObjects = renderer.backend.get( this.renderBundle ).renderObjects;
-		if ( renderObjects.length !== this.list.items.length ) throw new Error( `RetainedScenePass: encoded ${ renderObjects.length } draws for ${ this.list.items.length } retained items.` );
+		for ( const chunk of chunks ) for ( const item of chunk.items ) objects.add( item.object );
 
+		return objects;
+
+	}
+
+	_encodeChunk( renderer, { sceneRef, lightsNode, camera }, chunk ) {
+
+		chunk.bundleGroup.version ++;
+		const renderList = { opaque: chunk.items, transparent: [], transparentDoublePass: [] };
+		renderer._renderBundle( { bundleGroup: chunk.bundleGroup, camera, renderList }, sceneRef, lightsNode, true );
+
+		chunk.renderBundle = renderer._bundles.get( chunk.bundleGroup, camera, renderer._currentRenderContext );
+		const renderObjects = renderer.backend.get( chunk.renderBundle ).renderObjects;
+		if ( renderObjects.length !== chunk.items.length ) throw new Error( `RetainedScenePass: encoded ${ renderObjects.length } draws for ${ chunk.items.length } retained items.` );
+
+		chunk.renderObjects = renderObjects.slice();
+		renderObjects.forEach( ( renderObject, index ) => this.culling.writeDraw( chunk.items[ index ].slot, renderObject.getDrawParameters() ) );
 		this._learnPipelineOrder( renderObjects );
-		renderObjects.forEach( ( renderObject, index ) => this.culling.writeDraw( index, renderObject.getDrawParameters() ) );
+		this._rememberBindGroups( renderer, chunk );
+		chunk.dirty = false;
+
+	}
+
+	_afterEncode( renderer, renderContext ) {
+
 		this.culling.drawsKnown = true;
 		this.culling.upload();
 		renderer._attributes.update( this.culling.args, AttributeType.INDIRECT );
 		renderer._attributes.update( this.culling.instances, AttributeType.STORAGE );
 
-		this._remember( renderer, renderObjects );
+		this._remember( renderer, this.chunks.chunks.flatMap( ( chunk ) => chunk.renderObjects ) );
 
 		const encoded = this.encoded;
-		encoded.listVersion = this.list.version;
 		encoded.context = renderContext;
 		encoded.contextNode = renderer.contextNode;
 		encoded.contextNodeVersion = renderer.contextNode.version;
@@ -293,12 +341,25 @@ class RetainedScenePass {
 
 	}
 
-	_remember( renderer, renderObjects ) {
+	_rememberBindGroups( renderer, chunk ) {
 
 		const backend = renderer.backend;
+		chunk.bindGroups.clear();
+
+		for ( const renderObject of chunk.renderObjects ) {
+
+			if ( renderer._nodes.hasNodeBuilderState( renderObject ) === false ) continue;
+			for ( const bindGroup of renderObject.getBindings() ) chunk.bindGroups.set( bindGroup, backend.get( bindGroup ).group );
+
+		}
+
+	}
+
+	_remember( renderer, encoded ) {
+
+		const renderObjects = encoded.filter( ( renderObject ) => renderer._nodes.hasNodeBuilderState( renderObject ) );
 		const sharedBindings = new Set();
 
-		this.viewRefresh.release();
 		this.calledBack.clear();
 		const callbacks = new Set( this.list.callbacks );
 
@@ -309,10 +370,6 @@ class RetainedScenePass {
 		}
 
 		this.representatives.length = 0;
-		this.bindGroups.clear();
-		this.uploads.clear();
-		this.dynamicUploads.length = 0;
-		this.gpuBuffers.clear();
 
 		for ( const renderObject of renderObjects ) {
 
@@ -326,62 +383,17 @@ class RetainedScenePass {
 
 			}
 
-			for ( const bindGroup of renderObject.getBindings() ) this.bindGroups.set( bindGroup, backend.get( bindGroup ).group );
-
-			for ( const attribute of renderObject.getAttributes() ) this._rememberUpload( renderer, attribute, attribute.isStorageBufferAttribute || attribute.isStorageInstancedBufferAttribute ? AttributeType.STORAGE : AttributeType.VERTEX );
-
-			const index = renderer._geometries.getIndex( renderObject );
-			if ( index !== null ) this._rememberUpload( renderer, index, AttributeType.INDEX );
-
 		}
 
+		this.geometryUploads.clear();
+		this.geometryUploads.rememberRenderObjects( renderer, renderObjects );
 		this.viewRefresh.reset( this.representatives );
-
-	}
-
-	_rememberUpload( renderer, attribute, type ) {
-
-		const buffer = bufferOf( attribute );
-		let uploads = this.uploads.get( buffer );
-
-		if ( uploads === undefined ) {
-
-			uploads = [];
-			this.uploads.set( buffer, uploads );
-
-		}
-
-		if ( uploads.some( ( upload ) => upload.attribute === attribute ) ) return;
-
-		const upload = { attribute, type };
-		uploads.push( upload );
-		if ( buffer.usage === DynamicDrawUsage ) this.dynamicUploads.push( upload );
-		this.gpuBuffers.set( attribute, renderer.backend.get( attribute ).buffer );
 
 	}
 
 	_uploadChangedBuffers( renderer ) {
 
-		const dirty = takeDirtyBuffers( this.dirty );
-
-		for ( const buffer of dirty ) {
-
-			const uploads = this.uploads.get( buffer );
-			if ( uploads !== undefined ) for ( const upload of uploads ) this._upload( renderer, upload );
-
-		}
-
-		dirty.length = 0;
-
-		for ( const upload of this.dynamicUploads ) this._upload( renderer, upload );
-
-	}
-
-	_upload( renderer, { attribute, type } ) {
-
-		renderer._attributes.update( attribute, type );
-
-		if ( renderer.backend.get( attribute ).buffer !== this.gpuBuffers.get( attribute ) ) this.reencode = true;
+		if ( this.geometryUploads.upload( renderer ) ) this.reencode = true;
 
 	}
 
@@ -418,11 +430,11 @@ class RetainedScenePass {
 
 	}
 
-	_bindGroupsChanged( renderer ) {
+	_bindGroupsChanged( renderer, chunk ) {
 
 		const backend = renderer.backend;
 
-		for ( const [ bindGroup, group ] of this.bindGroups ) if ( backend.get( bindGroup ).group !== group ) return true;
+		for ( const [ bindGroup, group ] of chunk.bindGroups ) if ( backend.get( bindGroup ).group !== group ) return true;
 
 		return false;
 

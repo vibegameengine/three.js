@@ -296,6 +296,8 @@ class WebGPUPipelineUtils {
 
 					}
 
+					const errorScopePromise = device.popErrorScope();
+
 					_renderPipelineDescriptor.reset();
 
 					if ( pipelinePromise !== null ) {
@@ -312,7 +314,7 @@ class WebGPUPipelineUtils {
 
 					}
 
-					const errorScope = await device.popErrorScope();
+					const errorScope = await errorScopePromise;
 
 					if ( errorScope !== null || asyncError !== null ) {
 
@@ -453,6 +455,8 @@ class WebGPUPipelineUtils {
 
 					}
 
+					const errorScopePromise = device.popErrorScope();
+
 					_computePipelineDescriptor.reset();
 
 					if ( pipelinePromise !== null ) {
@@ -469,7 +473,7 @@ class WebGPUPipelineUtils {
 
 					}
 
-					const errorScope = await device.popErrorScope();
+					const errorScope = await errorScopePromise;
 
 					if ( errorScope !== null || asyncError !== null ) {
 

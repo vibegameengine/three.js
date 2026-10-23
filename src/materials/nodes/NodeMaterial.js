@@ -7,6 +7,7 @@ import { materialAlphaTest, materialColor, materialOpacity, materialEmissive, ma
 import { modelViewProjection } from '../../nodes/accessors/ModelViewProjectionNode.js';
 import { normalLocal } from '../../nodes/accessors/Normal.js';
 import { instancedMesh, instanceColor } from '../../nodes/accessors/Instance.js';
+import { gpuSceneCustomData } from '../../nodes/accessors/GpuSceneNode.js';
 import { batch, batchColor } from '../../nodes/accessors/Batch.js';
 import { materialReference } from '../../nodes/accessors/MaterialReferenceNode.js';
 import { positionLocal, positionView } from '../../nodes/accessors/Position.js';
@@ -859,6 +860,12 @@ class NodeMaterial extends Material {
 		if ( object.instanceColor ) {
 
 			colorNode = instanceColor.mul( colorNode );
+
+		}
+
+		if ( geometry.pulledVertices && geometry.pulledVertices.tinted ) {
+
+			colorNode = vec4( gpuSceneCustomData.rgb, 1 ).mul( colorNode );
 
 		}
 

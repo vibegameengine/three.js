@@ -1,4 +1,4 @@
-import { Fn, If, instanceIndex, length, max, select, storage, uint, uniformArray, vec4 } from '../../nodes/TSL.js';
+import { Fn, If, instanceIndex, length, max, select, storage, uint, uniform, uniformArray, vec4 } from '../../nodes/TSL.js';
 import { Vector4 } from '../../math/Vector4.js';
 import { PRIMITIVE_VEC4S, PrimitiveLayout } from './GpuScene.js';
 import { FULL_SCREEN_SIZE_BAND } from './ScreenSizeLods.js';
@@ -10,25 +10,87 @@ export const ARGS_WORDS = 5;
 export const ARGS_STRIDE = ARGS_WORDS * 4;
 const FRUSTUM_PLANES = 6;
 const ALWAYS_DRAWN = - 1;
+const MIN_CAPACITY = 64;
 
+function capacityFor( count ) {
+
+	return Math.max( MIN_CAPACITY, 2 ** Math.ceil( Math.log2( Math.max( 1, count ) ) ) );
+
+}
+
+function grown( array, capacity, perSlot ) {
+
+	const next = new array.constructor( capacity * perSlot );
+	next.set( array );
+	return next;
+
+}
+
+/**
+ * Culls the draws of a retained pass on the GPU. Draws are addressed by their slot, the kernel
+ * reads how many slots there are from a uniform and its buffers through nodes whose value is
+ * swapped when they grow, so the kernel is built once for the life of the pass, as a culling
+ * shader over a GPU scene is a global shader that never depends on what the scene holds.
+ *
+ * @private
+ */
 class RetainedCulling {
 
 	constructor( gpuScene, count ) {
 
-		this.count = count;
-		this.args = new IndirectStorageBufferAttribute( new Uint32Array( Math.max( 1, count ) * ARGS_WORDS ), 1 );
-		this.spheres = new StorageBufferAttribute( new Float32Array( Math.max( 1, count ) * 4 ), 4 );
-		this.primitives = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
-		this.instances = new StorageBufferAttribute( new Uint32Array( Math.max( 1, count ) ), 1 );
-		this.bands = new StorageBufferAttribute( new Float32Array( Math.max( 1, count ) * 4 ), 4 );
-		this.drawInstances = new Uint32Array( Math.max( 1, count ) );
-		this.hidden = new Uint8Array( Math.max( 1, count ) );
+		this.capacity = capacityFor( count );
+		this.count = uniform( count, 'uint' );
+		this.args = new IndirectStorageBufferAttribute( new Uint32Array( this.capacity * ARGS_WORDS ), 1 );
+		this.spheres = new StorageBufferAttribute( new Float32Array( this.capacity * 4 ), 4 );
+		this.primitives = new StorageBufferAttribute( new Uint32Array( this.capacity ), 1 );
+		this.instances = new StorageBufferAttribute( new Uint32Array( this.capacity ), 1 );
+		this.bands = new StorageBufferAttribute( new Float32Array( this.capacity * 4 ), 4 );
+		this.drawInstances = new Uint32Array( this.capacity );
+		this.hidden = new Uint8Array( this.capacity );
 		this.planes = uniformArray( Array.from( { length: FRUSTUM_PLANES }, () => new Vector4() ), 'vec4' );
 		this.eye = lodEyeUniform();
 		this.gpuScene = gpuScene;
 		this.drawsKnown = false;
 		this.recordsAttribute = gpuScene.records;
+		this.argsNode = storage( this.args, 'uint', this.args.count );
+		this.spheresNode = storage( this.spheres, 'vec4', this.spheres.count ).toReadOnly();
+		this.primitivesNode = storage( this.primitives, 'uint', this.primitives.count ).toReadOnly();
+		this.recordsNode = storage( gpuScene.records, 'vec4', gpuScene.records.count ).toReadOnly();
+		this.instancesNode = storage( this.instances, 'uint', this.instances.count ).toReadOnly();
+		this.bandsNode = storage( this.bands, 'vec4', this.bands.count ).toReadOnly();
 		this.node = this._kernel();
+
+	}
+
+	reserve( count ) {
+
+		this.count.value = count;
+
+		if ( count <= this.capacity ) return false;
+
+		const capacity = capacityFor( count );
+		this.args = new IndirectStorageBufferAttribute( grown( this.args.array, capacity, ARGS_WORDS ), 1 );
+		this.spheres = new StorageBufferAttribute( grown( this.spheres.array, capacity, 4 ), 4 );
+		this.primitives = new StorageBufferAttribute( grown( this.primitives.array, capacity, 1 ), 1 );
+		this.instances = new StorageBufferAttribute( grown( this.instances.array, capacity, 1 ), 1 );
+		this.bands = new StorageBufferAttribute( grown( this.bands.array, capacity, 4 ), 4 );
+		this.drawInstances = grown( this.drawInstances, capacity, 1 );
+		this.hidden = grown( this.hidden, capacity, 1 );
+		this.capacity = capacity;
+		this.argsNode.value = this.args;
+		this.spheresNode.value = this.spheres;
+		this.primitivesNode.value = this.primitives;
+		this.instancesNode.value = this.instances;
+		this.bandsNode.value = this.bands;
+		this.upload();
+		return true;
+
+	}
+
+	followRecords() {
+
+		this.recordsAttribute = this.gpuScene.records;
+		this.recordsNode.value = this.gpuScene.records;
 
 	}
 
@@ -58,6 +120,13 @@ class RetainedCulling {
 		args[ at + 4 ] = 0;
 		this.drawInstances[ index ] = instances;
 		this.instances.array[ index ] = this.hidden[ index ] === 1 ? 0 : instances;
+
+	}
+
+	release( index ) {
+
+		this.writeDraw( index, null );
+		this.hidden[ index ] = 0;
 
 	}
 
@@ -104,12 +173,12 @@ class RetainedCulling {
 	_kernel() {
 
 		const count = this.count;
-		const args = storage( this.args, 'uint', this.args.count );
-		const spheres = storage( this.spheres, 'vec4', this.spheres.count ).toReadOnly();
-		const primitives = storage( this.primitives, 'uint', this.primitives.count ).toReadOnly();
-		const records = storage( this.gpuScene.records, 'vec4', this.gpuScene.records.count ).toReadOnly();
-		const instances = storage( this.instances, 'uint', this.instances.count ).toReadOnly();
-		const bands = storage( this.bands, 'vec4', this.bands.count ).toReadOnly();
+		const args = this.argsNode;
+		const spheres = this.spheresNode;
+		const primitives = this.primitivesNode;
+		const records = this.recordsNode;
+		const instances = this.instancesNode;
+		const bands = this.bandsNode;
 		const planes = this.planes;
 		const eye = this.eye;
 
@@ -117,7 +186,7 @@ class RetainedCulling {
 
 			const draw = instanceIndex;
 
-			If( draw.lessThan( uint( count ) ), () => {
+			If( draw.lessThan( count ), () => {
 
 				const sphere = spheres.element( draw );
 				const base = primitives.element( draw ).mul( uint( PRIMITIVE_VEC4S ) ).add( uint( PrimitiveLayout.world ) );
@@ -150,7 +219,7 @@ class RetainedCulling {
 
 			} );
 
-		} )().compute( Math.max( 1, count ) ).setName( 'Retained.Cull' );
+		} )().compute( 1 ).setName( 'Retained.Cull' );
 
 	}
 

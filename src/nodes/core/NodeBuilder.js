@@ -2092,6 +2092,32 @@ class NodeBuilder {
 
 	}
 
+	stableNameFor( node, prefix ) {
+
+		if ( this.stableNames === undefined ) this.stableNames = new Map();
+
+		let names = this.stableNames.get( prefix );
+
+		if ( names === undefined ) {
+
+			names = new Map();
+			this.stableNames.set( prefix, names );
+
+		}
+
+		let index = names.get( node );
+
+		if ( index === undefined ) {
+
+			index = names.size;
+			names.set( node, index );
+
+		}
+
+		return `${ prefix }_${ index }`;
+
+	}
+
 	/**
 	 * Returns an instance of {@link NodeUniform} for the given uniform node.
 	 *

@@ -1,5 +1,6 @@
 import { hash, hashString } from '../../nodes/core/NodeUtils.js';
 import { instanceCullingFor } from './InstanceCulling.js';
+import { textureBindingKey } from './TextureBindingKey.js';
 
 let _id = 0;
 const _protoKeysCache = new WeakMap();
@@ -831,6 +832,7 @@ class RenderObject {
 							valueKey += value.wrapS;
 							valueKey += value.wrapT;
 							valueKey += value.wrapR;
+							valueKey += textureBindingKey( value );
 
 						}
 
@@ -995,7 +997,7 @@ class RenderObject {
 
 		if ( culling !== null && culling.instanceIds !== null ) {
 
-			cacheKey = hash( cacheKey, culling.instanceIds.id, culling.idBase );
+			cacheKey = hash( cacheKey,culling.instanceIds.id, culling.matrices ? culling.matrices.id : 0, culling.colors ? culling.colors.id : 0 );
 
 		}
 

@@ -1,8 +1,6 @@
 import { ChangeJournal } from './ChangeJournal.js';
 
 const revisions = { materials: 0 };
-const dirtyBuffers = new Set();
-let bufferListeners = 0;
 
 export function drawListRoot( object ) {
 
@@ -50,31 +48,38 @@ export function materialsRevision() {
 
 }
 
+const dirtyBufferSets = new Set();
+
 export function markBufferDirty( buffer ) {
 
-	if ( bufferListeners > 0 ) dirtyBuffers.add( buffer );
+	for ( const dirty of dirtyBufferSets ) dirty.add( buffer );
 
 }
 
-export function listenForDirtyBuffers() {
+export function dirtyBufferListener() {
 
-	bufferListeners ++;
+	const dirty = new Set();
+	dirtyBufferSets.add( dirty );
 
-	return () => {
+	return {
 
-		bufferListeners --;
-		if ( bufferListeners === 0 ) dirtyBuffers.clear();
+		take( into ) {
+
+			for ( const buffer of dirty ) into.push( buffer );
+			dirty.clear();
+
+			return into;
+
+		},
+
+		stop() {
+
+			dirtyBufferSets.delete( dirty );
+			dirty.clear();
+
+		}
 
 	};
-
-}
-
-export function takeDirtyBuffers( into ) {
-
-	for ( const buffer of dirtyBuffers ) into.push( buffer );
-	dirtyBuffers.clear();
-
-	return into;
 
 }
 

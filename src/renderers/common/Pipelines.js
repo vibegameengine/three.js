@@ -29,6 +29,10 @@ class Pipelines extends DataMap {
 		 */
 		this.backend = backend;
 
+		this.asyncCompilations = null;
+
+		this.drawsCompileInBackground = false;
+
 		/**
 		 * Renderer component for managing nodes related logic.
 		 *
@@ -331,7 +335,7 @@ class Pipelines extends DataMap {
 	 */
 	updateForRender( renderObject ) {
 
-		this.getForRender( renderObject );
+		this.getForRender( renderObject, this.asyncCompilations ?? ( this.drawsCompileInBackground ? [] : null ) );
 
 	}
 

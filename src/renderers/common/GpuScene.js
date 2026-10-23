@@ -102,6 +102,15 @@ class GpuScene {
 
 	}
 
+	rewriteCustomData( object ) {
+
+		const primitive = this.primitives.get( object );
+		if ( primitive === undefined || object.gpuSceneCustomData === undefined ) return;
+		this.records.array.set( object.gpuSceneCustomData, primitive.id * PRIMITIVE_FLOATS + CUSTOM_OFFSET );
+		this.markDirty( primitive.id );
+
+	}
+
 	syncMoved( frameId ) {
 
 		const newFrame = this.movedFrame !== frameId;

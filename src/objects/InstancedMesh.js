@@ -27,6 +27,32 @@ const _sphere = /*@__PURE__*/ new Sphere();
  */
 class InstancedMesh extends Mesh {
 
+	get instanceMatrix() {
+
+		return this._instanceMatrix;
+
+	}
+
+	set instanceMatrix( attribute ) {
+
+		if ( attribute ) attribute.skipsUnchangedUpdates = true;
+		this._instanceMatrix = attribute;
+
+	}
+
+	get instanceColor() {
+
+		return this._instanceColor;
+
+	}
+
+	set instanceColor( attribute ) {
+
+		if ( attribute ) attribute.skipsUnchangedUpdates = true;
+		this._instanceColor = attribute;
+
+	}
+
 	/**
 	 * Constructs a new instanced mesh.
 	 *

@@ -120,14 +120,51 @@ class RetainedViewRefresh {
 		this.unsteady = [];
 		this.viewed = [];
 		this.views = new Map();
+		this.keys = new Map();
 		this.changed = new Set();
 
 	}
 
 	reset( representatives ) {
 
-		this.release();
-		this.pending = [ ...representatives ];
+		const kept = new Set( representatives );
+
+		for ( const [ renderObject, sources ] of this.sources ) {
+
+			if ( kept.has( renderObject ) ) continue;
+
+			if ( sources !== null ) {
+
+				sources.onChange = null;
+				sources.release();
+
+			}
+
+			this.sources.delete( renderObject );
+			this.changed.delete( renderObject );
+
+		}
+
+		this.unsteady = this.unsteady.filter( ( renderObject ) => kept.has( renderObject ) );
+		this.viewed = this.viewed.filter( ( renderObject ) => kept.has( renderObject ) );
+		this.views.clear();
+		for ( const renderObject of this.viewed ) this.views.set( this.keys.get( renderObject ), renderObject );
+		for ( const renderObject of this.keys.keys() ) if ( kept.has( renderObject ) === false ) this.keys.delete( renderObject );
+		this._promoteOrphanedViews();
+		this.pending = representatives.filter( ( renderObject ) => this.sources.has( renderObject ) === false );
+
+	}
+
+	_promoteOrphanedViews() {
+
+		for ( const [ renderObject, key ] of this.keys ) {
+
+			if ( key === null || this.views.has( key ) ) continue;
+
+			this.views.set( key, renderObject );
+			this.viewed.push( renderObject );
+
+		}
 
 	}
 
@@ -147,6 +184,7 @@ class RetainedViewRefresh {
 		this.unsteady.length = 0;
 		this.viewed.length = 0;
 		this.views.clear();
+		this.keys.clear();
 		this.changed.clear();
 
 	}
@@ -209,6 +247,7 @@ class RetainedViewRefresh {
 		sources.onChange = () => this.changed.add( renderObject );
 
 		const key = viewKey( renderer, renderObject, sources.liveNodes );
+		this.keys.set( renderObject, key );
 
 		if ( key !== null && this.views.has( key ) ) return;
 

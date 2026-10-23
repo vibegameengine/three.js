@@ -8,6 +8,7 @@ import { instancedBufferAttribute, instancedDynamicBufferAttribute } from './Buf
 import { buffer } from './BufferNode.js';
 import { storage } from './StorageBufferNode.js';
 import { instanceIndex } from '../core/IndexNode.js';
+import { uniform } from '../core/UniformNode.js';
 
 import { InstancedInterleavedBuffer } from '../../core/InstancedInterleavedBuffer.js';
 import { InstancedBufferAttribute } from '../../core/InstancedBufferAttribute.js';
@@ -17,6 +18,39 @@ import { instanceCullingFor } from '../../renderers/common/InstanceCulling.js';
 const _matrixBuffers = /*@__PURE__*/ new WeakMap();
 const _colorBuffers = /*@__PURE__*/ new WeakMap();
 const _previousInstanceMatrices = /*@__PURE__*/ new WeakMap();
+const _sharedStorageNodes = /*@__PURE__*/ new WeakMap();
+
+export function sharedStorage( attribute, type ) {
+
+	let byType = _sharedStorageNodes.get( attribute );
+
+	if ( byType === undefined ) {
+
+		byType = new Map();
+		_sharedStorageNodes.set( attribute, byType );
+
+	}
+
+	let node = byType.get( type );
+
+	if ( node === undefined ) {
+
+		node = storage( attribute, type, Math.max( attribute.count, 1 ) );
+		byType.set( type, node );
+
+	}
+
+	return node;
+
+}
+
+export const instanceIdBase = /*@__PURE__*/ uniform( 0, 'uint' ).onObjectUpdate( ( { object, camera } ) => {
+
+	const culling = instanceCullingFor( object, camera );
+
+	return culling !== null ? culling.idBase : 0;
+
+} );
 
 function createInstanceIdNode( builder ) {
 
@@ -24,7 +58,15 @@ function createInstanceIdNode( builder ) {
 
 	if ( culling === null ) return instanceIndex;
 
-	return storage( culling.instanceIds, 'uint', culling.instanceIds.count ).element( instanceIndex.add( culling.idBase ) );
+	return sharedStorage( culling.instanceIds, 'uint' ).element( instanceIndex.add( instanceIdBase ) );
+
+}
+
+function sceneBufferOf( builder, name ) {
+
+	const culling = instanceCullingFor( builder.object, builder.camera );
+
+	return culling !== null && culling[ name ] ? culling[ name ] : null;
 
 }
 
@@ -37,19 +79,21 @@ function createInstanceIdNode( builder ) {
  * @param {Node<uint>} instanceId - The index of the instance the vertex belongs to.
  * @returns {Node} The matrix node.
  */
-function createInstanceMatrixNode( builder, instanceMatrix, instanceId ) {
+function createInstanceMatrixNode( builder, instanceMatrix, instanceId, name = 'instanceMatrices' ) {
 
 	const matrixCount = Math.max( instanceMatrix.count, 1 );
 
 	if ( instanceMatrix.isStorageInstancedBufferAttribute === true ) {
 
-		return storage( instanceMatrix, 'mat4', matrixCount ).element( instanceId );
+		return storage( instanceMatrix, 'mat4', matrixCount ).setName( name ).element( instanceId );
 
 	}
 
 	if ( matrixCount * 16 * 4 <= builder.getUniformBufferLimit() ) {
 
-		return buffer( instanceMatrix.array, 'mat4', matrixCount ).element( instanceId );
+		const matrices = buffer( instanceMatrix.array, 'mat4', matrixCount ).setName( name );
+		Object.defineProperty( matrices, 'elementsVersion', { get: () => instanceMatrix.version } );
+		return matrices.element( instanceId );
 
 	}
 
@@ -140,7 +184,7 @@ function createPreviousInstanceMatrixNode( builder, matrices, instanceMatrixNode
 
 	OnBeforeFrameUpdate( ( { frameId } ) => advancePreviousMatrices( previousMatrices, matrices, frameId ) );
 
-	return createInstanceMatrixNode( builder, previousMatrices.attribute, instanceId );
+	return createInstanceMatrixNode( builder, previousMatrices.attribute, instanceId, 'previousInstanceMatrices' );
 
 }
 
@@ -148,7 +192,7 @@ function createInstanceColorNode( colors, instanceId ) {
 
 	if ( colors.isStorageInstancedBufferAttribute === true ) {
 
-		return { node: storage( colors, 'vec3', Math.max( colors.count, 1 ) ).element( instanceId ), interleaved: null };
+		return { node: storage( colors, 'vec3', Math.max( colors.count, 1 ) ).setName( 'instanceColors' ).element( instanceId ), interleaved: null };
 
 	}
 
@@ -200,9 +244,11 @@ export const instanceColor = /*@__PURE__*/ varyingProperty( 'vec3', 'vInstanceCo
 export const instance = /*@__PURE__*/ Fn( ( [ matrices, colors = null ], builder ) => {
 
 	const instanceId = createInstanceIdNode( builder );
-	const instanceMatrixNode = createInstanceMatrixNode( builder, matrices, instanceId );
+	const sceneMatrices = sceneBufferOf( builder, 'matrices' );
+	const sceneColors = sceneBufferOf( builder, 'colors' );
+	const instanceMatrixNode = sceneMatrices !== null ? sharedStorage( sceneMatrices, 'mat4' ).element( instanceId ) : createInstanceMatrixNode( builder, matrices, instanceId );
 	const interleavedMatrix = _matrixBuffers.get( matrices ) || null;
-	const color = colors ? createInstanceColorNode( colors, instanceId ) : null;
+	const color = colors ? ( sceneColors !== null ? { node: sharedStorage( sceneColors, 'vec3' ).element( instanceId ), interleaved: null } : createInstanceColorNode( colors, instanceId ) ) : null;
 	const interleavedColor = color !== null ? color.interleaved : null;
 
 	if ( interleavedMatrix !== null || interleavedColor !== null ) {

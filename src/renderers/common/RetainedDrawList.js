@@ -29,7 +29,7 @@ class PipelineOrder {
 	 */
 	remember( material, pipeline ) {
 
-		if ( pipeline === null || this.pipelineOf.get( material ) === pipeline ) return false;
+		if ( pipeline === null || pipeline === undefined || this.pipelineOf.get( material ) === pipeline ) return false;
 
 		this.pipelineOf.set( material, pipeline );
 		if ( this.ranks.has( pipeline ) === false ) this.ranks.set( pipeline, this.nextRank ++ );

@@ -157,9 +157,47 @@ class BufferAttribute extends EventDispatcher {
 	set needsUpdate( value ) {
 
 		if ( value !== true ) return;
+		if ( this.skipsUnchangedUpdates === true && this._matchesLastUpdate() ) {
+
+			this.clearUpdateRanges();
+			return;
+
+		}
+
 		this.version ++;
 		markBufferDirty( this );
 		signalSource( this );
+
+	}
+
+	_matchesLastUpdate() {
+
+		const array = this.array;
+		const last = this._lastUpdate;
+
+		if ( last === undefined || last.length !== array.length || last.constructor !== array.constructor ) {
+
+			this._lastUpdate = array.slice();
+			return false;
+
+		}
+
+		let same = true;
+
+		for ( let i = 0, l = array.length; i < l; i ++ ) {
+
+			if ( last[ i ] !== array[ i ] ) {
+
+				same = false;
+				break;
+
+			}
+
+		}
+
+		if ( same === false ) last.set( array );
+
+		return same;
 
 	}
 
