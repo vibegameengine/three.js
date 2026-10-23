@@ -32,6 +32,8 @@ class Bindings extends DataMap {
 		 */
 		this.backend = backend;
 
+		this.uniformBufferHolders = new WeakMap();
+
 		/**
 		 * Renderer component for managing textures.
 		 *
@@ -228,7 +230,7 @@ class Bindings extends DataMap {
 
 		if ( shared !== null ) renderObject.getNodeBuilderState().releaseBindings( renderObject.material, shared );
 
-		this._destroyBindings( bindings );
+		if ( this.get( renderObject ).initialized === true ) this._destroyBindings( bindings );
 
 		this.delete( renderObject );
 
@@ -255,6 +257,7 @@ class Bindings extends DataMap {
 
 					if ( binding.isUniformBuffer ) {
 
+						this.uniformBufferHolders.set( binding, ( this.uniformBufferHolders.get( binding ) ?? 0 ) + 1 );
 						this.backend.createUniformBuffer( binding );
 						this.info.createUniformBuffer( binding );
 
@@ -319,6 +322,16 @@ class Bindings extends DataMap {
 
 					if ( binding.isUniformBuffer ) {
 
+						const holders = ( this.uniformBufferHolders.get( binding ) ?? 1 ) - 1;
+
+						if ( holders > 0 ) {
+
+							this.uniformBufferHolders.set( binding, holders );
+							continue;
+
+						}
+
+						this.uniformBufferHolders.delete( binding );
 						this.backend.destroyUniformBuffer( binding );
 						this.info.destroyUniformBuffer( binding );
 
